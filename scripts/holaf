@@ -1,0 +1,429 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════
+# holaf-lib — gestionnaire de briques holaf
+# ─────────────────────────────────────────────────────────────────────────────
+# Chaque brique holaf est un petit fichier .js autonome. Quand un projet en a
+# besoin, il en reçoit une COPIE "pinnée" (une copie figée dans le projet, PAS
+# un symlink). Cette commande aide à installer, vérifier, mettre à jour et
+# remonter les améliorations.
+#
+# Sous-commandes :
+#   list                       — affiche les briques et versions de la lib
+#   install <brique> <DEST>    — copie une brique dans le projet (pinnée)
+#   check   <DEST>             — compare les copies du projet à la lib
+#   upgrade <brique> <DEST>    — réinstalle la version actuelle dans le projet
+#   adopt   <brique> <DEST>    — remonte une copie améliorée du projet dans la lib
+#
+# Exemples :
+#   ./scripts/holaf list
+#   ./scripts/holaf install modal /projects/mon-site
+#   ./scripts/holaf check /projects/mon-site
+#   ./scripts/holaf upgrade modal /projects/mon-site
+#   ./scripts/holaf adopt modal /projects/mon-site
+#
+# Précédemment, ce dépôt s'appelait holaf-ui et utilisait scripts/sync-holaf-ui.sh.
+# holaf-lib remplace ce script par `holaf` avec un système de versions PAR BRIQUE
+# (copie pinnée + manifest local dans le projet).
+# ═══════════════════════════════════════════════════════════════════════════
+set -euo pipefail
+
+# Racine du dépôt holaf-lib (indépendante du répertoire courant).
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$REPO_DIR/manifest.json"
+SRC_DIR="$REPO_DIR/js"
+
+# ─── Aide complète ───────────────────────────────────────────────────────────
+usage() {
+    cat <<'EOF'
+holaf-lib — briques JS versionnées par brique, copiées (pinnées) dans les projets.
+
+USAGE
+  ./scripts/holaf <commande> [arguments]
+
+COMMANDES
+  list
+      Liste les briques disponibles dans la lib avec leur version (depuis
+      manifest.json).
+
+  install <brique> <DEST> [--version X]
+      Installe une brique dans le projet DEST : copie le fichier vers
+        DEST/vendor/holaf/<fichier>
+      et note la version installée dans
+        DEST/vendor/holaf/holaf-manifest.json
+      Par défaut : la version ACTUELLE de la lib. Avec --version X : essaie
+      cette version précise (erreur si elle n'est pas fournie par la lib).
+      N'écrase jamais silencieusement : si la brique est déjà installée avec
+      une autre version, on affiche l'écart et on demande confirmation.
+
+  check <DEST>
+      Compare chaque brique installée dans DEST avec la lib (manifest central).
+      Pour chaque brique on affiche :
+        ✓ à jour            /  ⚠️ EN RETARD (installée vX, dispo vY)
+        ? brique inconnue
+      C'est le moyen simple de voir si un projet est à jour.
+
+  upgrade <brique> <DEST>
+      Réinstalle la version actuelle de la lib dans DEST et met à jour le
+      manifest local. ATTENTION : écrase la copie du projet. On affiche la
+      différence quand elle est disponible puis on demande confirmation.
+
+  adopt <brique> <DEST>
+      Remonte une copie AMÉLIORÉE venant d'un projet vers la lib :
+        - on affiche la différence (lib actuelle vs copie du projet),
+        - on demande confirmation,
+        - on copie le fichier dans la lib,
+        - on incrémente la version PATCH du manifest central (+1),
+        - on met à jour le numéro de version dans l'en-tête du fichier brique,
+        - on rappelle : pensez à committer/pusher, et les autres projets qui
+          utilisent cette brique devront faire `upgrade`.
+      C'est le chemin normal pour qu'une amélioration faite dans un projet
+      profite à toutes les copies.
+
+WORKFLOW EN BREF
+  - Une copie dans un projet est RÉSERVÉE (pinnée) : on ne met pas à jour les
+    projets automatiquement.
+  - Pour tirer une amélioration de la lib : `upgrade`.
+  - Pour remonter une amélioration faite dans un projet : `adopt`.
+  - Pour vérifier si un projet est à jour : `check` (et voir les retards).
+EOF
+    exit 0
+}
+
+# ⛔ Erreur fatale, message clair, code de sortie 1.
+fail() {
+    echo "⛔ Erreur : $*" >&2
+    exit 1
+}
+
+# ─── Helpers JSON (via python3, plus portable que jq) ───────────────────────
+command -v python3 >/dev/null 2>&1 || fail "python3 est requis (pour lire/écrire les manifest JSON) mais introuvable."
+
+# json_get <fichier> <clé1> [<clé2> ...]  →  imprime "null" si absent
+json_get() {
+    python3 - "$@" <<'PY'
+import json, sys
+f = sys.argv[1]
+try:
+    d = json.load(open(f))
+except Exception:
+    print("null"); sys.exit(0)
+for k in sys.argv[2:]:
+    if not isinstance(d, dict) or k not in d:
+        print("null"); sys.exit(0)
+    d = d[k]
+print(json.dumps(d))
+PY
+}
+
+# json_set <fichier> <valeur> <clé1> [<clé2> ...]  →  crée/écrase la valeur.
+json_set() {
+    python3 - "$@" <<'PY'
+import json, sys
+f, val, keys = sys.argv[1], sys.argv[2], sys.argv[3:]
+try:
+    with open(f) as fh: d = json.load(fh)
+except Exception:
+    d = {}
+node = d
+for k in keys[:-1]:
+    node = node.setdefault(k, {})
+node[keys[-1]] = json.loads(val)
+with open(f, "w") as fh:
+    json.dump(d, fh, indent=2, ensure_ascii=False)
+    fh.write("\n")
+PY
+}
+
+# Version actuelle d'une brique (manifest central) ; vide si absente.
+central_version() {
+    json_get "$MANIFEST" "bricks" "$1" "version" | tr -d '"'
+}
+
+# Fichier (relatif à la racine) d'une brique (manifest central).
+brick_file_raw() {
+    json_get "$MANIFEST" "bricks" "$1" "file" | tr -d '"'
+}
+
+# Version installée dans le manifest local d'un projet.
+local_version() {
+    json_get "$1/vendor/holaf/holaf-manifest.json" "$2" | tr -d '"'
+}
+
+# Vérifie qu'une brique existe dans la lib et renvoie son fichier.
+brick_file_or_fail() {
+    local brick="$1"
+    local file
+    file="$(brick_file_raw "$brick")"
+    [ -n "$file" ] && [ "$file" != "null" ] || fail "brique inconnue : '$brick'. Faites 'holaf list' pour voir les briques disponibles."
+    local path="$REPO_DIR/$file"
+    [ -f "$path" ] || fail "fichier de la brique '$brick' introuvable dans la lib : $path"
+    echo "$file"
+}
+
+# Assure que le manifest local d'un projet existe (crée un {} ).
+ensure_local_manifest() {
+    local dest="$1"
+    local file="$dest/vendor/holaf/holaf-manifest.json"
+    mkdir -p "$(dirname "$file")"
+    if [ ! -s "$file" ]; then
+        echo "{}" > "$file"
+    fi
+}
+
+# Demande une confirmation oui/non (défaut non). Retourne vrai si oui.
+confirm() {
+    local prompt="$1"
+    local rep
+    read -p "$prompt [N/o] " -r rep || return 1
+    case "${rep,,}" in
+        o|oui|y|yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Incrémente la version PATCH (0.1.0 -> 0.1.1). Renvoie la nouvelle version.
+bump_patch() {
+    local v="$1"
+    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+    else
+        # Version non standard : on retombe sur 0.0.1 proprement.
+        echo "0.0.1"
+    fi
+}
+
+# ─── sous-commande : list ────────────────────────────────────────────────────
+cmd_list() {
+    echo "holaf-lib — briques disponibles :"
+    python3 - "$MANIFEST" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+for name, b in d.get("bricks", {}).items():
+    print(f"  • {name}  (version {b.get('version','?')})  → {b.get('file','?')}")
+PY
+}
+
+# ─── sous-commande : install ─────────────────────────────────────────────────
+cmd_install() {
+    local brick="$1" dest="$2" version_override=""
+    if [ "${3:-}" = "--version" ]; then
+        [ $# -ge 4 ] || fail "l'option --version attend un numéro de version en argument."
+        version_override="$4"
+    fi
+
+    local file
+    file="$(brick_file_or_fail "$brick")"
+
+    # Détermine la version à installer.
+    local current install_version
+    current="$(central_version "$brick")"
+    [ -n "$current" ] && [ "$current" != "null" ] || fail "version de la brique '$brick' introuvable dans le manifest."
+    if [ -n "$version_override" ]; then
+        # Version demandée : on accepte seulement la version ACTUELLE de la lib,
+        # sinon erreur claire (pas de stock d'anciennes versions ici).
+        if [ "$version_override" != "$current" ]; then
+            fail "version $version_override de la brique '$brick' indisponible : seule la version $current est fournie par la lib."
+        fi
+        install_version="$current"
+    else
+        install_version="$current"
+    fi
+
+    # Vérifie qu'on n'écrase pas silencieusement une version différente.
+    ensure_local_manifest "$dest"
+    local installed
+    installed="$(local_version "$dest" "$brick")"
+    if [ -n "$installed" ] && [ "$installed" != "null" ] && [ "$installed" != "$install_version" ]; then
+        echo "⚠️  '$brick' est déjà installé dans $dest."
+        echo "    Installée : v$installed   /   demandée : v$install_version"
+        confirm "Voulez-vous vraiment écraser la copie par v$install_version ? " || fail "installation annulée."
+    fi
+
+    # Copie la brique (version pinnée) dans le projet.
+    local target_dir="$dest/vendor/holaf"
+    mkdir -p "$target_dir"
+    local target_file="$target_dir/$(basename "$file")"
+    cp "$REPO_DIR/$file" "$target_file"
+
+    # Met à jour le manifest local.
+    json_set "$dest/vendor/holaf/holaf-manifest.json" "\"$install_version\"" "$brick"
+
+    echo "✅ '$brick' v$install_version copié vers $target_file"
+    echo "   Pensez à committer vendor/holaf/ dans le projet cible."
+}
+
+# ─── sous-commande : check ───────────────────────────────────────────────────
+cmd_check() {
+    local dest="$1"
+    local local_manifest="$dest/vendor/holaf/holaf-manifest.json"
+
+    [ -f "$local_manifest" ] \
+        || fail "aucune brique installée : $local_manifest introuvable. Faites d'abord 'holaf install'."
+
+    echo "Vérification des briques installées dans $dest :"
+    echo ""
+    local any_delay=0
+    while IFS=$'\t' read -r brick v; do
+        [ -n "$brick" ] || continue
+        local central
+        central="$(central_version "$brick")"
+        if [ -z "$central" ] || [ "$central" = "null" ]; then
+            echo "  ? brique inconnue : '$brick' (v$v) installée mais absente de la lib."
+            continue
+        fi
+        if [ "$v" = "$central" ]; then
+            echo "  ✓ à jour          : '$brick' (v$v)"
+        else
+            echo "  ⚠️  EN RETARD     : '$brick' installée v$v, dispo v$central"
+            any_delay=1
+        fi
+    done < <(python3 - "$local_manifest" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+for k, val in d.items():
+    print(f"{k}\t{val}")
+PY
+)
+
+    echo ""
+    if [ "$any_delay" -eq 1 ]; then
+        echo "→ Certaines briques sont EN RETARD. Lancez : ./scripts/holaf upgrade <brique> $dest"
+    else
+        echo "→ Tout est à jour. 🎉"
+    fi
+}
+
+# ─── sous-commande : upgrade ─────────────────────────────────────────────────
+cmd_upgrade() {
+    local brick="$1" dest="$2"
+    local file
+    file="$(brick_file_or_fail "$brick")"
+    ensure_local_manifest "$dest"
+
+    local current central
+    current="$(local_version "$dest" "$brick")"
+    central="$(central_version "$brick")"
+    [ -n "$current" ] && [ "$current" != "null" ] || fail "'$brick' n'est pas installé dans $dest. Lancez d'abord 'holaf install'."
+
+    local target_file="$dest/vendor/holaf/$(basename "$file")"
+    [ -f "$target_file" ] || fail "fichier de la copie introuvable : $target_file"
+
+    # Affiche le diff quand la copie diffère de la lib.
+    if command -v diff >/dev/null 2>&1 && ! diff -q "$REPO_DIR/$file" "$target_file" >/dev/null 2>&1; then
+        echo "Différence entre la lib (v$central) et la copie de $dest :"
+        diff -u "$target_file" "$REPO_DIR/$file" || true
+        echo ""
+    fi
+
+    if [ "$current" != "$central" ]; then
+        echo "⚠️  '$brick' va passer de v$current à v$central dans $dest."
+    else
+        echo "ℹ️  '$brick' est déjà à v$current — la copie va être réinstallée à l'identique."
+    fi
+    confirm "Écraser la copie de $dest par la version de la lib (v$central) ? " || fail "mise à jour annulée."
+
+    # Réinstalle + met à jour le manifest local.
+    cp "$REPO_DIR/$file" "$target_file"
+    json_set "$dest/vendor/holaf/holaf-manifest.json" "\"$central\"" "$brick"
+
+    echo "✅ '$brick' mis à jour vers v$central dans $dest"
+    echo "   Pensez à committer vendor/holaf/ dans le projet cible."
+}
+
+# ─── sous-commande : adopt ───────────────────────────────────────────────────
+cmd_adopt() {
+    local brick="$1" dest="$2"
+    local file
+    file="$(brick_file_or_fail "$brick")"
+    ensure_local_manifest "$dest"
+
+    local target_file="$dest/vendor/holaf/$(basename "$file")"
+    [ -f "$target_file" ] || fail "aucune copie à adopter : $target_file introuvable."
+    local lib_file="$REPO_DIR/$file"
+    local current central
+    current="$(local_version "$dest" "$brick")"
+    central="$(central_version "$brick")"
+    [ -n "$current" ] && [ "$current" != "null" ] || fail "'$brick' n'est pas installé dans $dest."
+
+    # Affiche la différence lib actuelle vs copie du projet.
+    echo "Remontée de la copie améliorée de '$brick' vers la lib."
+    echo "  Version locale (projet) : v$current"
+    echo "  Version de la lib       : v$central"
+    echo ""
+    if command -v diff >/dev/null 2>&1 && ! diff -q "$lib_file" "$target_file" >/dev/null 2>&1; then
+        echo "Différence (lib actuelle ← copie du projet) :"
+        diff -u "$lib_file" "$target_file" || true
+        echo ""
+    else
+        echo "ℹ️  La copie du projet est identique à la lib — rien de nouveau à adopter ?"
+    fi
+
+    confirm "Adopter cette copie dans la lib et incrémenter la version PATCH ? " || fail "adoption annulée."
+
+    # Copie le fichier amélioré dans la lib.
+    cp "$target_file" "$lib_file"
+
+    # Nouvelle version : au minimum le patch suivant de la version de la lib.
+    local new_version
+    new_version="$(bump_patch "$central")"
+    # Si la version du projet est déjà plus grande que la lib, on part d'elle + 1.
+    local proposed
+    proposed="$(bump_patch "$current")"
+    if [ "$proposed" != "$current" ] && \
+       { [ "$current" = "$central" ] || [ "$(printf '%s\n%s\n' "$central" "$current" | sort -V | tail -n1)" = "$current" ]; }; then
+        new_version="$proposed"
+    fi
+
+    # Met à jour la version dans l'en-tête du fichier brique.
+    # Ligne d'en-tête :  * Holaf UI — Brique HolafModal · version 0.1.0
+    sed -i -E "s/(· version )[0-9]+\.[0-9]+\.[0-9]+/\1${new_version}/" "$lib_file"
+    # Et la constante VERSION du code (cohérence avec l'en-tête).
+    sed -i -E "s/(const VERSION = \")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${new_version}\2/" "$lib_file" || true
+
+    # Met à jour le manifest central.
+    json_set "$MANIFEST" "\"$new_version\"" "bricks" "$brick" "version"
+
+    echo ""
+    echo "✅ brique '$brick' adoptée dans la lib — nouvelle version : v$new_version"
+    echo "   Rappels importants :"
+    echo "     1. Committez et pushez ce dépôt holaf-lib (manifest central + fichier brique)."
+    echo "     2. Les AUTRES projets qui utilisent '$brick' devront faire :"
+    echo "            ./scripts/holaf upgrade $brick <leur-projet>"
+}
+
+# ─── point d'entrée ──────────────────────────────────────────────────────────
+main() {
+    [ $# -ge 1 ] || { usage; }
+    local cmd="$1"
+    shift
+
+    case "$cmd" in
+        list)
+            cmd_list
+            ;;
+        install)
+            [ $# -ge 2 ] || fail "usage : holaf install <brique> <DEST> [--version X]"
+            cmd_install "$1" "$2" "${3:-}" "${4:-}"
+            ;;
+        check)
+            [ $# -eq 1 ] || fail "usage : holaf check <DEST>"
+            cmd_check "$1"
+            ;;
+        upgrade)
+            [ $# -eq 2 ] || fail "usage : holaf upgrade <brique> <DEST>"
+            cmd_upgrade "$1" "$2"
+            ;;
+        adopt)
+            [ $# -eq 2 ] || fail "usage : holaf adopt <brique> <DEST>"
+            cmd_adopt "$1" "$2"
+            ;;
+        help|-h|--help)
+            usage
+            ;;
+        *)
+            fail "commande inconnue : '$cmd'. Faites 'holaf help'."
+            ;;
+    esac
+}
+
+main "$@"

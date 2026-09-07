@@ -1,0 +1,22 @@
+{
+  "name": "holaf-lib",
+  "version": "0.1.0",
+  "description": "holaf-lib — briques JS maison, versionnées par brique avec copie pinnée dans les projets.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [
+    "holaf",
+    "lib",
+    "modal",
+    "briques",
+    "vendor"
+  ],
+  "author": "Holaf",
+  "devDependencies": {
+    "jsdom": "^30.0.1",
+    "vitest": "^5.0.0"
+  }
+}

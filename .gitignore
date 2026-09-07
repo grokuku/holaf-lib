@@ -1,0 +1,14 @@
+# Dépendances de dev (tests)
+node_modules/
+
+# Journaux
+*.log
+npm-debug.log*
+
+# Sorties de couverture / builds locaux
+coverage/
+dist/
+
+# Système
+.DS_Store
+Thumbs.db
