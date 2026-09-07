@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.2.0)
+# HolafModal — doc d'usage (brique holaf-lib v0.2.1)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -206,7 +206,8 @@ HolafModal.themes.get("nul");    // → null
 
 - `register(name, vars)` : enregistre ou **remplace** un thème. Seules les
   clés commençant par `--` sont conservées (valeurs stringifiées) — même
-  règle que l'option `theme` de `open()`.
+  règle que l'option `theme` de `open()`. Le retour est une **copie
+  protégée** : muter ce que renvoie `register` ne corrompt pas le registre.
 - `get(name)` retourne une **copie** : muter le résultat ne touche pas le
   registre.
 
@@ -229,6 +230,18 @@ HolafModal.open({
 Ordre de priorité des variables : surcharges `vars` > preset > défauts de la
 brique. Si le `preset` cité n'existe pas, un avertissement est émis et les
 surcharges seules s'appliquent (repli gracieux sur les défauts pour le reste).
+
+Les clés `--hm-*` posées **à la racine** du spec, à côté de `preset`, sont
+aussi acceptées (v0.2.1) : elles sont fusionnées dans les surcharges, après
+le preset. L'écriture courte `theme: { preset: "dark", "--hm-accent": "#123" }`
+est donc équivalente à `theme: { preset: "dark", vars: { "--hm-accent": "#123" } }`.
+En cas de doublon entre une clé racine et `vars`, c'est `vars` (champ
+officiel) qui garde la priorité.
+
+> Note : un nom de thème inconnu ne déclenche l'avertissement qu'**une seule
+> fois par nom** (à l'`open()` ou au `setTheme` selon le cas) — pas de spam
+> console à chaque ouverture. Le compteur est remis à zéro si le thème est
+> enregistré ensuite ou après `clearTheme()`.
 
 ---
 
@@ -311,7 +324,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.2.0).
+`HolafModal.version` (v0.2.1).
 
 ---
 

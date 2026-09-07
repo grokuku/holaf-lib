@@ -19,7 +19,7 @@ dossier `js/` (ex. `js/README-holaf-modal.md`).
 ## Versionnement PAR BRIQUE (copie pinnée + manifest)
 
 On ne « synchronise » pas en bloc avec un symlink. Chaque brique a **sa propre
-version** (ex. `modal 0.2.0`). Quand un projet prend une brique, il en reçoit
+version** (ex. `modal 0.2.1`). Quand un projet prend une brique, il en reçoit
 une **copie pinnée** (figée) dans `vendor/holaf/`, et sa version est notée dans
 le **manifest local** du projet : `vendor/holaf/holaf-manifest.json`.
 
@@ -30,7 +30,7 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal": { "version": "0.2.0", "file": "js/holaf-modal.js" }
+    "modal": { "version": "0.2.1", "file": "js/holaf-modal.js" }
   }
 }
 ```
@@ -45,7 +45,7 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.2.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs |
+| modal      | `js/holaf-modal.js` | 0.2.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », toasts, etc.                                 |
 
 ## Le script `holaf`

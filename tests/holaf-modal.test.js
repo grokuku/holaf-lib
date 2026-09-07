@@ -3,7 +3,9 @@
  * Couverture : open/close basique, aria, setters, pile d'overlays (Échap ne
  * ferme que le sommet), scroll-lock avec compteur, helpers Promise (alert /
  * confirm / prompt / busy), anti-doublon par id, focus trap, closeOnOverlay,
- * CSS auto-injecté (une seule fois, sans :root).
+ * CSS auto-injecté (une seule fois, sans :root), thèmes (presets, registre
+ * protégé, opt-out theme:"" silencieux, warning unique par nom inconnu,
+ * fusion des clés --hm-* racines d'un { preset, … }).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafModal } from "../js/holaf-modal.js";
@@ -404,7 +406,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.2.0");
+        expect(HolafModal.version).toBe("0.2.1");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -586,5 +588,62 @@ describe("thèmes", () => {
         expect(root.style.getPropertyValue("--hm-bg")).toBe("#ffffff");
         document.querySelector(".holaf-modal-btn-primary").click();
         await expect(p).resolves.toBeUndefined();
+    });
+
+    // ── Finitions v0.2.1 (un test par fix) ──────────────────────────────────
+
+    it('fix opt-out : theme:"" = aucun thème, SANS warning, même avec un thème global actif', () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        HolafModal.setTheme("light"); // thème global actif
+        const a = HolafModal.open({ title: "A", theme: "" });
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe(""); // ni global ni preset
+        expect(a.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("");
+        const b = HolafModal.open({ title: "B" }); // sans theme → le global s'applique bien
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");
+        expect(warn).not.toHaveBeenCalled(); // "" est un opt-out explicite, pas un nom inconnu
+    });
+
+    it("fix warning unique : setTheme + open() avec un nom inconnu n'avertissent qu'UNE fois ; reset par clearTheme", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        HolafModal.setTheme("theme-fantome"); // 1er (et unique) warning
+        expect(warn).toHaveBeenCalledTimes(1);
+
+        HolafModal.open({ title: "A" }); // le thème global est ré-évalué à chaque open…
+        HolafModal.open({ title: "B" }); // …sans jamais re-warning
+        expect(warn).toHaveBeenCalledTimes(1);
+
+        HolafModal.clearTheme(); // reset : le même nom peut re-avertir
+        HolafModal.setTheme("theme-fantome");
+        expect(warn).toHaveBeenCalledTimes(2);
+    });
+
+    it("fix register : retourne une copie protégée — muter le retour ne corrompt pas le registre", () => {
+        const vars = { "--hm-accent": "#112233", "ignore": "x" };
+        const ret = HolafModal.themes.register("copie-register", vars);
+        expect(ret).toEqual({ "--hm-accent": "#112233" }); // filtrage -- inchangé
+
+        ret["--hm-accent"] = "#hack"; // mutation du retour…
+        ret["--hm-extra"] = "intrus"; // …et ajout d'une clé
+        expect(HolafModal.themes.get("copie-register")).toEqual({ "--hm-accent": "#112233" });
+
+        vars["--hm-accent"] = "#muté-après-coup"; // l'objet source n'est pas retenu par référence
+        expect(HolafModal.themes.get("copie-register")["--hm-accent"]).toBe("#112233");
+    });
+
+    it("fix edge case { preset + clés --hm-* racine } : fusionnées dans les surcharges (après le preset) ; vars gagne", () => {
+        const a = HolafModal.open({
+            title: "Racine",
+            theme: { preset: "dark", "--hm-accent": "#123456" },
+        });
+        expect(a.el.style.getPropertyValue("--hm-accent")).toBe("#123456"); // clé racine appliquée
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#1e1e1e");     // reste du preset
+
+        // En cas de doublon entre clé racine et vars, vars (champ officiel) gagne.
+        const b = HolafModal.open({
+            title: "Doublon",
+            theme: { preset: "light", "--hm-accent": "#racine", vars: { "--hm-accent": "#123abc" } },
+        });
+        expect(b.el.style.getPropertyValue("--hm-accent")).toBe("#123abc"); // vars > racine
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");     // preset intact
     });
 });
