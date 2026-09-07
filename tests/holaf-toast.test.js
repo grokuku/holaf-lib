@@ -1,0 +1,321 @@
+/* Tests HolafToast — vitest + jsdom
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Couverture : show + auto-dismiss au timeout (fake timers), types → classe /
+ * icône, stack max 5 (le plus ancien saute avec reason 'replaced'), pause au
+ * survol (dismiss retardé + barre gelée), bouton ✕, close() manuel, actions
+ * cliquables, conteneur par position (créé une fois), aria-live polite /
+ * assertive, helpers, update(), CSS injecté une seule fois, classes scoppées
+ * .holaf-toast-* sans :root.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HolafToast } from "../js/holaf-toast.js";
+
+function containers(sel = ".holaf-toast-container") {
+    return document.querySelectorAll(sel);
+}
+function toasts() {
+    return document.querySelectorAll(".holaf-toast");
+}
+
+beforeEach(() => {
+    vi.useFakeTimers();
+    document.body.innerHTML = "";
+});
+
+afterEach(() => {
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+});
+
+describe("HolafToast.show — affichage", () => {
+    it("affiche un toast avec message et titre", () => {
+        HolafToast.show({ message: "Salut", title: "Info" });
+        const t = document.querySelector(".holaf-toast");
+        expect(t).toBeTruthy();
+        expect(t.querySelector(".holaf-toast__message").textContent).toBe("Salut");
+        expect(t.querySelector(".holaf-toast__title").textContent).toBe("Info");
+        expect(t.querySelector(".holaf-toast__close").textContent).toBe("✕");
+    });
+
+    it("auto-dismiss au timeout (reason 'timeout')", () => {
+        const onClose = vi.fn();
+        HolafToast.show({ message: "x", duration: 1000, onClose });
+        expect(toasts().length).toBe(1);
+        vi.advanceTimersByTime(1000);
+        expect(onClose).toHaveBeenCalledWith("timeout");
+        // suppression du DOM à la fin de l'animation (filet de sécurité 250 ms)
+        vi.advanceTimersByTime(300);
+        expect(toasts().length).toBe(0);
+    });
+
+    it("duration: 0 = persistant (pas d'auto-dismiss)", () => {
+        HolafToast.show({ message: "x", duration: 0 });
+        vi.advanceTimersByTime(60000);
+        expect(toasts().length).toBe(1);
+    });
+
+    it("applique la classe et l'icône du type demandé", () => {
+        for (const [type, icon] of [["info", "ℹ"], ["success", "✓"], ["warning", "⚠"], ["error", "✕"]]) {
+            document.body.innerHTML = "";
+            HolafToast.show({ message: "x", type, duration: 0 });
+            const t = document.querySelector(".holaf-toast");
+            expect(t.classList.contains("holaf-toast--" + type)).toBe(true);
+            expect(t.querySelector(".holaf-toast__icon").textContent).toBe(icon);
+        }
+    });
+});
+
+describe("HolafToast — stack et positions", () => {
+    it("empile dans un conteneur unique par position", () => {
+        HolafToast.show({ message: "a", duration: 0 });
+        HolafToast.show({ message: "b", duration: 0 });
+        expect(containers(".holaf-toast-container--top-right").length).toBe(1);
+        expect(toasts().length).toBe(2);
+    });
+
+    it("respecte la limite de 5 visibles, le plus ancien saute (reason 'replaced')", () => {
+        const onClose = vi.fn();
+        for (let i = 0; i < 6; i++) {
+            HolafToast.show({ message: "t" + i, duration: 0, onClose: i === 0 ? onClose : undefined });
+        }
+        // 5 visibles (le 6ᵉ a la classe de sortie puis disparaît du DOM)
+        expect(document.querySelectorAll(".holaf-toast:not(.holaf-toast--closing)").length).toBe(5);
+        vi.advanceTimersByTime(300);
+        expect(toasts().length).toBe(5);
+        expect(onClose).toHaveBeenCalledWith("replaced");
+        expect(document.querySelector(".holaf-toast__message").textContent).toBe("t1");
+    });
+
+    it("crée un conteneur distinct par position", () => {
+        HolafToast.show({ message: "a", position: "bottom-left", duration: 0 });
+        expect(containers(".holaf-toast-container--bottom-left").length).toBe(1);
+        expect(containers(".holaf-toast-container--top-right").length).toBe(0);
+    });
+});
+
+describe("HolafToast — fermeture et pause", () => {
+    it("bouton ✕ ferme (reason 'click')", () => {
+        const onClose = vi.fn();
+        HolafToast.show({ message: "x", duration: 0, onClose });
+        document.querySelector(".holaf-toast__close").click();
+        expect(onClose).toHaveBeenCalledWith("click");
+        vi.advanceTimersByTime(300);
+        expect(toasts().length).toBe(0);
+    });
+
+    it("close() manuel ferme (reason 'manual')", () => {
+        const onClose = vi.fn();
+        const ctrl = HolafToast.show({ message: "x", duration: 0, onClose });
+        ctrl.close();
+        expect(onClose).toHaveBeenCalledWith("manual");
+        vi.advanceTimersByTime(300);
+        expect(toasts().length).toBe(0);
+    });
+
+    it("closeOnClick ferme au clic sur le toast (reason 'click')", () => {
+        const onClose = vi.fn();
+        HolafToast.show({ message: "x", duration: 0, closeOnClick: true, onClose });
+        document.querySelector(".holaf-toast").click();
+        expect(onClose).toHaveBeenCalledWith("click");
+    });
+
+    it("met en pause le dismiss au survol", () => {
+        const t = HolafToast.show({ message: "x", duration: 1000 });
+        vi.advanceTimersByTime(400); // 400 ms écoulées
+        t.el.dispatchEvent(new MouseEvent("mouseenter"));
+        vi.advanceTimersByTime(5000); // survol : le timer est gelé
+        expect(t.el.classList.contains("holaf-toast--closing")).toBe(false);
+        t.el.dispatchEvent(new MouseEvent("mouseleave"));
+        vi.advanceTimersByTime(500); // reste 600 ms
+        expect(t.el.classList.contains("holaf-toast--closing")).toBe(false);
+        vi.advanceTimersByTime(200); // 700 > 600 restants → timeout
+        expect(t.el.classList.contains("holaf-toast--closing")).toBe(true);
+    });
+
+    it("gèle la barre de progression au survol", () => {
+        const t = HolafToast.show({ message: "x", duration: 1000 });
+        const bar = t.el.querySelector(".holaf-toast__progress");
+        vi.advanceTimersByTime(500);
+        t.el.dispatchEvent(new MouseEvent("mouseenter"));
+        expect(bar.style.transform).toBe("scaleX(0.5)");
+    });
+});
+
+describe("HolafToast — actions, helpers, update", () => {
+    it("les actions sont cliquables et ferment par défaut", () => {
+        const onClick = vi.fn();
+        const onClose = vi.fn();
+        HolafToast.show({ message: "x", duration: 0, onClose, actions: [{ label: "OK", onClick }] });
+        const btn = document.querySelector(".holaf-toast__action");
+        expect(btn.textContent).toBe("OK");
+        btn.click();
+        expect(onClick).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledWith("click");
+    });
+
+    it("une action avec close: false ne ferme pas", () => {
+        HolafToast.show({ message: "x", duration: 0, actions: [{ label: "Rest", onClick: () => {}, close: false }] });
+        document.querySelector(".holaf-toast__action").click();
+        expect(toasts().length).toBe(1);
+    });
+
+    it("les helpers type et opts passent correctement", () => {
+        const c = HolafToast.success("Bravo", { position: "bottom-right", duration: 0 });
+        expect(c.el.classList.contains("holaf-toast--success")).toBe(true);
+        expect(containers(".holaf-toast-container--bottom-right").length).toBe(1);
+        HolafToast.error("Oups", { duration: 0 });
+        expect(document.querySelector(".holaf-toast--error")).toBeTruthy();
+    });
+
+    it("update() change le message et le type", () => {
+        const c = HolafToast.info("Chargement…", { duration: 0 });
+        c.update({ message: "Fini !", type: "success" });
+        expect(c.el.querySelector(".holaf-toast__message").textContent).toBe("Fini !");
+        expect(c.el.classList.contains("holaf-toast--success")).toBe(true);
+        expect(c.el.classList.contains("holaf-toast--info")).toBe(false);
+        expect(c.el.getAttribute("role")).toBe("status");
+    });
+});
+
+describe("HolafToast — accessibilité et CSS", () => {
+    it("aria-live='polite' + role='status' par défaut, 'assertive' + 'alert' pour error", () => {
+        HolafToast.info("a", { duration: 0 });
+        const info = document.querySelector(".holaf-toast--info");
+        expect(info.getAttribute("aria-live")).toBe("polite");
+        expect(info.getAttribute("role")).toBe("status");
+        HolafToast.error("b", { duration: 0 });
+        const err = document.querySelector(".holaf-toast--error");
+        expect(err.getAttribute("aria-live")).toBe("assertive");
+        expect(err.getAttribute("role")).toBe("alert");
+    });
+
+    it("injecte le CSS une seule fois, scoppé sans :root", () => {
+        HolafToast.show({ message: "a", duration: 0 });
+        HolafToast.show({ message: "b", duration: 0 });
+        const styles = document.querySelectorAll("style#holaf-toast-style");
+        expect(styles.length).toBe(1);
+        const css = styles[0].textContent;
+        expect(css).not.toContain(":root");
+        expect(css).toContain(".holaf-toast-container");
+        expect(css).toContain("--ht-");
+        expect(css).toContain("prefers-reduced-motion");
+    });
+
+    it("expose la version et window.HolafToast", () => {
+        expect(HolafToast.version).toBe("0.2.0");
+        expect(window.HolafToast).toBe(HolafToast);
+    });
+});
+
+describe("HolafToast — positions alternatives", () => {
+    it("supporte les 6 positions, conteneur créé à la demande", () => {
+        const positions = ["top-right", "top-left", "bottom-right", "bottom-left", "top-center", "bottom-center"];
+        positions.forEach((p) => {
+            document.body.innerHTML = "";
+            HolafToast.show({ message: "x", position: p, duration: 0 });
+            expect(containers(".holaf-toast-container--" + p).length).toBe(1);
+        });
+    });
+
+    it("top-center et bottom-center centrent le conteneur", () => {
+        HolafToast.show({ message: "x", position: "top-center", duration: 0 });
+        const c = document.querySelector(".holaf-toast-container--top-center");
+        expect(c.style.transform).toBe(""); // centrage via CSS (classe), pas inline
+        expect(c.className).toContain("holaf-toast-container--top-center");
+    });
+
+    it("chaque position a son propre conteneur (empilement propre)", () => {
+        HolafToast.show({ message: "a", position: "top-center", duration: 0 });
+        HolafToast.show({ message: "b", position: "bottom-center", duration: 0 });
+        expect(containers(".holaf-toast-container--top-center").length).toBe(1);
+        expect(containers(".holaf-toast-container--bottom-center").length).toBe(1);
+        expect(containers().length).toBe(2);
+    });
+});
+
+describe("HolafToast — thèmes", () => {
+    it("enregistre les 4 presets au chargement", () => {
+        expect(HolafToast.themes.list().sort()).toEqual(["dark", "light", "midnight", "slate"]);
+    });
+
+    it("themes.get renvoie une copie protégée, null si inconnu", () => {
+        const t = HolafToast.themes.get("dark");
+        expect(t["--ht-bg"]).toBe("#2b2b2b");
+        t["--ht-bg"] = "#000";
+        expect(HolafToast.themes.get("dark")["--ht-bg"]).toBe("#2b2b2b");
+        expect(HolafToast.themes.get("nul")).toBeNull();
+    });
+
+    it("themes.register enregistre/remplace et filtre les clés non --", () => {
+        const ret = HolafToast.themes.register("foret", { "--ht-bg": "#12211a", foo: "bar" });
+        expect(ret).toEqual({ "--ht-bg": "#12211a" });
+        expect(HolafToast.themes.list()).toContain("foret");
+        // mutation du retour ne corrompt pas le registre
+        ret["--ht-bg"] = "#fff";
+        expect(HolafToast.themes.get("foret")["--ht-bg"]).toBe("#12211a");
+    });
+
+    it("applique un thème par instance via l'option theme", () => {
+        HolafToast.show({ message: "x", theme: "light", duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");
+        expect(t.style.getPropertyValue("--ht-fg")).toBe("#18181b");
+    });
+
+    it("applique un preset + surcharges (vars gagnent)", () => {
+        HolafToast.show({ message: "x", theme: { preset: "light", vars: { "--ht-radius": "16px" } }, duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");
+        expect(t.style.getPropertyValue("--ht-radius")).toBe("16px");
+    });
+
+    it("setTheme s'applique aux toasts sans option theme", () => {
+        HolafToast.setTheme("midnight");
+        HolafToast.show({ message: "x", duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#10111d");
+        HolafToast.clearTheme();
+    });
+
+    it("theme: null opte-out du thème global", () => {
+        HolafToast.setTheme("midnight");
+        HolafToast.show({ message: "x", theme: null, duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("");
+        HolafToast.clearTheme();
+    });
+
+    it("dark ≡ aucun thème (défauts CSS inchangés)", () => {
+        HolafToast.show({ message: "x", theme: "dark", duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#2b2b2b");
+    });
+});
+
+describe("HolafToast — configure()", () => {
+    it("change la position et la durée par défaut", () => {
+        HolafToast.configure({ position: "bottom-center", duration: 5000 });
+        const onClose = vi.fn();
+        HolafToast.show({ message: "x", onClose });
+        expect(containers(".holaf-toast-container--bottom-center").length).toBe(1);
+        vi.advanceTimersByTime(5000);
+        expect(onClose).toHaveBeenCalledWith("timeout");
+        HolafToast.configure({ position: "top-right", duration: 4000 });
+    });
+
+    it("configure.theme pose le thème global par défaut", () => {
+        HolafToast.configure({ theme: "slate" });
+        HolafToast.show({ message: "x", duration: 0 });
+        const t = document.querySelector(".holaf-toast");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#1f232b");
+        HolafToast.clearTheme();
+    });
+
+    it("une option explicite prime sur configure()", () => {
+        HolafToast.configure({ position: "bottom-left", duration: 1000 });
+        HolafToast.show({ message: "x", position: "top-left", duration: 0 });
+        expect(containers(".holaf-toast-container--top-left").length).toBe(1);
+        expect(containers(".holaf-toast-container--bottom-left").length).toBe(0);
+        HolafToast.configure({ position: "top-right", duration: 4000 });
+    });
+});

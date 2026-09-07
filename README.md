@@ -46,7 +46,8 @@ Grâce à ça, le script `holaf` sait :
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
 | modal      | `js/holaf-modal.js` | 0.2.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs |
-| *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », toasts, etc.                                 |
+| toast      | `js/holaf-toast.js` | 0.2.0   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live) |
+| *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
 
 ## Le script `holaf`
 
@@ -162,7 +163,9 @@ holaf-lib/
 ├── manifest.json               ← manifest central : briques + versions + fichiers
 ├── js/                         ← les briques (1 fichier = 1 brique, + sa doc)
 │   ├── holaf-modal.js
-│   └── README-holaf-modal.md
+│   ├── README-holaf-modal.md
+│   ├── holaf-toast.js
+│   └── README-holaf-toast.md
 ├── tests/                      ← tests automatisés (vitest + jsdom)
 ├── scripts/
 │   └── holaf                   ← commande de gestion (install / check / upgrade / adopt)
