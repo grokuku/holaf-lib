@@ -135,9 +135,15 @@ describe("HolafToast — fermeture et pause", () => {
     it("gèle la barre de progression au survol", () => {
         const t = HolafToast.show({ message: "x", duration: 1000 });
         const bar = t.el.querySelector(".holaf-toast__progress");
+        // La durée est calée inline sur la barre (animation CSS pilotée par le temps).
+        expect(bar.style.animationDuration).toBe("1000ms");
         vi.advanceTimersByTime(500);
         t.el.dispatchEvent(new MouseEvent("mouseenter"));
-        expect(bar.style.transform).toBe("scaleX(0.5)");
+        // Au survol on gèle la barre via animation-play-state:paused (classe).
+        expect(bar.classList.contains("holaf-toast__progress--paused")).toBe(true);
+        // Au départ de la souris, la barre reprend (classe retirée).
+        t.el.dispatchEvent(new MouseEvent("mouseleave"));
+        expect(bar.classList.contains("holaf-toast__progress--paused")).toBe(false);
     });
 });
 
@@ -202,7 +208,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.2.0");
+        expect(HolafToast.version).toBe("0.2.1");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -289,6 +295,37 @@ describe("HolafToast — thèmes", () => {
         HolafToast.show({ message: "x", theme: "dark", duration: 0 });
         const t = document.querySelector(".holaf-toast");
         expect(t.style.getPropertyValue("--ht-bg")).toBe("#2b2b2b");
+    });
+
+    it("warning unique : un thème inconnu ne warn qu'UNE fois, reset par clearTheme", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        HolafToast.show({ message: "a", theme: "theme-fantome" }); // 1er (et unique) warning
+        expect(warn).toHaveBeenCalledTimes(1);
+        // Le nom inconnu est ré-évalué à chaque show… sans jamais re-warning.
+        HolafToast.show({ message: "b", theme: "theme-fantome" });
+        HolafToast.show({ message: "c", theme: "theme-fantome" });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0][0]).toContain("theme-fantome");
+        // clearTheme remet à zéro : le même nom peut re-avertir ensuite.
+        HolafToast.clearTheme();
+        HolafToast.show({ message: "d", theme: "theme-fantome" });
+        expect(warn).toHaveBeenCalledTimes(2);
+        // register d'un nom le rend valide → on oublie l'avertissement déjà émis.
+        HolafToast.themes.register("theme-fantome", { "--ht-accent": "#123" });
+        HolafToast.clearTheme();
+        HolafToast.show({ message: "e", theme: "theme-fantome" });
+        // re-registré → plus aucun warning pour ce nom désormais valide.
+        expect(warn).toHaveBeenCalledTimes(2);
+    });
+
+    it("fusion des clés --ht-* racines d'un { preset, … } dans les surcharges (après le preset), vars gagne", () => {
+        const a = HolafToast.show({ message: "Racine", theme: { preset: "dark", "--ht-accent": "#123456" }, duration: 0 });
+        expect(a.el.style.getPropertyValue("--ht-accent")).toBe("#123456"); // clé racine appliquée
+        expect(a.el.style.getPropertyValue("--ht-bg")).toBe("#2b2b2b");     // reste du preset
+        // En cas de doublon entre clé racine et vars, vars (champ officiel) gagne.
+        const b = HolafToast.show({ message: "Doublon", theme: { preset: "light", "--ht-accent": "#racine", vars: { "--ht-accent": "#123abc" } }, duration: 0 });
+        expect(b.el.style.getPropertyValue("--ht-accent")).toBe("#123abc"); // vars > racine
+        expect(b.el.style.getPropertyValue("--ht-bg")).toBe("#ffffff");     // preset intact
     });
 });
 

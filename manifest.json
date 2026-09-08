@@ -7,7 +7,7 @@
       "file": "js/holaf-modal.js"
     },
     "toast": {
-      "version": "0.2.0",
+      "version": "0.2.1",
       "file": "js/holaf-toast.js"
     },
     "fetch": {

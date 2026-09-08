@@ -46,7 +46,7 @@ Grâce à ça, le script `holaf` sait :
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
 | modal      | `js/holaf-modal.js` | 0.2.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs |
-| toast      | `js/holaf-toast.js` | 0.2.0   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live) |
+| toast      | `js/holaf-toast.js` | 0.2.1   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live) |
 | fetch      | `js/holaf-fetch.js` | 0.1.1   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom) |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
 

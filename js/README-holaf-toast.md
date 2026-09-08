@@ -5,7 +5,7 @@ Brique autonome, **zéro dépendance runtime** : un seul fichier
 empilées, avec auto-dismiss, pause au survol, actions cliquables, **thèmes**
 (registre + presets) et **6 positions**.
 
-**Version : 0.2.0**
+**Version : 0.2.1**
 
 ---
 
@@ -83,9 +83,16 @@ HolafToast.show({
 ### Pause au survol
 
 Quand la souris survole un toast, **le timer d'auto-dismiss ET la barre de
-progression se mettent en pause** ; au départ de la souris, le compte à
-rebours reprend là où il en était. Pratique pour laisser le temps de lire ou
-de cliquer une action.
+progression se mettent en pause** (l'animation CSS est gelée à sa position
+courante via `animation-play-state: paused`) ; au départ de la souris, le
+compte à rebours (et la barre) reprend là où ils en étaient. Pratique pour
+laisser le temps de lire ou de cliquer une action.
+
+La barre de progression est **animée en temps réel** : sa durée est calée sur
+le `duration` du toast et elle se vide linéairement de `scaleX(1)` à
+`scaleX(0)`. En `prefers-reduced-motion`, la barre reste **visible mais
+statique** (pleine, sans animation) ; le timer JS ferme toujours le toast.
+Pour un toast persistant (`duration: 0`), aucune barre n'est affichée.
 
 ### Comportement de pile
 
@@ -278,7 +285,7 @@ HolafToast suit le même workflow que les autres briques via le script
 ```bash
 # Installer / réinstaller la brique dans un projet
 ./scripts/holaf install toast /projects/mon-site
-# (avec une version précise : --version 0.2.0)
+# (avec une version précise : --version 0.2.1)
 
 # Vérifier si la copie d'un projet est à jour
 ./scripts/holaf check /projects/mon-site
