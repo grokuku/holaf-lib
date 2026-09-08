@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.2.1)
+# HolafModal — doc d'usage (brique holaf-lib v0.3.0)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -93,6 +93,15 @@ ctrl.close();
 | `theme`          | —      | Thème de CETTE instance : string (nom de thème enregistré), objet `--hm-*`, ou `{ preset, vars }` — voir §3 |
 | `onOpen(ctrl)`   | —      | Appelé après l'ouverture                                                |
 | `onClose(value)` | —      | Appelé à la fermeture avec la valeur passée à `close()`                 |
+| `draggable`      | `false`| **v0.3.0** : la fenêtre se déplace par le header (drag, clamp viewport)  |
+| `resizable`      | `false`| **v0.3.0** : 8 poignées de redimensionnement (minWidth 280 / minHeight 120) |
+| `minWidth`/`minHeight` | 280/120 | **v0.3.0** : bornes du resize (si `resizable`)                    |
+| `storageKey`     | —      | **v0.3.0** : persiste position/taille (voir § Fenêtre)                  |
+| `persistPos`/`persistSize` | `true`/`true` | **v0.3.0** : quelles dimensions persister            |
+| `storageGet`/`storageSet` | — | **v0.3.0** : callbacks de stockage personnalisés (défaut localStorage) |
+| `zoom`           | —      | **v0.3.0** : `true` ou `{ key, min, max, step }` → boutons −/+ sur le contenu |
+| `headerRight`    | —      | **v0.3.0** : Node inséré dans le header avant le bouton fermer          |
+| `labels`         | —      | **v0.3.0** : `{ ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement |
 
 ### Boutons
 
@@ -113,6 +122,115 @@ Les variables (`--hm-*`) vivent sur la racine de la modale — jamais sur
 `:root` — donc chaque instance peut être re-colorée indépendamment. L'option
 `theme` accepte un objet de variables, un nom de thème enregistré, ou un
 `{ preset, vars }` : tout est détaillé dans la section suivante.
+
+---
+
+## 2bis. Fenêtre (v0.3.0) — drag / resize / persistance / zoom
+
+Toutes les options de cette section sont **OPT-IN** : sans elles, la modale
+reste **centrée, non-draggable, non-resizable** (comportement historique
+strictement inchangé). Le markup et le CSS par défaut ne changent pas ; les
+classes ajoutées (poignées, boutons zoom) n'apparaissent que si l'option
+correspondante est activée.
+
+### `draggable: true`
+
+La fenêtre se déplace par le **header** (les clics sur un bouton/input/select/
+textarea/lien du header ne déclenchent pas le drag). Position clampée au
+viewport (marge 10 px) :
+
+```js
+HolafModal.open({ title: "Fenêtre", content: "…", draggable: true });
+```
+
+### `resizable: true`
+
+8 poignées (`n/s/e/w/ne/nw/se/sw`) sur la racine redimensionnent la fenêtre,
+avec `minWidth` (280) / `minHeight` (120) et clamp viewport :
+
+```js
+HolafModal.open({ title: "Fenêtre", content: "…", resizable: true, minWidth: 320, minHeight: 200 });
+```
+
+### Persistance : `storageKey` + `persistPos` / `persistSize`
+
+Avec `storageKey`, la position/taille est **restaurée à l'ouverture** (clampée
+viewport) et **sauvegardée à la fermeture** ainsi qu'à la fin de chaque
+drag/resize :
+
+```js
+HolafModal.open({ title: "Fenêtre", content: "…", draggable: true, resizable: true, storageKey: "ma-fenetre" });
+```
+
+- `persistPos` (défaut `true`) : persiste `left`/`top` ;
+- `persistSize` (défaut `true`) : persiste `width`/`height`.
+
+Par défaut le stockage est `localStorage` sous la clé
+`holaf-modal-rect:<storageKey>`. Pour brancher votre propre store, fournissez
+les callbacks `storageGet(key)` / `storageSet(key, rect)` :
+
+```js
+HolafModal.open({
+    title: "Fenêtre", content: "…", draggable: true, storageKey: "ma-fenetre",
+    storageGet: (k) => monStore.get(k),
+    storageSet: (k, rect) => monStore.set(k, rect),
+});
+```
+
+### `zoom`
+
+`zoom: true` (ou `{ key, min, max, step }`) ajoute deux petits boutons **−/+**
+dans le header qui appliquent un facteur de zoom sur le **contenu** (via
+`style.zoom` sur le body, repli `transform: scale` si non supporté). Le niveau
+est persisté sous `holaf-modal-zoom:<key|id>` :
+
+```js
+HolafModal.open({ title: "Canevas", content: "…", zoom: { key: "canevas", min: 0.5, max: 2, step: 0.1 } });
+```
+
+### `headerRight`
+
+Un **Node** inséré dans le header, avant le bouton fermer :
+
+```js
+const badge = document.createElement("span");
+badge.textContent = "BETA";
+HolafModal.open({ title: "Réglages", content: "…", headerRight: badge });
+```
+
+### `content` fonction
+
+Si `content` est une **fonction**, elle est appelée avec le body :
+
+```js
+HolafModal.open({
+    title: "Formulaire",
+    content: (body) => {
+        const input = document.createElement("input");
+        input.className = "holaf-modal-input";
+        body.appendChild(input);
+    },
+});
+```
+
+### `labels`
+
+`labels: { ok, cancel, close, loading }` personnalise les libellés des boutons
+des helpers, du bouton fermer et du chargement (`busy`) :
+
+```js
+await HolafModal.confirm("Supprimer ?", "Sûr ?", { labels: { ok: "Oui", cancel: "Non" } });
+HolafModal.busy(undefined, { labels: { loading: "Patientez…" } });
+```
+
+### `alert` icon
+
+`alert(title, msg, { icon })` affiche un div icône au-dessus du message (défaut :
+aucune icône) :
+
+```js
+await HolafModal.alert("Attention", "Action irréversible.", { icon: "⚠️" });
+```
 
 ---
 
@@ -181,7 +299,7 @@ HolafModal.clearTheme();                                       // retour aux dé
   comme n'importe quelle modale ; `alert`/`confirm`/`prompt` acceptent aussi
   une option `theme` individuelle.
 
-### Thèmes customs : `register` / `get` / `list`
+### Thèmes customs : `register` / `get` / `list` / `update`
 
 ```js
 // Un thème = un objet de variables --hm-* (les mêmes clés que l'option theme).
@@ -210,6 +328,15 @@ HolafModal.themes.get("nul");    // → null
   protégée** : muter ce que renvoie `register` ne corrompt pas le registre.
 - `get(name)` retourne une **copie** : muter le résultat ne touche pas le
   registre.
+- `update(name, vars)` (v0.3.0) : **fusionne** les variables d'un thème
+  enregistré (les clés fournies écrasent, les autres restent) — utile pour un
+  hôte qui recalcule ses vars. Si le thème n'existe pas, il est enregistré à
+  la place (avec un avertissement). Retourne une copie protégée du thème
+  résultant :
+
+```js
+HolafModal.themes.update("foret", { "--hm-accent": "#0ea5e9" });
+```
 
 ### Preset + surcharge (override)
 

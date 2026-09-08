@@ -5,7 +5,7 @@ Brique autonome, **zéro dépendance runtime** : un seul fichier
 empilées, avec auto-dismiss, pause au survol, actions cliquables, **thèmes**
 (registre + presets) et **6 positions**.
 
-**Version : 0.2.1**
+**Version : 0.3.0**
 
 ---
 
@@ -65,6 +65,72 @@ HolafToast.info("Nouvelle version disponible");
 ```
 
 Équivalents à `show({ message, type, ...opts })`.
+
+### id métier : `show({ id })`, `update(idOrCtrl, opts)`, `hide(idOrCtrl)` (v0.3.0)
+
+Vous pouvez donner un **id métier** (string) à un toast. Si un toast **vivant**
+porte déjà cet id, `show({ id })` **met à jour son contenu** au lieu d'en créer
+un nouveau (pratique pour une progression, un état unique…) :
+
+```js
+HolafToast.show({ id: "upload", message: "Démarrage…", duration: 0 });
+HolafToast.show({ id: "upload", message: "50 %", title: "Upload", type: "warning", duration: 0 });
+// → un SEUL toast, mis à jour (même contrôleur retourné)
+```
+
+Deux fonctions module acceptent un **id string** OU la **référence ctrl** :
+
+```js
+HolafToast.update("upload", { message: "100 %", type: "success" }); // par id
+HolafToast.update(ctrl, { message: "100 %" });                        // par référence
+HolafToast.hide("upload");                                            // ferme par id
+HolafToast.hide(ctrl);                                                 // ferme par référence
+```
+
+- `update(idOrCtrl, opts)` retourne le contrôleur mis à jour (ou `null` si
+  introuvable) ; `hide(idOrCtrl)` retourne `true` si un toast a été fermé.
+- L'id est **libéré à la fermeture** : un `show({ id })` ultérieur crée un
+  nouveau toast.
+
+### Progression manuelle : `progress: 'manual'` (v0.3.0)
+
+Par défaut, la barre de progression est **temporelle** (animée sur `duration`,
+avec timer d'auto-dismiss). En mode **manuel**, la barre est **visible**
+(largeur 0) même avec `duration: 0`, et **aucun timer** de fermeture auto
+n'est armé — vous pilotez la largeur à la main :
+
+```js
+const t = HolafToast.show({ message: "Téléchargement…", progress: "manual", duration: 0 });
+HolafToast.update(t, { progress: 30 }); // largeur = 30 %
+HolafToast.update(t, { progress: 100 }); // largeur = 100 %
+HolafToast.hide(t);
+```
+
+- `update({ progress: 0-100 })` règle la largeur de la barre (clampée 0-100).
+- Le mode temporel reste le **défaut** : sans `progress`, timer + barre animée
+  inchangés.
+
+### `html: true` (v0.3.0)
+
+Par défaut, le message est posé en `textContent` (aucune injection). Avec
+`html: true`, il passe par `innerHTML` (contenu de confiance) :
+
+```js
+HolafToast.show({ message: "<b>Important</b>", html: true });
+```
+
+### `newestFirst` (v0.3.0)
+
+`configure({ newestFirst: true })` fait s'insérer les nouveaux toasts **en
+premier** dans le conteneur (`prepend`) au lieu d'ajouter à la fin (`append`,
+défaut historique) :
+
+```js
+HolafToast.configure({ newestFirst: true });
+```
+
+Sans configuration, le comportement historique (append) est strictement
+conservé.
 
 ### Actions cliquables
 
@@ -196,7 +262,7 @@ HolafToast.clearTheme();                                       // retour aux dé
   effet sur les toasts affichés ensuite (les toasts déjà affichés ne sont pas
   retouchés).
 
-### Thèmes customs : `register` / `get` / `list`
+### Thèmes customs : `register` / `get` / `list` / `update`
 
 ```js
 // Un thème = un objet de variables --ht-* (les mêmes clés que l'option theme).
@@ -223,6 +289,15 @@ HolafToast.themes.get("nul");    // → null
   protégée** : muter ce que renvoie `register` ne corrompt pas le registre.
 - `get(name)` retourne une **copie** : muter le résultat ne touche pas le
   registre.
+- `update(name, vars)` (v0.3.0) : **fusionne** les variables d'un thème
+  enregistré (les clés fournies écrasent, les autres restent) — utile pour un
+  hôte qui recalcule ses vars. Si le thème n'existe pas, il est enregistré à
+  la place (avec un avertissement). Retourne une copie protégée du thème
+  résultant :
+
+```js
+HolafToast.themes.update("foret", { "--ht-accent-info": "#0ea5e9" });
+```
 
 ### Preset + surcharge (override)
 
@@ -266,6 +341,7 @@ HolafToast.configure({
     position: "bottom-center",   // position par défaut (top-right)
     duration: 3000,              // durée par défaut en ms (4000 ; 0 = persistant)
     theme: "light",              // thème global par défaut (aucun) — équivaut à setTheme
+    newestFirst: true,           // v0.3.0 : nouveaux toasts en premier (false par défaut)
 });
 ```
 
@@ -273,7 +349,8 @@ HolafToast.configure({
 - Une option explicite dans `show()` (ou un helper) **prime toujours** sur le
   défaut configuré.
 - Sans appel à `configure()`, les défauts historiques sont strictement
-  conservés : position `top-right`, durée `4000 ms`, aucun thème.
+  conservés : position `top-right`, durée `4000 ms`, aucun thème, `newestFirst`
+  désactivé.
 
 ---
 

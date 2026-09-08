@@ -274,8 +274,8 @@ describe("HolafFetch — divers", () => {
         expect(onStatus).toHaveBeenCalledWith(201);
     });
 
-    it("version 0.1.1 exposée", () => {
-        expect(HolafFetch.version).toBe("0.1.1");
+    it("version 0.2.0 exposée", () => {
+        expect(HolafFetch.version).toBe("0.2.0");
     });
 
     it("HolafFetchError est une instance de Error avec name", async () => {
@@ -287,5 +287,116 @@ describe("HolafFetch — divers", () => {
             expect(err).toBeInstanceOf(Error);
             expect(err.name).toBe("HolafFetchError");
         }
+    });
+});
+
+describe("HolafFetch — forward des options natives (v0.2.0)", () => {
+    it("forwarde cache:'no-store' au fetch natif", async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+        await HolafFetch.get("/api/x", { cache: "no-store" });
+        expect(fetchMock.mock.calls[0][1].cache).toBe("no-store");
+    });
+
+    it("forwarde toutes les options natives fournies", async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+        await HolafFetch.get("/api/x", {
+            cache: "no-cache",
+            priority: "high",
+            mode: "cors",
+            redirect: "follow",
+            credentials: "include",
+            integrity: "sha256-abc",
+            referrer: "https://example.com",
+            referrerPolicy: "no-referrer",
+            keepalive: true,
+            duplex: "half",
+        });
+        const init = fetchMock.mock.calls[0][1];
+        expect(init.cache).toBe("no-cache");
+        expect(init.priority).toBe("high");
+        expect(init.mode).toBe("cors");
+        expect(init.redirect).toBe("follow");
+        expect(init.credentials).toBe("include");
+        expect(init.integrity).toBe("sha256-abc");
+        expect(init.referrer).toBe("https://example.com");
+        expect(init.referrerPolicy).toBe("no-referrer");
+        expect(init.keepalive).toBe(true);
+        expect(init.duplex).toBe("half");
+    });
+
+    it("les options réservées ne sont pas forwardées (method/headers/body/signal)", async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+        await HolafFetch.post("/api/x", { body: { a: 1 }, headers: { "X-H": "1" } });
+        const init = fetchMock.mock.calls[0][1];
+        // method/headers/body sont gérés par le wrapper (présents mais pas en
+        // tant qu'options natives brutes) ; signal est le controller interne.
+        expect(init.method).toBe("POST");
+        expect(init.headers["X-H"]).toBe("1");
+        expect(init.body).toBe(JSON.stringify({ a: 1 }));
+        expect(init.signal).toBeTruthy();
+        // Aucune option native non fournie ne doit apparaître.
+        expect(init.cache).toBeUndefined();
+        expect(init.mode).toBeUndefined();
+        expect(init.credentials).toBeUndefined();
+    });
+});
+
+describe("HolafFetch — configure() (v0.2.0)", () => {
+    it("configure({timeout}) → request utilise le défaut global", async () => {
+        HolafFetch.configure({ timeout: 5000 });
+        fetchMock.mockImplementation((_url, init) =>
+            new Promise((_resolve, reject) => {
+                init.signal.addEventListener("abort", () => reject(new Error("Aborted")));
+            })
+        );
+        const p = HolafFetch.get("/api/x");
+        const assertion = expect(p).rejects.toThrow("timeout");
+        vi.advanceTimersByTime(5000);
+        await assertion;
+        HolafFetch.configure({ timeout: undefined }); // reset
+    });
+
+    it("override per-request prioritaire sur configure()", async () => {
+        HolafFetch.configure({ timeout: 5000 });
+        fetchMock.mockImplementation((_url, init) =>
+            new Promise((_resolve, reject) => {
+                init.signal.addEventListener("abort", () => reject(new Error("Aborted")));
+            })
+        );
+        // timeout explicite 1000 < 5000 : la requête timeout à 1000.
+        const p = HolafFetch.get("/api/x", { timeout: 1000 });
+        const assertion = expect(p).rejects.toThrow("timeout");
+        vi.advanceTimersByTime(1000);
+        await assertion;
+        HolafFetch.configure({ timeout: undefined }); // reset
+    });
+
+    it("configure({retry}) → défaut global de retry, override per-request", async () => {
+        HolafFetch.configure({ retry: { attempts: 2, backoffMs: 100 } });
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ error: "boom" }, 500))
+            .mockResolvedValueOnce(jsonResponse({ ok: true }));
+        const p = HolafFetch.get("/api/x");
+        await vi.advanceTimersByTimeAsync(2000);
+        await expect(p).resolves.toEqual({ ok: true });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        // override per-request : retry:{attempts:1} désactive le retry global.
+        fetchMock.mockReset();
+        fetchMock.mockResolvedValue(jsonResponse({ error: "boom" }, 500));
+        await expect(HolafFetch.get("/api/x", { retry: { attempts: 1 } })).rejects.toMatchObject({ status: 500 });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        HolafFetch.configure({ retry: null }); // reset
+    });
+
+    it("configure() retourne la config courante", () => {
+        const before = HolafFetch.configure({ timeout: 1234, retry: { attempts: 3, backoffMs: 50 } });
+        expect(before.timeout).toBe(1234);
+        expect(before.retry).toEqual({ attempts: 3, backoffMs: 50 });
+        // le retour est une copie : le muter ne corrompt pas la config interne
+        before.retry.attempts = 99;
+        const after = HolafFetch.configure({});
+        expect(after.retry.attempts).toBe(3);
+        HolafFetch.configure({ timeout: undefined, retry: null }); // reset
     });
 });

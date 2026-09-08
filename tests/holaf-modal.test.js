@@ -406,7 +406,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.2.1");
+        expect(HolafModal.version).toBe("0.3.0");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -645,5 +645,179 @@ describe("thèmes", () => {
         });
         expect(b.el.style.getPropertyValue("--hm-accent")).toBe("#123abc"); // vars > racine
         expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");     // preset intact
+    });
+});
+
+// ── Fenêtre (v0.3.0) : drag / resize / persistance / zoom ───────────────────
+describe("fenêtre (v0.3.0)", () => {
+    it("sans option fenêtre, le comportement historique est inchangé (pas de position absolue)", () => {
+        const ctrl = HolafModal.open({ title: "T" });
+        expect(ctrl.el.style.position).toBe("");
+        expect(ctrl.el.querySelector(".holaf-modal-resize")).toBeNull();
+        expect(ctrl.el.querySelector(".holaf-modal-zoom")).toBeNull();
+    });
+
+    it("draggable : mousedown sur le header + mousemove → left/top changent", () => {
+        const ctrl = HolafModal.open({ title: "D", draggable: true });
+        const header = ctrl.el.querySelector(".holaf-modal-header");
+        header.dispatchEvent(new MouseEvent("mousedown", { clientX: 10, clientY: 10, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: 100, clientY: 80 }));
+        document.dispatchEvent(new MouseEvent("mouseup"));
+        // startLeft/startTop = 0 (jsdom) → left = 0 + (100-10) = 90, top = 0 + (80-10) = 70
+        expect(ctrl.el.style.left).toBe("90px");
+        expect(ctrl.el.style.top).toBe("70px");
+    });
+
+    it("draggable : un mousedown sur un bouton du header ne déclenche pas le drag", () => {
+        const ctrl = HolafModal.open({ title: "D", draggable: true });
+        const closeBtn = ctrl.el.querySelector(".holaf-modal-close");
+        closeBtn.dispatchEvent(new MouseEvent("mousedown", { clientX: 10, clientY: 10, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: 200, clientY: 200 }));
+        document.dispatchEvent(new MouseEvent("mouseup"));
+        expect(ctrl.el.style.left).not.toBe("190px"); // pas déplacé
+    });
+
+    it("resizable : poignée se → width/height changent (minWidth/minHeight respectés)", () => {
+        const ctrl = HolafModal.open({ title: "R", resizable: true, minWidth: 100, minHeight: 50 });
+        const se = ctrl.el.querySelector(".holaf-modal-resize--se");
+        expect(se).not.toBeNull();
+        se.dispatchEvent(new MouseEvent("mousedown", { clientX: 0, clientY: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: 250, clientY: 150 }));
+        document.dispatchEvent(new MouseEvent("mouseup"));
+        expect(ctrl.el.style.width).toBe("250px");
+        expect(ctrl.el.style.height).toBe("150px");
+    });
+
+    it("resizable : 8 poignées créées", () => {
+        const ctrl = HolafModal.open({ title: "R", resizable: true });
+        const dirs = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+        dirs.forEach((d) => {
+            expect(ctrl.el.querySelector(".holaf-modal-resize--" + d)).not.toBeNull();
+        });
+    });
+
+    it("persistance : storageKey → localStorage peuplé après fermeture, restauré à la réouverture", () => {
+        const ctrl = HolafModal.open({ title: "P", storageKey: "win", draggable: true });
+        const header = ctrl.el.querySelector(".holaf-modal-header");
+        header.dispatchEvent(new MouseEvent("mousedown", { clientX: 10, clientY: 10, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: 100, clientY: 80 }));
+        document.dispatchEvent(new MouseEvent("mouseup"));
+        ctrl.close();
+
+        const stored = JSON.parse(localStorage.getItem("holaf-modal-rect:win"));
+        expect(stored).toBeTruthy();
+        expect(stored.left).toBe(90);
+        expect(stored.top).toBe(70);
+
+        // réouverture → restauré
+        const ctrl2 = HolafModal.open({ title: "P2", storageKey: "win", draggable: true });
+        expect(ctrl2.el.style.left).toBe("90px");
+        expect(ctrl2.el.style.top).toBe("70px");
+        ctrl2.close();
+        localStorage.removeItem("holaf-modal-rect:win");
+    });
+
+    it("persistance : callbacks storageGet/storageSet personnalisés", () => {
+        const store = {};
+        const storageGet = vi.fn((k) => store[k] || null);
+        const storageSet = vi.fn((k, rect) => { store[k] = rect; });
+        const ctrl = HolafModal.open({ title: "P", storageKey: "custom", draggable: true, storageGet, storageSet });
+        const header = ctrl.el.querySelector(".holaf-modal-header");
+        header.dispatchEvent(new MouseEvent("mousedown", { clientX: 0, clientY: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: 50, clientY: 40 }));
+        document.dispatchEvent(new MouseEvent("mouseup"));
+        ctrl.close();
+        expect(storageSet).toHaveBeenCalled();
+        expect(store["custom"].left).toBe(50);
+        expect(store["custom"].top).toBe(40);
+    });
+
+    it("content fonction : opts.content(body) est appelé avec le body", () => {
+        const fn = vi.fn((body) => {
+            const p = document.createElement("p");
+            p.textContent = "via-fonction";
+            body.appendChild(p);
+        });
+        const ctrl = HolafModal.open({ title: "F", content: fn });
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn.mock.calls[0][0]).toBe(ctrl.body);
+        expect(ctrl.body.textContent).toContain("via-fonction");
+    });
+
+    it("headerRight : Node inséré dans le header avant le bouton fermer", () => {
+        const badge = document.createElement("span");
+        badge.textContent = "BETA";
+        const ctrl = HolafModal.open({ title: "H", headerRight: badge });
+        const header = ctrl.el.querySelector(".holaf-modal-header");
+        expect(header.contains(badge)).toBe(true);
+        const closeBtn = header.querySelector(".holaf-modal-close");
+        // le badge est avant le bouton fermer (ordre des enfants du header)
+        const children = Array.from(header.children);
+        expect(children.indexOf(badge)).toBeLessThan(children.indexOf(closeBtn));
+    });
+
+    it("labels : ok/cancel/close/loading appliqués dans les helpers", async () => {
+        const labels = { ok: "Oui", cancel: "Non", close: "Fermer X", loading: "Patientez…" };
+        const p = HolafModal.confirm("T", "M", { labels });
+        const btns = document.querySelectorAll(".holaf-modal-footer .holaf-modal-btn");
+        expect(btns[0].textContent).toBe("Non");
+        expect(btns[1].textContent).toBe("Oui");
+        document.querySelector(".holaf-modal-btn-cancel").click();
+        await expect(p).resolves.toBe(false);
+
+        const b = HolafModal.busy(undefined, { labels });
+        expect(document.body.textContent).toContain("Patientez…");
+        b.close();
+    });
+
+    it("alert icon : opts.icon affiche un div icône au-dessus du message", async () => {
+        const p = HolafModal.alert("T", "M", { icon: "⚠️" });
+        const icon = document.querySelector(".holaf-modal-alert-icon");
+        expect(icon).not.toBeNull();
+        expect(icon.textContent).toBe("⚠️");
+        document.querySelector(".holaf-modal-btn-primary").click();
+        await expect(p).resolves.toBeUndefined();
+    });
+
+    it("alert sans icon : aucun div icône (défaut inchangé)", async () => {
+        const p = HolafModal.alert("T", "M");
+        expect(document.querySelector(".holaf-modal-alert-icon")).toBeNull();
+        document.querySelector(".holaf-modal-btn-primary").click();
+        await expect(p).resolves.toBeUndefined();
+    });
+
+    it("zoom : boutons −/+ appliquent un zoom sur le body et le persistent", () => {
+        const ctrl = HolafModal.open({ title: "Z", zoom: { key: "ztest", step: 0.1 } });
+        const zoomIn = ctrl.el.querySelector(".holaf-modal-zoom--in");
+        const zoomOut = ctrl.el.querySelector(".holaf-modal-zoom--out");
+        expect(zoomIn).not.toBeNull();
+        expect(zoomOut).not.toBeNull();
+        expect(ctrl.body.style.zoom).toBe("1");
+        zoomIn.click();
+        expect(ctrl.body.style.zoom).toBe("1.1");
+        zoomIn.click();
+        expect(ctrl.body.style.zoom).toBe("1.2");
+        zoomOut.click();
+        expect(ctrl.body.style.zoom).toBe("1.1");
+        expect(localStorage.getItem("holaf-modal-zoom:ztest")).toBe("1.1");
+        localStorage.removeItem("holaf-modal-zoom:ztest");
+    });
+
+    it("themes.update : fusionne les vars d'un thème enregistré", () => {
+        HolafModal.themes.register("dyn", { "--hm-bg": "#111", "--hm-text": "#eee" });
+        const ret = HolafModal.themes.update("dyn", { "--hm-bg": "#222" });
+        expect(ret).toEqual({ "--hm-bg": "#222", "--hm-text": "#eee" });
+        expect(HolafModal.themes.get("dyn")["--hm-bg"]).toBe("#222");
+        expect(HolafModal.themes.get("dyn")["--hm-text"]).toBe("#eee");
+        ret["--hm-bg"] = "#hack";
+        expect(HolafModal.themes.get("dyn")["--hm-bg"]).toBe("#222");
+    });
+
+    it("themes.update : thème inconnu → enregistré à la place (avec warning)", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const ret = HolafModal.themes.update("nouveau", { "--hm-bg": "#333" });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(HolafModal.themes.get("nouveau")["--hm-bg"]).toBe("#333");
+        expect(ret).toEqual({ "--hm-bg": "#333" });
     });
 });

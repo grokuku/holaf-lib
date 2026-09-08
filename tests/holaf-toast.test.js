@@ -208,7 +208,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.2.1");
+        expect(HolafToast.version).toBe("0.3.0");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -354,5 +354,153 @@ describe("HolafToast — configure()", () => {
         expect(containers(".holaf-toast-container--top-left").length).toBe(1);
         expect(containers(".holaf-toast-container--bottom-left").length).toBe(0);
         HolafToast.configure({ position: "top-right", duration: 4000 });
+    });
+});
+
+describe("HolafToast — id métier (v0.3.0)", () => {
+    it("show({id}) : un toast vivant portant déjà l'id est mis à jour au lieu d'en créer un nouveau", () => {
+        const a = HolafToast.show({ id: "upload", message: "Démarrage…", duration: 0 });
+        const b = HolafToast.show({ id: "upload", message: "50 %", title: "Upload", type: "warning", duration: 0 });
+        expect(b).toBe(a); // même contrôleur
+        expect(toasts().length).toBe(1); // pas de doublon
+        expect(document.querySelector(".holaf-toast__message").textContent).toBe("50 %");
+        expect(document.querySelector(".holaf-toast__title").textContent).toBe("Upload");
+        expect(document.querySelector(".holaf-toast").classList.contains("holaf-toast--warning")).toBe(true);
+    });
+
+    it("update(id, opts) met à jour par id métier", () => {
+        HolafToast.show({ id: "job", message: "a", duration: 0 });
+        const ctrl = HolafToast.update("job", { message: "b", type: "success" });
+        expect(ctrl).toBeTruthy();
+        expect(document.querySelector(".holaf-toast__message").textContent).toBe("b");
+        expect(document.querySelector(".holaf-toast").classList.contains("holaf-toast--success")).toBe(true);
+    });
+
+    it("update(ctrl, opts) fonctionne aussi par référence ctrl (comportement préservé)", () => {
+        const c = HolafToast.show({ message: "x", duration: 0 });
+        HolafToast.update(c, { message: "y" });
+        expect(document.querySelector(".holaf-toast__message").textContent).toBe("y");
+    });
+
+    it("hide(id) ferme par id métier", () => {
+        const onClose = vi.fn();
+        HolafToast.show({ id: "tmp", message: "x", duration: 0, onClose });
+        const ok = HolafToast.hide("tmp");
+        expect(ok).toBe(true);
+        expect(onClose).toHaveBeenCalledWith("manual");
+        vi.advanceTimersByTime(300);
+        expect(toasts().length).toBe(0);
+        // après fermeture, l'id est libéré : un nouveau show crée un nouveau toast
+        HolafToast.show({ id: "tmp", message: "neuf", duration: 0 });
+        expect(toasts().length).toBe(1);
+        expect(document.querySelector(".holaf-toast__message").textContent).toBe("neuf");
+    });
+
+    it("update/hide sur un id inconnu ne plante pas", () => {
+        expect(HolafToast.update("inconnu", { message: "x" })).toBeNull();
+        expect(HolafToast.hide("inconnu")).toBe(false);
+    });
+});
+
+describe("HolafToast — progression manuelle (v0.3.0)", () => {
+    it("show({progress:'manual'}) : barre visible (largeur 0) même avec duration:0, pas de timer", () => {
+        const onClose = vi.fn();
+        const c = HolafToast.show({ message: "x", progress: "manual", duration: 0, onClose });
+        const bar = c.el.querySelector(".holaf-toast__progress");
+        expect(bar).not.toBeNull();
+        expect(bar.classList.contains("holaf-toast__progress--manual")).toBe(true);
+        expect(bar.style.width).toBe("0%");
+        // pas de timer de fermeture auto
+        vi.advanceTimersByTime(60000);
+        expect(onClose).not.toHaveBeenCalled();
+        expect(toasts().length).toBe(1);
+    });
+
+    it("update({progress: N}) pilote la largeur de la barre (0-100)", () => {
+        const c = HolafToast.show({ message: "x", progress: "manual", duration: 0 });
+        const bar = c.el.querySelector(".holaf-toast__progress");
+        HolafToast.update(c, { progress: 50 });
+        expect(bar.style.width).toBe("50%");
+        HolafToast.update(c, { progress: 100 });
+        expect(bar.style.width).toBe("100%");
+        // clampé 0-100
+        HolafToast.update(c, { progress: 150 });
+        expect(bar.style.width).toBe("100%");
+        HolafToast.update(c, { progress: -5 });
+        expect(bar.style.width).toBe("0%");
+    });
+
+    it("le mode temporel reste le défaut (progress absent → timer + barre animée)", () => {
+        const c = HolafToast.show({ message: "x", duration: 1000 });
+        const bar = c.el.querySelector(".holaf-toast__progress");
+        expect(bar).not.toBeNull();
+        expect(bar.classList.contains("holaf-toast__progress--manual")).toBe(false);
+        expect(bar.style.animationDuration).toBe("1000ms");
+        // update({progress}) sans mode manuel n'a aucun effet sur la largeur
+        HolafToast.update(c, { progress: 50 });
+        expect(bar.style.width).toBe("");
+    });
+});
+
+describe("HolafToast — html:true (v0.3.0)", () => {
+    it("html:true → innerHTML ; défaut → textContent", () => {
+        HolafToast.show({ message: "<b>gras</b>", html: true, duration: 0 });
+        const msg = document.querySelector(".holaf-toast__message");
+        expect(msg.querySelector("b")).not.toBeNull();
+        expect(msg.innerHTML).toBe("<b>gras</b>");
+
+        document.body.innerHTML = "";
+        HolafToast.show({ message: "<b>pas gras</b>", duration: 0 });
+        const msg2 = document.querySelector(".holaf-toast__message");
+        expect(msg2.querySelector("b")).toBeNull();
+        expect(msg2.textContent).toBe("<b>pas gras</b>");
+    });
+});
+
+describe("HolafToast — newestFirst (v0.3.0)", () => {
+    it("configure({newestFirst:true}) → les nouveaux toasts s'insèrent en premier", () => {
+        HolafToast.configure({ newestFirst: true });
+        HolafToast.show({ message: "premier", duration: 0 });
+        HolafToast.show({ message: "second", duration: 0 });
+        const msgs = document.querySelectorAll(".holaf-toast__message");
+        expect(msgs[0].textContent).toBe("second"); // prepend
+        expect(msgs[1].textContent).toBe("premier");
+        HolafToast.configure({ newestFirst: false }); // reset
+    });
+
+    it("défaut (false) : append, comportement historique préservé", () => {
+        HolafToast.show({ message: "premier", duration: 0 });
+        HolafToast.show({ message: "second", duration: 0 });
+        const msgs = document.querySelectorAll(".holaf-toast__message");
+        expect(msgs[0].textContent).toBe("premier");
+        expect(msgs[1].textContent).toBe("second");
+    });
+});
+
+describe("HolafToast — themes.update (v0.3.0)", () => {
+    it("fusionne les vars d'un thème enregistré", () => {
+        HolafToast.themes.register("dyn", { "--ht-bg": "#111", "--ht-fg": "#eee" });
+        const ret = HolafToast.themes.update("dyn", { "--ht-bg": "#222" });
+        expect(ret).toEqual({ "--ht-bg": "#222", "--ht-fg": "#eee" }); // fusion
+        expect(HolafToast.themes.get("dyn")["--ht-bg"]).toBe("#222");
+        expect(HolafToast.themes.get("dyn")["--ht-fg"]).toBe("#eee");
+        // le retour est une copie protégée
+        ret["--ht-bg"] = "#hack";
+        expect(HolafToast.themes.get("dyn")["--ht-bg"]).toBe("#222");
+    });
+
+    it("thème inconnu → enregistré à la place (avec warning)", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const ret = HolafToast.themes.update("nouveau", { "--ht-bg": "#333" });
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(HolafToast.themes.get("nouveau")["--ht-bg"]).toBe("#333");
+        expect(ret).toEqual({ "--ht-bg": "#333" });
+    });
+
+    it("nom invalide → refusé sans casser le registre", () => {
+        const before = HolafToast.themes.list();
+        HolafToast.themes.update("", { "--ht-bg": "#000" });
+        HolafToast.themes.update(null, { "--ht-bg": "#000" });
+        expect(HolafToast.themes.list()).toEqual(before);
     });
 });

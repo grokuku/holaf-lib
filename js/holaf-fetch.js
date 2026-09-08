@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafFetch · version 0.1.1
+ * Holaf UI — Brique HolafFetch · version 0.2.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Wrapper HTTP maison, purement LOGIQUE : aucun DOM, aucun CSS. Il remplace
  * les apiFetch maison des projets (AiKore, CaddyPanel, airunner, Kinoscribe,
@@ -34,10 +34,44 @@
 const HolafFetch = (function () {
     "use strict";
 
-    const VERSION = "0.1.1";
+    const VERSION = "0.2.0";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const DEFAULT_TIMEOUT = 30000; // ms ; 0 = aucun timeout
+    // Options NATIVES du fetch à forwarder telles quelles (v0.2.0). Les options
+    // gérées par la brique (method, headers, body, signal, auth, timeout,
+    // retry, on, raw) ne sont JAMAIS forwardées — elles pilotent le wrapper.
+    const NATIVE_OPTIONS = [
+        "cache", "priority", "mode", "redirect", "credentials",
+        "integrity", "referrer", "referrerPolicy", "keepalive", "duplex",
+    ];
+
+    // ─── Défauts globaux (configure) ────────────────────────────────────────
+    // Volatils, en mémoire uniquement. request() résout :
+    //   opts.timeout ?? config.timeout ?? DEFAULT_TIMEOUT
+    //   opts.retry   ?? config.retry
+    // configure() les remplace pour TOUTES les requêtes qui ne passent pas
+    // d'option explicite. Une option explicite dans request() prime toujours.
+    const config = {
+        timeout: undefined, // undefined → DEFAULT_TIMEOUT
+        retry: null,       // null → aucun retry par défaut
+    };
+
+    // Configure les défauts globaux (timeout, retry). Retourne la config
+    // courante (copie) : { timeout, retry }.
+    function configure(opts) {
+        opts = opts || {};
+        if (opts.timeout !== undefined) {
+            config.timeout = opts.timeout === null ? undefined : (Number(opts.timeout) || 0);
+        }
+        if (opts.retry !== undefined) {
+            config.retry = opts.retry === null ? null : opts.retry;
+        }
+        return {
+            timeout: config.timeout === undefined ? DEFAULT_TIMEOUT : config.timeout,
+            retry: config.retry ? Object.assign({}, config.retry) : null,
+        };
+    }
     // Traces d'une page de login SSO (Authentik / outpost) dans le HTML reçu.
     const LOGIN_PAGE_MARKERS = ["authentik", "outpost", "sign-in"];
 
@@ -177,8 +211,13 @@ const HolafFetch = (function () {
     async function request(url, opts) {
         opts = opts || {};
         const method = (opts.method || "GET").toUpperCase();
-        const timeout = opts.timeout === undefined ? DEFAULT_TIMEOUT : (Number(opts.timeout) || 0);
-        const retry = opts.retry || null;
+        // Résolution des défauts globaux (configure) : une option explicite
+        // dans opts prime ; sinon le défaut global ; sinon la valeur historique.
+        const timeoutRaw = (opts.timeout !== undefined && opts.timeout !== null)
+            ? opts.timeout
+            : (config.timeout !== undefined && config.timeout !== null ? config.timeout : DEFAULT_TIMEOUT);
+        const timeout = Number(timeoutRaw) || 0;
+        const retry = (opts.retry !== undefined && opts.retry !== null) ? opts.retry : config.retry;
         const attempts = retry && retry.attempts ? Math.max(1, retry.attempts) : 1;
         const backoffMs = retry && retry.backoffMs ? (Number(retry.backoffMs) || 0) : 0;
 
@@ -219,7 +258,17 @@ const HolafFetch = (function () {
             }
 
             try {
-                const res = await fetch(url, { method, headers, body, signal: controller.signal });
+                // Options natives forwardées telles quelles (v0.2.0) : cache,
+                // priority, mode, redirect, credentials, integrity, referrer,
+                // referrerPolicy, keepalive, duplex. Les options réservées
+                // (method, headers, body, signal, auth, timeout, retry, on,
+                // raw) ne sont jamais forwardées — elles pilotent le wrapper.
+                const init = { method, headers, body, signal: controller.signal };
+                for (let i = 0; i < NATIVE_OPTIONS.length; i++) {
+                    const k = NATIVE_OPTIONS[i];
+                    if (opts[k] !== undefined) init[k] = opts[k];
+                }
+                const res = await fetch(url, init);
 
                 // Hook de statut (ex. on: { status: (code) => … }).
                 if (opts.on && typeof opts.on.status === "function") {
@@ -296,6 +345,8 @@ const HolafFetch = (function () {
         put,
         patch,
         delete: del,
+        // Défauts globaux (timeout, retry) — voir README.
+        configure: configure,
         HolafFetchError,
     };
 })();

@@ -7,7 +7,7 @@ comportement **blindé** et homogène : JSON vérifié avant parsing, erreurs
 typées, timeout, retry, et une **authentification enfichable** configurée par
 l'hôte.
 
-**Version : 0.1.1**
+**Version : 0.2.0**
 
 ---
 
@@ -63,6 +63,57 @@ HolafFetch.put(url, opts)
 HolafFetch.patch(url, opts)
 HolafFetch.delete(url, opts)
 ```
+
+---
+
+## Options natives forwardées (v0.2.0)
+
+`request()` construit l'appel `fetch(url, init)` en **forwardant telles quelles**
+les options natives du fetch que vous fournissez dans `opts` :
+
+`cache`, `priority`, `mode`, `redirect`, `credentials`, `integrity`,
+`referrer`, `referrerPolicy`, `keepalive`, `duplex`.
+
+```js
+HolafFetch.get("/api/items", {
+    cache: "no-store",
+    credentials: "include",
+    redirect: "follow",
+});
+// → fetch(url, { method, headers, body, signal, cache: "no-store",
+//                credentials: "include", redirect: "follow" })
+```
+
+Les options **réservées** (gérées par la brique, jamais forwardées) sont :
+`method`, `headers`, `body`, `signal`, `auth`, `timeout`, `retry`, `on`, `raw`.
+
+---
+
+## Défauts globaux : `configure()`
+
+Pour changer les **défauts** de la brique (timeout, retry) pour toutes les
+requêtes qui ne passent pas d'option explicite :
+
+```js
+HolafFetch.configure({ timeout: 5000, retry: { attempts: 2, backoffMs: 300 } });
+```
+
+`request()` résout :
+
+- `opts.timeout ?? config.timeout ?? 30000` (défaut historique 30 s) ;
+- `opts.retry ?? config.retry` (défaut : aucun retry).
+
+Une option explicite dans `request()` (ou un helper) **prime toujours** sur le
+défaut configuré. `configure()` retourne la **config courante** (une copie) :
+
+```js
+const cfg = HolafFetch.configure({ timeout: 5000 });
+console.log(cfg.timeout); // 5000
+```
+
+- **Volatil, en mémoire uniquement** : rien n'est écrit en localStorage.
+- Sans appel à `configure()`, les défauts historiques sont strictement
+  conservés : timeout 30 s, aucun retry.
 
 ---
 

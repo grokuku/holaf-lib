@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafToast · version 0.2.1
+ * Holaf UI — Brique HolafToast · version 0.3.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Notifications flottantes (toasts) autonomes, zéro dépendance runtime :
  * 4 types (info/success/warning/error) avec icône, empilement par position
@@ -29,7 +29,7 @@
 const HolafToast = (function () {
     "use strict";
 
-    const VERSION = "0.2.1";
+    const VERSION = "0.3.0";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const CSS_ID = "holaf-toast-style";
@@ -46,6 +46,11 @@ const HolafToast = (function () {
     // Conteneurs par position, créés paresseusement une seule fois.
     // { "top-right": { el, toasts: [ { el, timer, remaining, start, close, ... } ] } }
     const containers = {};
+
+    // Registre id métier → toast (v0.3.0) : show({ id }) / update(id) / hide(id).
+    // Un toast vivant portant déjà cet id est MIS À JOUR au lieu d'en créer un
+    // nouveau. Le registre est nettoyé à la fermeture du toast.
+    const idRegistry = Object.create(null);
 
     function str(v, fallback) {
         return v === undefined || v === null ? (fallback || "") : String(v);
@@ -107,6 +112,27 @@ const HolafToast = (function () {
     function themesGet(name) {
         const t = themeRegistry[name];
         return t ? Object.assign({}, t) : null;
+    }
+
+    // Met à jour / FUSIONNE les variables d'un thème enregistré (v0.3.0).
+    // Utile pour un hôte qui recalcule ses vars (ex. thème dynamique). Les
+    // clés fournies écrasent celles du thème existant ; les autres restent.
+    // Si le thème n'existe pas, il est enregistré (avec un avertissement).
+    // Retourne une copie protégée du thème résultant.
+    function themesUpdate(name, vars) {
+        if (typeof name !== "string" || !name.trim()) {
+            console.error("[HolafToast] themes.update : nom de thème invalide (chaîne non vide attendue).");
+            return null;
+        }
+        const existing = themeRegistry[name];
+        if (!existing) {
+            console.warn('[HolafToast] themes.update : thème inconnu "' + name + '" — enregistré à la place.');
+            return themesRegister(name, vars);
+        }
+        const merged = Object.assign({}, existing, filterVars(vars));
+        themeRegistry[name] = merged;
+        warnedUnknownThemes.delete(name);
+        return Object.assign({}, merged);
     }
 
     // Noms des thèmes enregistrés (préréglages + customs).
@@ -262,6 +288,9 @@ const HolafToast = (function () {
     // passent pas d'option explicite. Volatil, en mémoire uniquement.
     let defaultPosition = "top-right";
     let defaultDuration = DEFAULT_DURATION;
+    // v0.3.0 : si true, les nouveaux toasts s'insèrent EN PREMIER dans le
+    // conteneur (prepend) au lieu d'ajouter à la fin (append, défaut historique).
+    let newestFirst = false;
 
     function configure(opts) {
         opts = opts || {};
@@ -280,6 +309,9 @@ const HolafToast = (function () {
         }
         if (opts.theme !== undefined) {
             setTheme(opts.theme);
+        }
+        if (opts.newestFirst !== undefined) {
+            newestFirst = !!opts.newestFirst;
         }
     }
 
@@ -413,6 +445,14 @@ const HolafToast = (function () {
 .holaf-toast__progress--paused {
     animation-play-state: paused;
 }
+/* Progression MANUELLE (v0.3.0) : show({ progress: 'manual' }) → barre visible
+ * (largeur 0) pilotée par update({ progress: 0-100 }) ; pas d'animation, pas
+ * de timer de fermeture auto. La largeur est posée inline (N%). */
+.holaf-toast__progress--manual {
+    animation: none;
+    transform: none;
+    width: 0%;
+}
 @keyframes holaf-toast-progress {
     from { transform: scaleX(1); }
     to   { transform: scaleX(0); }
@@ -507,6 +547,21 @@ const HolafToast = (function () {
         }
         ensureStyle();
 
+        // ── id métier (v0.3.0) : un toast vivant portant déjà cet id est MIS
+        // À JOUR au lieu d'en créer un nouveau. Retourne le contrôleur existant.
+        if (typeof opts.id === "string" && opts.id) {
+            const existing = idRegistry[opts.id];
+            if (existing && !existing.closed) {
+                existing.ctrl.update({
+                    message: opts.message,
+                    title: opts.title,
+                    type: opts.type,
+                    html: opts.html,
+                });
+                return existing.ctrl;
+            }
+        }
+
         const type = VALID_TYPES.indexOf(opts.type) >= 0 ? opts.type : "info";
         const position = VALID_POSITIONS.indexOf(opts.position) >= 0
             ? opts.position
@@ -554,7 +609,9 @@ const HolafToast = (function () {
 
         const messageEl = document.createElement("div");
         messageEl.className = "holaf-toast__message";
-        messageEl.textContent = str(opts.message);
+        // v0.3.0 : html:true → innerHTML (contenu de confiance) ; défaut textContent.
+        if (opts.html) messageEl.innerHTML = str(opts.message);
+        else messageEl.textContent = str(opts.message);
         bodyEl.appendChild(messageEl);
 
         // ── Actions ──
@@ -589,17 +646,19 @@ const HolafToast = (function () {
         });
         el.appendChild(closeBtn);
 
-        // ── Barre de progression (durée restante) ──
-        // Animation CSS pilotée par le temps : `animation-duration` = durée du
-        // toast (inline, prioritaire), la barre se vide en temps réel de
-        // scaleX(1) → scaleX(0). Au survol on la gèle via la classe paused ;
-        // duration 0 (persistant) = pas de barre. En prefers-reduced-motion la
-        // barre reste affichée pleine et statique (voir CSS).
+        // ── Barre de progression ──
+        // Mode TEMPOREL (défaut) : animation CSS pilotée par le temps, la barre
+        // se vide de scaleX(1) → scaleX(0) sur `duration` ; duration 0 = pas de
+        // barre. Mode MANUEL (v0.3.0, progress:'manual') : barre VISIBLE (largeur
+        // 0) même avec duration:0, pilotée par update({ progress: 0-100 }), et
+        // AUCUN timer de fermeture auto.
+        const manualProgress = opts.progress === "manual";
         let progressEl = null;
-        if (duration > 0) {
+        if (duration > 0 || manualProgress) {
             progressEl = document.createElement("div");
-            progressEl.className = "holaf-toast__progress";
-            progressEl.style.animationDuration = duration + "ms";
+            progressEl.className = "holaf-toast__progress" + (manualProgress ? " holaf-toast__progress--manual" : "");
+            if (manualProgress) progressEl.style.width = "0%";
+            else progressEl.style.animationDuration = duration + "ms";
             el.appendChild(progressEl);
         }
 
@@ -608,7 +667,7 @@ const HolafToast = (function () {
         // animation CSS seule : au survol on annule le timer ET on gèle la
         // barre (classe paused → animation-play-state, position conservée),
         // au départ on réarme pour le reste et on relance l'animation.
-        const toast = { el, timer: null, remaining: duration, startedAt: 0, closed: false };
+        const toast = { el, timer: null, remaining: duration, startedAt: 0, closed: false, manualProgress };
 
         function clearTimer() {
             if (toast.timer !== null) {
@@ -618,7 +677,8 @@ const HolafToast = (function () {
         }
 
         function armTimer() {
-            if (duration <= 0 || toast.closed) return;
+            // Mode manuel : PAS de timer de fermeture auto.
+            if (toast.manualProgress || duration <= 0 || toast.closed) return;
             toast.startedAt = Date.now();
             toast.timer = setTimeout(() => close("timeout"), toast.remaining);
         }
@@ -651,6 +711,10 @@ const HolafToast = (function () {
             if (toast.closed) return;
             toast.closed = true;
             clearTimer();
+            // Nettoyage du registre id métier (v0.3.0).
+            if (typeof opts.id === "string" && opts.id && idRegistry[opts.id] === toast) {
+                delete idRegistry[opts.id];
+            }
             const idx = container.toasts.indexOf(toast);
             if (idx >= 0) container.toasts.splice(idx, 1);
             // Sortie en fondu ; suppression à la fin d'animation (ou après un
@@ -675,7 +739,22 @@ const HolafToast = (function () {
             close: () => close("manual"),
             update(patch) {
                 patch = patch || {};
-                if (patch.message !== undefined) messageEl.textContent = str(patch.message);
+                if (patch.message !== undefined) {
+                    if (patch.html) messageEl.innerHTML = str(patch.message);
+                    else messageEl.textContent = str(patch.message);
+                }
+                if (patch.title !== undefined) {
+                    if (patch.title === null || patch.title === "") {
+                        if (titleEl) { titleEl.remove(); titleEl = null; }
+                    } else {
+                        if (!titleEl) {
+                            titleEl = document.createElement("div");
+                            titleEl.className = "holaf-toast__title";
+                            bodyEl.insertBefore(titleEl, messageEl);
+                        }
+                        titleEl.textContent = str(patch.title);
+                    }
+                }
                 if (patch.type !== undefined && VALID_TYPES.indexOf(patch.type) >= 0) {
                     el.classList.remove(...VALID_TYPES.map((t) => "holaf-toast--" + t));
                     el.classList.add("holaf-toast--" + patch.type);
@@ -685,17 +764,30 @@ const HolafToast = (function () {
                     el.setAttribute("aria-live", isErr ? "assertive" : "polite");
                     toast.type = patch.type;
                 }
+                // Progression manuelle (v0.3.0) : largeur de la barre = N%.
+                if (patch.progress !== undefined && progressEl && toast.manualProgress) {
+                    const p = Math.max(0, Math.min(100, Number(patch.progress) || 0));
+                    progressEl.style.width = p + "%";
+                }
             },
         };
         toast.type = type;
+        toast.ctrl = ctrl;
 
         // ── Stack : max MAX_VISIBLE visibles — le plus ancien saute ──
         toast.closeWithReason = close; // interne : fermeture « replaced »
         container.toasts.push(toast);
-        container.el.appendChild(el);
+        // v0.3.0 : newestFirst → prepend (en premier) au lieu d'append (défaut).
+        if (newestFirst) container.el.insertBefore(el, container.el.firstChild);
+        else container.el.appendChild(el);
         while (container.toasts.length > MAX_VISIBLE) {
             const oldest = container.toasts.shift();
             oldest.closeWithReason("replaced");
+        }
+
+        // Enregistrement du registre id métier (v0.3.0).
+        if (typeof opts.id === "string" && opts.id) {
+            idRegistry[opts.id] = toast;
         }
 
         armTimer();
@@ -710,6 +802,40 @@ const HolafToast = (function () {
         };
     }
 
+    // ─── Résolution id métier / référence ctrl (v0.3.0) ─────────────────────
+    // update(idOrCtrl, opts) et hide(idOrCtrl) acceptent un id string (résolu
+    // via le registre) OU la référence ctrl retournée par show().
+    function findToastByCtrl(ctrl) {
+        for (const pos in containers) {
+            const c = containers[pos];
+            for (let i = 0; i < c.toasts.length; i++) {
+                if (c.toasts[i].ctrl === ctrl) return c.toasts[i];
+            }
+        }
+        return null;
+    }
+
+    function resolveToast(idOrCtrl) {
+        if (typeof idOrCtrl === "string") return idRegistry[idOrCtrl] || null;
+        if (idOrCtrl && typeof idOrCtrl === "object") return findToastByCtrl(idOrCtrl);
+        return null;
+    }
+
+    // Met à jour un toast par id métier OU par référence ctrl. Retourne le
+    // contrôleur mis à jour (ou null si introuvable).
+    function update(idOrCtrl, opts) {
+        const toast = resolveToast(idOrCtrl);
+        if (toast && !toast.closed) toast.ctrl.update(opts || {});
+        return toast ? toast.ctrl : null;
+    }
+
+    // Ferme un toast par id métier OU par référence ctrl.
+    function hide(idOrCtrl) {
+        const toast = resolveToast(idOrCtrl);
+        if (toast && !toast.closed) toast.ctrl.close();
+        return !!toast;
+    }
+
     return {
         version: VERSION,
         show,
@@ -717,20 +843,25 @@ const HolafToast = (function () {
         error: helper("error"),
         warning: helper("warning"),
         info: helper("info"),
+        // v0.3.0 : update/hide par id métier OU référence ctrl.
+        update: update,
+        hide: hide,
         // Thème global par défaut (volatil) : s'applique aux toasts qui ne
         // passent pas d'option `theme` — voir README section « Thèmes ».
         setTheme: setTheme,
         clearTheme: clearTheme,
-        // Défauts globaux (position, durée, thème) — voir README.
+        // Défauts globaux (position, durée, thème, newestFirst) — voir README.
         configure: configure,
         // Registre de thèmes (préréglages + customs) :
         //   themes.register(name, vars) — enregistre/remplace (retourne une copie protégée)
         //   themes.get(name)            — copie des variables ou null
         //   themes.list()               — noms enregistrés
+        //   themes.update(name, vars)   — fusionne les vars d'un thème enregistré (v0.3.0)
         themes: {
             register: themesRegister,
             get: themesGet,
             list: themesList,
+            update: themesUpdate,
         },
     };
 })();

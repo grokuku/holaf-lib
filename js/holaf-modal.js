@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafModal · version 0.2.1
+ * Holaf UI — Brique HolafModal · version 0.3.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Modale autonome (zéro dépendance runtime) : overlay, pile d'overlays
  * document-level, helpers Promise (alert / confirm / prompt / busy), focus
@@ -26,7 +26,7 @@
 const HolafModal = (function () {
     "use strict";
 
-    const VERSION = "0.2.1";
+    const VERSION = "0.3.0";
 
     // ─── État global du module (partagé par toutes les modales) ──────────────
     // Pile des modales ouvertes : la DERNIÈRE entrée est le « sommet », la
@@ -116,6 +116,26 @@ const HolafModal = (function () {
     function themesGet(name) {
         const t = themeRegistry[name];
         return t ? Object.assign({}, t) : null;
+    }
+
+    // Met à jour / FUSIONNE les variables d'un thème enregistré (v0.3.0).
+    // Utile pour un hôte qui recalcule ses vars. Les clés fournies écrasent
+    // celles du thème existant ; les autres restent. Si le thème n'existe pas,
+    // il est enregistré (avec un avertissement). Retourne une copie protégée.
+    function themesUpdate(name, vars) {
+        if (typeof name !== "string" || !name.trim()) {
+            console.error("[HolafModal] themes.update : nom de thème invalide (chaîne non vide attendue).");
+            return null;
+        }
+        const existing = themeRegistry[name];
+        if (!existing) {
+            console.warn('[HolafModal] themes.update : thème inconnu "' + name + '" — enregistré à la place.');
+            return themesRegister(name, vars);
+        }
+        const merged = Object.assign({}, existing, filterVars(vars));
+        themeRegistry[name] = merged;
+        warnedUnknownThemes.delete(name);
+        return Object.assign({}, merged);
     }
 
     // Noms des thèmes enregistrés (préréglages + customs).
@@ -358,6 +378,21 @@ body.holaf-modal-open { overflow: hidden; }
 @keyframes holaf-modal-pop { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes holaf-modal-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .holaf-modal-overlay, .holaf-modal-root, .holaf-modal-spinner { animation: none; } }
+/* v0.3.0 — fenêtre (OPT-IN) : poignées de resize + boutons zoom + icône alert.
+ * Ces classes n'apparaissent que si les options correspondantes sont activées
+ * (resizable / zoom / icon) — le markup et le CSS par défaut restent inchangés. */
+.holaf-modal-resize { position: absolute; z-index: 3; }
+.holaf-modal-resize--n { top: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.holaf-modal-resize--s { bottom: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.holaf-modal-resize--e { right: 0; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.holaf-modal-resize--w { left: 0; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.holaf-modal-resize--ne { top: 0; right: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+.holaf-modal-resize--nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.holaf-modal-resize--se { bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.holaf-modal-resize--sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+.holaf-modal-zoom { background: none; border: 1px solid var(--hm-border); color: var(--hm-text-secondary); font-size: 14px; line-height: 1; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+.holaf-modal-zoom:hover { color: var(--hm-text); border-color: var(--hm-text-secondary); }
+.holaf-modal-alert-icon { font-size: 28px; text-align: center; margin-bottom: 10px; }
 `;
 
     let cssInjected = false;
@@ -465,6 +500,8 @@ body.holaf-modal-open { overflow: hidden; }
         const focusTrap = opts.focusTrap !== undefined ? !!opts.focusTrap : true;
         const scrollLock = opts.scrollLock !== undefined ? !!opts.scrollLock : true;
         const hideClose = !!opts.hideClose;
+        // v0.3.0 : libellés personnalisables (boutons / fermeture / chargement).
+        const labels = opts.labels || {};
 
         // ── Overlay : toujours créé (backdrop si modal, transparent sinon) —
         // en mode non-modal, l'overlay laisse passer les clics (pointer-events
@@ -512,13 +549,17 @@ body.holaf-modal-open { overflow: hidden; }
         titleEl.id = titleId;
         titleEl.textContent = str(opts.title);
         header.appendChild(titleEl);
+        // v0.3.0 : headerRight (Node) inséré dans le header avant le bouton fermer.
+        if (opts.headerRight && isNode(opts.headerRight)) {
+            header.appendChild(opts.headerRight);
+        }
         if (!hideClose) {
             const closeBtn = document.createElement("button");
             closeBtn.type = "button";
             closeBtn.className = "holaf-modal-close";
             closeBtn.textContent = "✕";
-            closeBtn.title = "Fermer";
-            closeBtn.setAttribute("aria-label", "Fermer");
+            closeBtn.title = labels.close || "Fermer";
+            closeBtn.setAttribute("aria-label", labels.close || "Fermer");
             closeBtn.addEventListener("click", () => close());
             header.appendChild(closeBtn);
         }
@@ -580,6 +621,13 @@ body.holaf-modal-open { overflow: hidden; }
         document.body.appendChild(overlay);
         if (scrollLock) lockScroll();
 
+        // ── Fenêtre (v0.3.0, OPT-IN) : drag / resize / persistance / zoom ────
+        // Toutes les options sont désactivées par défaut ; sans elles, le
+        // comportement historique (centré, non-draggable, non-resizable) est
+        // strictement inchangé. windowState.saveRect est appelé à la fermeture.
+        const windowState = { saveRect: null };
+        initWindowFeatures();
+
         let closed = false;
         const entry = {
             el: el,
@@ -589,10 +637,215 @@ body.holaf-modal-open { overflow: hidden; }
         };
         stack.push(entry);
 
+        // ── Fenêtre (v0.3.0) : drag / resize / persistance / zoom ────────────
+        // Fonction déclarée ici (hoistée) : appelée plus haut après l'insertion
+        // DOM. Toutes les options sont OPT-IN ; sans elles, rien ne change.
+        function initWindowFeatures() {
+            const draggable = !!opts.draggable;
+            const resizable = !!opts.resizable;
+            const storageKey = (typeof opts.storageKey === "string" && opts.storageKey) ? opts.storageKey : null;
+            const persistPos = opts.persistPos !== false;
+            const persistSize = opts.persistSize !== false;
+            const zoomSpec = opts.zoom;
+
+            const windowMode = draggable || resizable || storageKey || zoomSpec;
+            if (!windowMode) return;
+
+            // Positionnement absolu + origine 0 0 pour drag/resize. L'overlay
+            // garde son padding par défaut ; on l'annule ici (opt-in) pour que
+            // les coordonnées left/top soient alignées sur le viewport.
+            overlay.style.padding = "0";
+            el.style.position = "absolute";
+            el.style.transformOrigin = "0 0";
+
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const w = el.offsetWidth || 440;
+            const h = el.offsetHeight || 300;
+            // Centrage initial (surchargé ensuite par la restauration éventuelle).
+            el.style.left = Math.round((vw - w) / 2) + "px";
+            el.style.top = Math.round((vh - h) / 2) + "px";
+
+            // ── Persistance position/taille ──
+            function storageGet(key) {
+                if (typeof opts.storageGet === "function") return opts.storageGet(key);
+                try {
+                    const raw = localStorage.getItem("holaf-modal-rect:" + key);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) { return null; }
+            }
+            function storageSet(key, rect) {
+                if (typeof opts.storageSet === "function") { opts.storageSet(key, rect); return; }
+                try { localStorage.setItem("holaf-modal-rect:" + key, JSON.stringify(rect)); } catch (e) {}
+            }
+            function saveRect() {
+                if (!storageKey) return;
+                const rect = {};
+                if (persistPos) {
+                    rect.left = parseInt(el.style.left, 10) || 0;
+                    rect.top = parseInt(el.style.top, 10) || 0;
+                }
+                if (persistSize) {
+                    rect.width = parseInt(el.style.width, 10) || el.offsetWidth;
+                    rect.height = parseInt(el.style.height, 10) || el.offsetHeight;
+                }
+                storageSet(storageKey, rect);
+            }
+            windowState.saveRect = saveRect;
+
+            // Restauration à l'ouverture (clampée viewport).
+            if (storageKey) {
+                const rect = storageGet(storageKey);
+                if (rect) {
+                    if (persistPos && rect.left !== undefined && rect.top !== undefined) {
+                        let left = Number(rect.left) || 0;
+                        let top = Number(rect.top) || 0;
+                        left = Math.max(10, Math.min(vw - w - 10, left));
+                        top = Math.max(10, Math.min(vh - h - 10, top));
+                        el.style.left = left + "px";
+                        el.style.top = top + "px";
+                    }
+                    if (persistSize && rect.width !== undefined && rect.height !== undefined) {
+                        let rw = Math.max(280, Number(rect.width) || 0);
+                        let rh = Math.max(120, Number(rect.height) || 0);
+                        rw = Math.min(vw - 20, rw);
+                        rh = Math.min(vh - 20, rh);
+                        el.style.width = rw + "px";
+                        el.style.height = rh + "px";
+                    }
+                }
+            }
+
+            // ── Drag par le header (ignorer les éléments interactifs) ──
+            if (draggable) {
+                header.style.cursor = "move";
+                header.addEventListener("mousedown", (e) => {
+                    if (e.target.closest && e.target.closest("button, input, select, textarea, a")) return;
+                    e.preventDefault();
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startLeft = el.offsetLeft;
+                    const startTop = el.offsetTop;
+                    function onMove(ev) {
+                        let left = startLeft + (ev.clientX - startX);
+                        let top = startTop + (ev.clientY - startY);
+                        const cw = el.offsetWidth;
+                        const ch = el.offsetHeight;
+                        left = Math.max(10, Math.min(vw - cw - 10, left));
+                        top = Math.max(10, Math.min(vh - ch - 10, top));
+                        el.style.left = left + "px";
+                        el.style.top = top + "px";
+                    }
+                    function onUp() {
+                        document.removeEventListener("mousemove", onMove);
+                        document.removeEventListener("mouseup", onUp);
+                        saveRect();
+                    }
+                    document.addEventListener("mousemove", onMove);
+                    document.addEventListener("mouseup", onUp);
+                });
+            }
+
+            // ── Resize (8 poignées) ──
+            if (resizable) {
+                const minW = opts.minWidth || 280;
+                const minH = opts.minHeight || 120;
+                ["n", "s", "e", "w", "ne", "nw", "se", "sw"].forEach((dir) => {
+                    const hd = document.createElement("div");
+                    hd.className = "holaf-modal-resize holaf-modal-resize--" + dir;
+                    hd.setAttribute("data-dir", dir);
+                    el.appendChild(hd);
+                    hd.addEventListener("mousedown", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const startX = e.clientX;
+                        const startY = e.clientY;
+                        const startW = el.offsetWidth;
+                        const startH = el.offsetHeight;
+                        const startLeft = el.offsetLeft;
+                        const startTop = el.offsetTop;
+                        function onMove(ev) {
+                            const dx = ev.clientX - startX;
+                            const dy = ev.clientY - startY;
+                            let w = startW, h = startH, left = startLeft, top = startTop;
+                            if (dir.indexOf("e") >= 0) w = startW + dx;
+                            if (dir.indexOf("s") >= 0) h = startH + dy;
+                            if (dir.indexOf("w") >= 0) { w = startW - dx; left = startLeft + dx; }
+                            if (dir.indexOf("n") >= 0) { h = startH - dy; top = startTop + dy; }
+                            w = Math.max(minW, w);
+                            h = Math.max(minH, h);
+                            if (left + w > vw - 10) w = Math.max(minW, vw - 10 - left);
+                            if (top + h > vh - 10) h = Math.max(minH, vh - 10 - top);
+                            el.style.width = w + "px";
+                            el.style.height = h + "px";
+                            el.style.left = left + "px";
+                            el.style.top = top + "px";
+                        }
+                        function onUp() {
+                            document.removeEventListener("mousemove", onMove);
+                            document.removeEventListener("mouseup", onUp);
+                            saveRect();
+                        }
+                        document.addEventListener("mousemove", onMove);
+                        document.addEventListener("mouseup", onUp);
+                    });
+                });
+            }
+
+            // ── Zoom (boutons −/+) sur le CONTENT ──
+            if (zoomSpec) {
+                const zoomKey = (typeof zoomSpec === "object" && zoomSpec.key) ? zoomSpec.key : (opts.id || "default");
+                const min = (typeof zoomSpec === "object" && zoomSpec.min) ? zoomSpec.min : 0.5;
+                const max = (typeof zoomSpec === "object" && zoomSpec.max) ? zoomSpec.max : 2;
+                const step = (typeof zoomSpec === "object" && zoomSpec.step) ? zoomSpec.step : 0.1;
+                let level = 1;
+                try {
+                    const raw = localStorage.getItem("holaf-modal-zoom:" + zoomKey);
+                    if (raw) level = Math.max(min, Math.min(max, Number(raw) || 1));
+                } catch (e) {}
+                function applyZoom() {
+                    // style.zoom si supporté, sinon repli transform scale.
+                    body.style.zoom = String(level);
+                    if (typeof body.style.zoom === "undefined") {
+                        body.style.transform = "scale(" + level + ")";
+                        body.style.transformOrigin = "0 0";
+                    }
+                    try { localStorage.setItem("holaf-modal-zoom:" + zoomKey, String(level)); } catch (e) {}
+                }
+                const zoomOut = document.createElement("button");
+                zoomOut.type = "button";
+                zoomOut.className = "holaf-modal-zoom holaf-modal-zoom--out";
+                zoomOut.textContent = "−";
+                zoomOut.title = "Zoom arrière";
+                zoomOut.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    level = Math.max(min, +(level - step).toFixed(3));
+                    applyZoom();
+                });
+                const zoomIn = document.createElement("button");
+                zoomIn.type = "button";
+                zoomIn.className = "holaf-modal-zoom holaf-modal-zoom--in";
+                zoomIn.textContent = "+";
+                zoomIn.title = "Zoom avant";
+                zoomIn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    level = Math.min(max, +(level + step).toFixed(3));
+                    applyZoom();
+                });
+                const closeBtn = header.querySelector(".holaf-modal-close");
+                if (closeBtn) header.insertBefore(zoomIn, closeBtn);
+                else header.appendChild(zoomIn);
+                header.insertBefore(zoomOut, zoomIn);
+                applyZoom();
+            }
+        }
+
         // ── Fermeture (idempotente) ──────────────────────────────────────────
         function close(value) {
             if (closed) return;
             closed = true;
+            // v0.3.0 : persistance de la position/taille à la fermeture.
+            if (windowState.saveRect) windowState.saveRect();
             const result = value === undefined ? null : value;
             const idx = stack.indexOf(entry);
             if (idx !== -1) stack.splice(idx, 1); // sort de la pile
@@ -711,9 +964,11 @@ body.holaf-modal-open { overflow: hidden; }
     }
 
     // Rend le contenu dans le conteneur : string → innerHTML (contenu de
-    // confiance, documenté) ; Node → rattaché tel quel (recommandé).
+    // confiance, documenté) ; Node → rattaché tel quel (recommandé) ; fonction
+    // (v0.3.0) → appelée avec le conteneur (opts.content(body)).
     function renderContent(target, content) {
         if (content === undefined || content === null) return;
+        if (typeof content === "function") { content(target); return; }
         if (isNode(content)) target.appendChild(content);
         else target.innerHTML = String(content);
     }
@@ -731,15 +986,25 @@ body.holaf-modal-open { overflow: hidden; }
     // le fond : closeOnOverlay=false) pour éviter les dismiss accidentels.
 
     // alert(title, msg, opts) → Promise (résolue à la fermeture, sans valeur utile).
+    // v0.3.0 : opts.icon → div icône au-dessus du message ; opts.labels.ok → libellé.
     function alert(title, message, opts) {
         opts = opts || {};
         return new Promise((resolve) => {
+            const content = document.createElement("div");
+            if (opts.icon) {
+                const icon = document.createElement("div");
+                icon.className = "holaf-modal-alert-icon";
+                icon.textContent = String(opts.icon);
+                content.appendChild(icon);
+            }
+            content.appendChild(messageNode(message));
             open({
                 title: title || "Information",
                 size: "sm",
-                content: messageNode(message),
-                buttons: [{ text: opts.okText || "OK", value: true, type: "primary", autoFocus: true }],
+                content: content,
+                buttons: [{ text: (opts.labels && opts.labels.ok) || opts.okText || "OK", value: true, type: "primary", autoFocus: true }],
                 theme: opts.theme,
+                labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: () => resolve(undefined),
             });
@@ -756,9 +1021,9 @@ body.holaf-modal-open { overflow: hidden; }
                 size: "sm",
                 content: messageNode(message),
                 buttons: [
-                    { text: opts.cancelText || "Annuler", value: false, type: "cancel", guard: false },
+                    { text: (opts.labels && opts.labels.cancel) || opts.cancelText || "Annuler", value: false, type: "cancel", guard: false },
                     {
-                        text: opts.confirmText || "Confirmer",
+                        text: (opts.labels && opts.labels.ok) || opts.confirmText || "Confirmer",
                         value: true,
                         type: opts.danger ? "danger" : "primary",
                         autoFocus: true,
@@ -766,6 +1031,7 @@ body.holaf-modal-open { overflow: hidden; }
                 ],
                 guard: opts.guard,
                 theme: opts.theme,
+                labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: (v) => resolve(v === true),
             });
@@ -790,14 +1056,15 @@ body.holaf-modal-open { overflow: hidden; }
                 size: "sm",
                 content: wrap,
                 buttons: [
-                    { text: opts.cancelText || "Annuler", value: null, type: "cancel" },
+                    { text: (opts.labels && opts.labels.cancel) || opts.cancelText || "Annuler", value: null, type: "cancel" },
                     {
-                        text: opts.okText || "OK",
+                        text: (opts.labels && opts.labels.ok) || opts.okText || "OK",
                         type: "primary",
                         onClick: () => input.value, // la valeur saisie remplace btn.value
                     },
                 ],
                 theme: opts.theme,
+                labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: (v) => resolve(typeof v === "string" ? v : null),
             });
@@ -812,16 +1079,18 @@ body.holaf-modal-open { overflow: hidden; }
         });
     }
 
-    // busy(msg) → { set(msg), close() } : écran d'attente non fermable
+    // busy(message, opts) → { set(msg), close() } : écran d'attente non fermable
     // (ni ✕, ni Échap, ni fond). close() par code quand le travail est fini.
-    function busy(message) {
+    // v0.3.0 : opts.labels.loading → libellé par défaut.
+    function busy(message, opts) {
+        opts = opts || {};
         const box = document.createElement("div");
         box.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:8px 4px;";
         const spin = document.createElement("span");
         spin.className = "holaf-modal-spinner";
         const label = document.createElement("div");
         label.className = "holaf-modal-message";
-        label.textContent = str(message, "Chargement…");
+        label.textContent = str(message, (opts.labels && opts.labels.loading) || "Chargement…");
         box.appendChild(spin);
         box.appendChild(label);
         const ctrl = open({
@@ -860,10 +1129,12 @@ body.holaf-modal-open { overflow: hidden; }
         //   themes.register(name, vars) — enregistre/remplace (retourne une copie protégée)
         //   themes.get(name)            — copie des variables ou null
         //   themes.list()               — noms enregistrés
+        //   themes.update(name, vars)   — fusionne les vars d'un thème enregistré (v0.3.0)
         themes: {
             register: themesRegister,
             get: themesGet,
             list: themesList,
+            update: themesUpdate,
         },
     };
 })();

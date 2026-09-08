@@ -45,10 +45,48 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.2.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs |
-| toast      | `js/holaf-toast.js` | 0.2.1   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live) |
-| fetch      | `js/holaf-fetch.js` | 0.1.1   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom) |
+| modal      | `js/holaf-modal.js` | 0.3.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom) |
+| toast      | `js/holaf-toast.js` | 0.3.0   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
+| fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
+
+## Nouveautés v0.3
+
+Mise à jour **100 % additive** (rétro-compatible : les projets existants ne
+changent pas de comportement). Toutes les nouvelles options sont **désactivées
+par défaut**.
+
+### HolafModal 0.2.1 → 0.3.0 — fenêtre (opt-in)
+
+- `draggable: true` — déplacement par le header (clamp viewport).
+- `resizable: true` — 8 poignées de redimensionnement (`minWidth`/`minHeight`).
+- `storageKey` + `persistPos`/`persistSize` — persistance position/taille
+  (localStorage par défaut, ou callbacks `storageGet`/`storageSet`).
+- `zoom` — boutons −/+ sur le contenu (persisté sous `holaf-modal-zoom:<key|id>`).
+- `headerRight` (Node) — inséré dans le header avant le bouton fermer.
+- `content` fonction — `opts.content(body)`.
+- `labels: { ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement.
+- `alert(title, msg, { icon })` — icône au-dessus du message.
+- `themes.update(name, vars)` — fusionne les vars d'un thème enregistré.
+
+### HolafToast 0.2.1 → 0.3.0
+
+- `show({ id })` / `update(idOrCtrl, opts)` / `hide(idOrCtrl)` — id métier.
+- `progress: 'manual'` — barre visible pilotée par `update({ progress: 0-100 })`,
+  sans timer de fermeture auto.
+- `html: true` — message en `innerHTML` (défaut `textContent`).
+- `configure({ newestFirst: true })` — nouveaux toasts en premier (prepend).
+- `themes.update(name, vars)` — fusionne les vars d'un thème enregistré.
+
+### HolafFetch 0.1.1 → 0.2.0
+
+- Forward des **options natives** du fetch (`cache`, `priority`, `mode`,
+  `redirect`, `credentials`, `integrity`, `referrer`, `referrerPolicy`,
+  `keepalive`, `duplex`).
+- `configure({ timeout, retry })` — défauts globaux (résolution
+  `opts ?? config ?? défaut`), retourne la config courante.
+
+---
 
 ## Le script `holaf`
 
