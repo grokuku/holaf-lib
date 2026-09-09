@@ -29,6 +29,10 @@ function makeContainer(width = 400, height = 300, withContent = true) {
         // offsetLeft/offsetTop sont des getters seuls en jsdom → on les stub.
         Object.defineProperty(content, "offsetLeft", { configurable: true, value: 0 });
         Object.defineProperty(content, "offsetTop", { configurable: true, value: 0 });
+        // offsetWidth/offsetHeight (taille de layout) : la brique les lit en mode
+        // content (pas getBoundingClientRect, transform-aware).
+        Object.defineProperty(content, "offsetWidth", { configurable: true, value: width });
+        Object.defineProperty(content, "offsetHeight", { configurable: true, value: height });
         content.getBoundingClientRect = () => ({
             left: 0, top: 0, right: width, bottom: height,
             width, height, x: 0, y: 0, toJSON() {},
@@ -349,6 +353,23 @@ describe("onChange", () => {
         expect(onChange).toHaveBeenCalledTimes(4);
         expect(onChange).toHaveBeenLastCalledWith(vp);
     });
+
+    it("un onChange qui jette ne casse pas la brique (le reste fonctionne)", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const onChange = vi.fn(() => { throw new Error("boom"); });
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+            onChange,
+        });
+        // create() appelle fit() → notify() → onChange jette → ne doit pas remonter.
+        expect(() => vp.setScale(2, 200, 150)).not.toThrow();
+        expect(vp.getScale()).toBe(2);
+        expect(() => vp.panBy(10, 10)).not.toThrow();
+        expect(() => vp.fit()).not.toThrow();
+        expect(vp.getScale()).toBe(1);
+    });
 });
 
 // ── multi-subscription on/off ───────────────────────────────────────────────
@@ -429,6 +450,121 @@ describe("on/off (multi-subscription)", () => {
     });
 });
 
+// ── followers ────────────────────────────────────────────────────────────────
+// Les followers reçoivent EXACTEMENT le même transform inline que le content
+// (même string, même moment, même transition) — utilisés pour des overlays
+// (canvas) qui doivent suivre l'image au pixel près.
+describe("followers", () => {
+    it("addFollower : le follower reçoit le même transform que le content après zoom/pan/drag", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const follower = document.createElement("canvas");
+        container.appendChild(follower);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        vp.addFollower(follower);
+
+        // au fit (create) : même transform
+        expect(follower.style.transform).toBe(content.style.transform);
+        expect(follower.style.transform).toBe("translate(0px, 0px) scale(1)");
+
+        // zoom
+        vp.setScale(2, 200, 150);
+        expect(follower.style.transform).toBe(content.style.transform);
+        expect(follower.style.transform).toContain("scale(2)");
+
+        // pan
+        vp.panBy(10, 20);
+        expect(follower.style.transform).toBe(content.style.transform);
+
+        // drag (transition none pendant, .2s après)
+        vp.setScale(2, 200, 150);
+        drag(content, 200, 150, 260, 190);
+        expect(follower.style.transform).toBe(content.style.transform);
+        expect(follower.style.transition).toBe("transform .2s ease-out");
+    });
+
+    it("transition synchronisée : none pendant le drag, .2s après — identique au content", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const follower = document.createElement("canvas");
+        container.appendChild(follower);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        vp.addFollower(follower);
+        vp.setScale(2, 200, 150);
+
+        // pendant le drag : transition none sur les deux
+        content.dispatchEvent(new MouseEvent("mousedown", {
+            bubbles: true, cancelable: true, clientX: 200, clientY: 150, button: 0,
+        }));
+        expect(content.style.transition).toBe("none");
+        expect(follower.style.transition).toBe("none");
+        window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+        expect(content.style.transition).toBe("transform .2s ease-out");
+        expect(follower.style.transition).toBe("transform .2s ease-out");
+    });
+
+    it("removeFollower stoppe la synchro (le follower ne bouge plus)", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const follower = document.createElement("canvas");
+        container.appendChild(follower);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        vp.addFollower(follower);
+        vp.setScale(2, 200, 150);
+        const frozen = follower.style.transform;
+
+        vp.removeFollower(follower);
+        vp.setScale(3, 200, 150);
+        expect(follower.style.transform).toBe(frozen); // inchangé
+        expect(content.style.transform).toContain("scale(3)");
+    });
+
+    it("addFollower ignore les non-éléments et les doublons", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const follower = document.createElement("canvas");
+        container.appendChild(follower);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        expect(() => vp.addFollower(null)).not.toThrow();
+        expect(() => vp.addFollower(42)).not.toThrow();
+        expect(() => vp.addFollower("x")).not.toThrow();
+        // doublon : ajouté deux fois → un seul follower (Set), pas d'erreur
+        vp.addFollower(follower);
+        vp.addFollower(follower);
+        vp.setScale(2, 200, 150);
+        expect(follower.style.transform).toBe(content.style.transform);
+    });
+
+    it("destroy retire les refs followers (l'élément reste dans son état)", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const follower = document.createElement("canvas");
+        container.appendChild(follower);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        vp.addFollower(follower);
+        vp.setScale(2, 200, 150);
+        const frozen = follower.style.transform;
+        vp.destroy();
+        // destroy ne touche pas au follower (laisse son état), retire juste la ref
+        expect(follower.style.transform).toBe(frozen);
+    });
+});
+
 // ── headless vs content ─────────────────────────────────────────────────────
 describe("headless vs content", () => {
     it("headless ne touche à aucun élément et expose la géométrie", () => {
@@ -472,6 +608,9 @@ describe("refit sur resize", () => {
             left: 0, top: 0, right: 800, bottom: 300,
             width: 800, height: 300, x: 0, y: 0, toJSON() {},
         });
+        // la taille de layout suit aussi le resize (offsetWidth/Height)
+        Object.defineProperty(content, "offsetWidth", { configurable: true, value: 800 });
+        Object.defineProperty(content, "offsetHeight", { configurable: true, value: 300 });
         vp.refit();
         // containScale = min(800/800, 300/400) = 0.75 ; fit = 1 (content)
         expect(vp.getScale()).toBe(1);
@@ -495,5 +634,28 @@ describe("refit sur resize", () => {
         const t = vp.getTransform();
         expect(t.tx).toBeLessThanOrEqual(0);
         expect(t.ty).toBeLessThanOrEqual(0);
+    });
+
+    it("refit après zoom : géométrie correcte malgré un getBoundingClientRect transformé", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        // Simule l'état zoomé : getBoundingClientRect renvoie la taille transformée
+        // (scale 2 → 800x600), alors que la taille de layout (offsetWidth/Height)
+        // reste 400x300. Le bug lisait getBoundingClientRect → containScale corrompu.
+        content.getBoundingClientRect = () => ({
+            left: 0, top: 0, right: 800, bottom: 600,
+            width: 800, height: 600, x: 0, y: 0, toJSON() {},
+        });
+        vp.setScale(2, 200, 150);
+        vp.refit();
+        // containScale doit rester 0.5 (taille de layout), pas 1 (taille transformée).
+        expect(vp.getScale()).toBe(2);
+        const rect = vp.getImageRect();
+        expect(rect.width).toBe(800 * 0.5 * 2); // 800
+        expect(rect.height).toBe(400 * 0.5 * 2); // 400
     });
 });

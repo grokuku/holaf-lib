@@ -1,4 +1,4 @@
-# HolafViewport — doc d'usage (brique holaf-lib v0.1.1)
+# HolafViewport — doc d'usage (brique holaf-lib v0.1.2)
 
 Géométrie + interactions de viewport image, **sans rendu** : un seul fichier
 (`holaf-viewport.js`), zéro dépendance, **zéro CSS injecté** (la brique ne
@@ -93,6 +93,30 @@ vp.on(reposition); // multi-subscription
 Pour convertir un point écran ↔ image : `screenToImage(clientX, clientY)` et
 `imageToScreen(ix, iy)` (coords image naturelles ↔ px locaux au conteneur).
 
+### 4bis. Followers : overlay qui suit l'image au pixel près (latence zéro)
+
+Pour un overlay qui doit suivre l'image **exactement** (même transform, même
+transition, même moment), positionnez-le UNE FOIS au rect de repos (échelle 1)
+puis `addFollower(overlay)` : la brique lui applique le même transform inline
+que le content à chaque changement (zoom/pan/drag), avec la même transition
+(none pendant le drag, `.2s ease-out` après).
+
+```js
+const vp = HolafViewport.create(container, { content: img, imageWidth: 1024, imageHeight: 768 });
+// Position fixe au rect de repos (échelle 1) — constant, ne dépend pas du zoom.
+overlay.style.left = (img.offsetLeft || 0) + r.dx + "px";
+overlay.style.top  = (img.offsetTop || 0) + r.dy + "px";
+overlay.style.width  = r.width + "px";
+overlay.style.height = r.height + "px";
+overlay.style.transformOrigin = "0 0";
+vp.addFollower(overlay); // suit l'img (même transform, même transition)
+// ... vp.removeFollower(overlay) à la fermeture (l'élément reste en place).
+```
+
+`addFollower` protège contre les non-éléments et les doublons (Set) ; il
+applique immédiatement le transform courant. `destroy()` retire les refs
+followers sans toucher aux éléments (ils restent dans leur état).
+
 ---
 
 ## 5. Options
@@ -101,7 +125,6 @@ Pour convertir un point écran ↔ image : `screenToImage(clientX, clientY)` et
 |------------------|----------|------|
 | `content`        | `null`   | Élément à transformer (mode content). Absent → headless. |
 | `imageWidth`/`imageHeight` | — | Taille naturelle de l'image (ou `setImageSize()` ensuite). |
-| `contentFit`     | `'contain'` | Letterbox du contenu dans l'élément. |
 | `minZoom`        | `'fit'`  | `'fit'` = ne pas dézoomer sous le fit, ou nombre. |
 | `maxZoom`        | `30`     | Zoom max. |
 | `zoomFactor`     | `1.1`    | Facteur de zoom (molette / dblclick). |
@@ -123,6 +146,8 @@ Pour convertir un point écran ↔ image : `screenToImage(clientX, clientY)` et
 `imageToScreen(ix, iy)` → `{x,y}` (px locaux conteneur) ·
 `getImageRect()` → `{x,y,width,height}` (rect à l'écran du contenu image) ·
 `on(cb)`/`off(cb)` (multi-subscription) ·
+`addFollower(el)`/`removeFollower(el)` (overlay qui reçoit le même transform
+que le content) ·
 `reset()` · `destroy()` · `refit()` (appelé sur resize via ResizeObserver si
 dispo : refit si l'utilisateur était au fit, sinon re-clamp le pan) · `VERSION`.
 
