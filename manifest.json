@@ -13,6 +13,10 @@
     "fetch": {
       "version": "0.2.0",
       "file": "js/holaf-fetch.js"
+    },
+    "viewport": {
+      "version": "0.1.1",
+      "file": "js/holaf-viewport.js"
     }
   }
 }
