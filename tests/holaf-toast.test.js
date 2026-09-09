@@ -5,7 +5,8 @@
  * survol (dismiss retardé + barre gelée), bouton ✕, close() manuel, actions
  * cliquables, conteneur par position (créé une fois), aria-live polite /
  * assertive, helpers, update(), CSS injecté une seule fois, classes scoppées
- * .holaf-toast-* sans :root.
+ * .holaf-toast-* sans :root, fonds teintés par type (v0.4.0 : règles CSS +
+ * fallback --ht-bg + vars inline + teintes des presets).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafToast } from "../js/holaf-toast.js";
@@ -208,7 +209,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.3.0");
+        expect(HolafToast.version).toBe("0.4.0");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -502,5 +503,66 @@ describe("HolafToast — themes.update (v0.3.0)", () => {
         HolafToast.themes.update("", { "--ht-bg": "#000" });
         HolafToast.themes.update(null, { "--ht-bg": "#000" });
         expect(HolafToast.themes.list()).toEqual(before);
+    });
+});
+
+describe("HolafToast — fonds teintés par type (v0.4.0)", () => {
+    it("le CSS injecté contient les 4 règles de fond par type, APRÈS la règle de base, avec fallback var(--ht-bg)", () => {
+        HolafToast.show({ message: "a", duration: 0 });
+        const css = document.querySelector("style#holaf-toast-style").textContent;
+        for (const type of ["info", "success", "warning", "error"]) {
+            const re = new RegExp(
+                "\\.holaf-toast--" + type + "\\s*\\{[^}]*background:\\s*var\\(--ht-bg-" + type + ",\\s*var\\(--ht-bg\\)\\)"
+            );
+            expect(re.test(css)).toBe(true);
+        }
+        // Ordre de la cascade : la règle de base .holaf-toast { … background:
+        // var(--ht-bg) … } doit PRÉCÉDER les règles de type (même spécificité,
+        // la dernière gagne).
+        expect(css.indexOf(".holaf-toast {")).toBeGreaterThanOrEqual(0);
+        for (const type of ["info", "success", "warning", "error"]) {
+            expect(css.indexOf(".holaf-toast--" + type)).toBeGreaterThan(css.indexOf(".holaf-toast {"));
+        }
+    });
+
+    it("fallback : sans les vars de type, aucune var --ht-bg-* n'est posée en inline (le CSS retombe sur --ht-bg)", () => {
+        HolafToast.show({ message: "x", type: "success", duration: 0 });
+        const t = document.querySelector(".holaf-toast--success");
+        expect(t.style.getPropertyValue("--ht-bg-success")).toBe("");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("");
+        // idem info (neutre par défaut, même avec un preset)
+        HolafToast.show({ message: "y", type: "info", theme: "midnight", duration: 0 });
+        const info = document.querySelector(".holaf-toast--info");
+        expect(info.style.getPropertyValue("--ht-bg-info")).toBe(""); // pas de var info dans les presets
+        expect(info.style.getPropertyValue("--ht-bg")).toBe("#10111d"); // fond global du preset
+    });
+
+    it("theme: { \"--ht-bg-success\" } est appliqué en inline sur l'élément (gagne sur le fallback)", () => {
+        HolafToast.show({ message: "x", type: "success", duration: 0, theme: { "--ht-bg-success": "#20301a" } });
+        const t = document.querySelector(".holaf-toast--success");
+        expect(t.style.getPropertyValue("--ht-bg-success")).toBe("#20301a");
+    });
+
+    it("preset + vars : la surcharge --ht-bg-success inline gagne, le fond global du preset reste intact", () => {
+        HolafToast.show({
+            message: "x", type: "success", duration: 0,
+            theme: { preset: "light", vars: { "--ht-bg-success": "#eaf6ee" } },
+        });
+        const t = document.querySelector(".holaf-toast--success");
+        expect(t.style.getPropertyValue("--ht-bg-success")).toBe("#eaf6ee"); // vars > preset
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");         // fond global du preset intact
+    });
+
+    it("les presets définissent les teintes success/warning/error mais PAS --ht-bg-info", () => {
+        const expected = {
+            dark: "#303f35", light: "#dcece2", midnight: "#152e30", slate: "#2b4040",
+        };
+        for (const name of Object.keys(expected)) {
+            const t = HolafToast.themes.get(name);
+            expect(t["--ht-bg-success"]).toBe(expected[name]);
+            expect(t["--ht-bg-warning"]).toMatch(/^#[0-9a-f]{6}$/i);
+            expect(t["--ht-bg-error"]).toMatch(/^#[0-9a-f]{6}$/i);
+            expect(t["--ht-bg-info"]).toBeUndefined(); // info reste neutre (fallback --ht-bg)
+        }
     });
 });

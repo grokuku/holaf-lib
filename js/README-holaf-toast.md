@@ -2,10 +2,11 @@
 
 Brique autonome, **zéro dépendance runtime** : un seul fichier
 `holaf-toast.js` à copier dans un projet. Notifications en coin d'écran,
-empilées, avec auto-dismiss, pause au survol, actions cliquables, **thèmes**
-(registre + presets) et **6 positions**.
+empilées, avec auto-dismiss, pause au survol, actions cliquables, **fonds
+teintés par type** (avec fallback), **thèmes** (registre + presets) et
+**6 positions**.
 
-**Version : 0.3.0**
+**Version : 0.4.0**
 
 ---
 
@@ -242,6 +243,54 @@ HolafToast.show({ message: "Analyse", theme: "midnight" }); // un toast bleu nui
 
 > Les presets ne figent **pas** `--ht-width` : la largeur reste gouvernée par
 > la brique (et le responsive mobile), même avec un thème actif.
+
+### Fond teinté par type (v0.4.0)
+
+Quatre variables de thème **optionnelles** colorent le fond du toast selon
+son type :
+
+| Variable          | Rôle                       | Définie dans les presets ?  |
+|-------------------|----------------------------|-----------------------------|
+| `--ht-bg-info`    | fond des toasts `info`     | non — info reste **neutre** |
+| `--ht-bg-success` | fond des toasts `success`  | oui (teinte verdâtre)       |
+| `--ht-bg-warning` | fond des toasts `warning`  | oui (teinte ambrée)         |
+| `--ht-bg-error`   | fond des toasts `error`    | oui (teinte rougeâtre)      |
+
+Le CSS de la brique applique, pour chaque type, une règle avec **fallback** :
+
+```css
+.holaf-toast--success { background: var(--ht-bg-success, var(--ht-bg)); }
+```
+
+- Si la var du type n'est **pas définie** (thèmes customs anciens, hôtes qui
+  n'ont pas migré), le fond global `--ht-bg` s'applique :
+  **rétrocompatibilité totale**, aucun changement visuel.
+- Un `--ht-bg` posé **en inline** sur le toast (override par toast, ex. via
+  `theme: { "--ht-bg": … }`) l'emporte dans la chaîne de fallback.
+- Un `--ht-bg-<type>` posé **en inline** (par toast ou via `theme.vars`)
+  gagne sur tout le reste.
+
+Teintes embarquées dans les presets (≈ 15 % de l'accent du type mélangé dans
+le `--ht-bg` du preset, hex calculés à la main — pas de `color-mix()`, pour
+une compatibilité maximale) :
+
+| Preset     | `--ht-bg-success` | `--ht-bg-warning` | `--ht-bg-error` |
+|------------|-------------------|-------------------|-----------------|
+| `dark`     | `#303f35`         | `#463d2c`         | `#463131`       |
+| `light`    | `#dcece2`         | `#f4e5da`         | `#fadede`       |
+| `midnight` | `#152e30`         | `#332b1e`         | `#331f2a`       |
+| `slate`    | `#2b4040`         | `#403d30`         | `#40373d`       |
+
+Le type **info** n'a pas de var dans les presets : il garde le fond neutre
+`--ht-bg` du preset. Un thème custom qui veut un fond info dédié ajoute
+simplement `--ht-bg-info` à ses variables.
+
+```js
+// Override par toast : fond success verdâtre spécifique
+HolafToast.success("OK", {
+    theme: { preset: "midnight", vars: { "--ht-bg-success": "#123528" } },
+});
+```
 
 ### Thème global par défaut : `setTheme` / `clearTheme`
 

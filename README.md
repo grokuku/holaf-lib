@@ -46,9 +46,28 @@ Grâce à ça, le script `holaf` sait :
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
 | modal      | `js/holaf-modal.js` | 0.3.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom) |
-| toast      | `js/holaf-toast.js` | 0.3.0   | ✅ prête   | Notifications flottantes empilées (4 types, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
+| toast      | `js/holaf-toast.js` | 0.4.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
+
+## Nouveautés v0.4
+
+Mise à jour **100 % additive** (rétro-compatible : les projets existants ne
+changent pas de comportement). Une seule brique concernée.
+
+### HolafToast 0.3.0 → 0.4.0 — fonds teintés par type
+
+- Nouvelles variables de thème **optionnelles** : `--ht-bg-info`,
+  `--ht-bg-success`, `--ht-bg-warning`, `--ht-bg-error` — fond du toast par
+  type, avec **fallback** sur le fond global `--ht-bg` : sans ces vars (thèmes
+  existants, hôtes anciens), rien ne change visuellement.
+- Un `--ht-bg` posé en inline (override par toast) reste gagnant dans la
+  chaîne de fallback ; un `--ht-bg-<type>` inline (par toast ou via
+  `theme.vars`) gagne sur tout.
+- Les presets `dark` / `light` / `midnight` / `slate` définissent désormais
+  des teintes harmonisées (~15 % de l'accent du type mélangé dans `--ht-bg`,
+  hex calculés à la main) pour success / warning / error. Le type **info**
+  reste neutre (aucune var `--ht-bg-info` dans les presets, fond `--ht-bg`).
 
 ## Nouveautés v0.3
 
