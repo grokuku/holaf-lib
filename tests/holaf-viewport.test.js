@@ -317,6 +317,52 @@ describe("events wheel / drag", () => {
         expect(vp.getTransform().tx).toBe(before.tx);
     });
 
+    it("canDrag=false : pas de pan au pointerdown/drag", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+            canDrag: () => false,
+        });
+        vp.setScale(2, 200, 150);
+        const before = vp.getTransform();
+        drag(content, 200, 150, 260, 190);
+        expect(vp.getTransform().tx).toBe(before.tx);
+        expect(vp.getTransform().ty).toBe(before.ty);
+    });
+
+    it("canDrag=true (défaut) : pan OK", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+        });
+        vp.setScale(2, 200, 150);
+        const before = vp.getTransform();
+        drag(content, 200, 150, 260, 190);
+        const t = vp.getTransform();
+        expect(t.tx).toBeCloseTo(before.tx + 60, 6);
+        expect(t.ty).toBeCloseTo(before.ty + 40, 6);
+    });
+
+    it("canDrag qui jette : traité comme true (pan OK, la brique ne casse pas)", () => {
+        const { container, content } = makeContainer(400, 300, true);
+        const vp = HolafViewport.create(container, {
+            content,
+            imageWidth: 800,
+            imageHeight: 400,
+            canDrag: () => { throw new Error("boom"); },
+        });
+        vp.setScale(2, 200, 150);
+        const before = vp.getTransform();
+        expect(() => drag(content, 200, 150, 260, 190)).not.toThrow();
+        const t = vp.getTransform();
+        expect(t.tx).toBeCloseTo(before.tx + 60, 6);
+        expect(t.ty).toBeCloseTo(before.ty + 40, 6);
+    });
+
     it("destroy retire les listeners (wheel ne fait plus rien)", () => {
         const { container, content } = makeContainer(400, 300, true);
         const vp = HolafViewport.create(container, {

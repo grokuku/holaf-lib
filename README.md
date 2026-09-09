@@ -33,7 +33,7 @@ brique avec sa version et son fichier :
     "modal":   { "version": "0.3.0", "file": "js/holaf-modal.js" },
     "toast":   { "version": "0.4.0", "file": "js/holaf-toast.js" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js" },
-    "viewport": { "version": "0.1.2", "file": "js/holaf-viewport.js" }
+    "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js" }
   }
 }
 ```
@@ -51,12 +51,12 @@ Grâce à ça, le script `holaf` sait :
 | modal      | `js/holaf-modal.js` | 0.3.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom) |
 | toast      | `js/holaf-toast.js` | 0.4.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
-| viewport   | `js/holaf-viewport.js` | 0.1.2 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
+| viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
 
 ## Nouveautés v0.1
 
-### HolafViewport 0.1.2 — viewport image (géométrie + interactions, SANS rendu)
+### HolafViewport 0.1.3 — viewport image (géométrie + interactions, SANS rendu)
 
 Nouvelle brique : `HolafViewport.create(container, opts)` calcule le zoom / le
 pan / le fit d'une image et, en mode **content**, applique le CSS transform à un
@@ -69,6 +69,9 @@ pan / le fit d'une image et, en mode **content**, applique le CSS transform à u
 - `minZoom` (`'fit'` par défaut = ne pas dézoomer sous le fit) | nombre,
   `maxZoom` (30), `zoomFactor` (1.1), `panClamp` (true), `doubleClickZoom`
   (true), `wheel` (true), `drag` (true), `dragButton` (0), `dragTarget`.
+- `canDrag(e)` : garde-fou par événement, consulté AVANT d'amorcer un drag.
+  Défaut `() => true` (aucun filtre). Renvoyer `false` interdit le pan depuis
+  la cible de l'événement (ex. un overlay de dessin crop/masque).
 - `onChange(instance)` appelé après chaque changement de transform.
 - Multi-subscription : `on(cb)` / `off(cb)` — cb appelé avec l'instance après
   chaque changement de transform, EN PLUS de `opts.onChange` (utile pour

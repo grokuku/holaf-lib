@@ -1,4 +1,4 @@
-# HolafViewport — doc d'usage (brique holaf-lib v0.1.2)
+# HolafViewport — doc d'usage (brique holaf-lib v0.1.3)
 
 Géométrie + interactions de viewport image, **sans rendu** : un seul fichier
 (`holaf-viewport.js`), zéro dépendance, **zéro CSS injecté** (la brique ne
@@ -134,6 +134,7 @@ followers sans toucher aux éléments (ils restent dans leur état).
 | `drag`           | `true`   | Pan par glisser. |
 | `dragButton`     | `0`      | Bouton souris du drag. |
 | `dragTarget`     | content sinon container | Élément qui reçoit le mousedown. |
+| `canDrag(e)`     | `() => true` | Garde-fou par événement, consulté AVANT d'amorcer un drag. Renvoyer `false` interdit le pan depuis la cible de l'événement (ex. un overlay de dessin crop/masque). |
 | `onChange`       | —        | `onChange(instance)` après chaque changement de transform. |
 | `on(cb)`/`off(cb)` | —      | Multi-subscription : cb appelé avec l'instance après chaque changement de transform (en plus de `onChange`). |
 
