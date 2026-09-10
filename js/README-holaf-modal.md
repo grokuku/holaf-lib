@@ -451,7 +451,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.2.1).
+`HolafModal.version` (v0.3.0).
 
 ---
 
