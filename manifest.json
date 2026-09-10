@@ -1,6 +1,6 @@
 {
   "name": "holaf-lib",
-  "description": "Briques JS maison, versionnées par brique. Chaque brique est un fichier .js autonome, copié (pinné) dans les projets qui en ont besoin.",
+  "description": "Briques maison (JS et Python), versionnées par brique. Chaque brique est un fichier autonome, copié (pinné) dans les projets qui en ont besoin.",
   "bricks": {
     "modal": {
       "version": "0.3.0",
@@ -17,6 +17,10 @@
     "viewport": {
       "version": "0.1.3",
       "file": "js/holaf-viewport.js"
+    },
+    "notify": {
+      "version": "0.1.0",
+      "file": "python/holaf-notify.py"
     }
   }
 }

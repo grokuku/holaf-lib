@@ -1,11 +1,11 @@
-# holaf-lib — briques JS maison, versionnées par brique
+# holaf-lib — briques maison (JS & Python), versionnées par brique
 
 ## C'est quoi, ce kit ?
 
 **holaf-lib** (anciennement *holaf-ui*) est une petite boîte à outils de
-briques JavaScript écrites à la maison. Chaque **brique** = **un seul fichier
-`.js`**, autonome, sans dépendance à installer : on le copie dans un projet,
-on l'inclut dans une page, et ça marche.
+briques écrites à la maison (JavaScript et, depuis la brique `notify`,
+Python). Chaque **brique** = **un seul fichier** (`.js` ou `.py`), autonome,
+sans dépendance à installer : on le copie dans un projet, et ça marche.
 
 L'idée : quand on retrouve les mêmes besoins dans plusieurs projets (afficher
 une modale, une fenêtre déplaçable, un toast…), au lieu de copier-coller du
@@ -14,7 +14,8 @@ par brique**, documentée ici, puis **copiée (pinnée)** dans les projets qui e
 ont besoin.
 
 Chaque brique est accompagnée de sa propre documentation détaillée dans le
-dossier `js/` (ex. `js/README-holaf-modal.md`).
+dossier de son rayon (ex. `js/README-holaf-modal.md`,
+`python/README-holaf-notify.md`).
 
 ## Versionnement PAR BRIQUE (copie pinnée + manifest)
 
@@ -52,9 +53,25 @@ Grâce à ça, le script `holaf` sait :
 | toast      | `js/holaf-toast.js` | 0.4.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
+| notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
 
 ## Nouveautés v0.1
+
+### HolafNotify 0.1.0 — brique émetteur Python (webhooks OpenClaw) — 1ʳᵉ brique du rayon `python/`
+
+Nouvelle brique **Python**, stdlib pur (urllib, zéro install), qui notifie
+OpenClaw (le « cerveau » de l'écosystème) via `POST /hooks/wake` (Bearer
+`hooks.token`) quand un outil (PEH, AiKore, scripts Pi-Web…) a un fait à
+annoncer : `notify(event, message, priority, data, project)` → payload
+`{"text": "[event] message (projet=…, clé=valeur…)", "mode": "now"}`, retry
+léger (3 tentatives, backoff 1s/2s/4s, réseau/5xx uniquement ; 4xx =
+définitif), config par env (`HOLAF_WEBHOOK_URL`, `HOLAF_WEBHOOK_TOKEN`,
+`HOLAF_WEBHOOK_TIMEOUT`), jamais de secret dans les erreurs.
+
+Voir [`python/README-holaf-notify.md`](python/README-holaf-notify.md) et le
+design [`docs/design-webhooks-mcp.md`](docs/design-webhooks-mcp.md) (§3 couche
+evénements, §5 convention `<source>.<objet>.<verbe>`).
 
 ### HolafViewport 0.1.3 — viewport image (géométrie + interactions, SANS rendu)
 
@@ -252,11 +269,14 @@ voir [`js/README-holaf-modal.md`](js/README-holaf-modal.md) pour modal.
 ```
 holaf-lib/
 ├── manifest.json               ← manifest central : briques + versions + fichiers
-├── js/                         ← les briques (1 fichier = 1 brique, + sa doc)
+├── js/                         ← les briques JS (1 fichier = 1 brique, + sa doc)
 │   ├── holaf-modal.js
 │   ├── README-holaf-modal.md
 │   ├── holaf-toast.js
 │   └── README-holaf-toast.md
+├── python/                     ← les briques Python (stdlib pur, + leur doc)
+│   ├── holaf-notify.py
+│   └── README-holaf-notify.md
 ├── tests/                      ← tests automatisés (vitest + jsdom)
 ├── scripts/
 │   └── holaf                   ← commande de gestion (install / check / upgrade / adopt)
