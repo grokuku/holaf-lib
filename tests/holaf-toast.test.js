@@ -209,7 +209,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.4.0");
+        expect(HolafToast.version).toBe("0.5.0");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -564,5 +564,80 @@ describe("HolafToast — fonds teintés par type (v0.4.0)", () => {
             expect(t["--ht-bg-error"]).toMatch(/^#[0-9a-f]{6}$/i);
             expect(t["--ht-bg-info"]).toBeUndefined(); // info reste neutre (fallback --ht-bg)
         }
+    });
+});
+
+describe("HolafToast — position configurable (v0.5.0)", () => {
+    it("configure par défaut top-right (défaut historique), même après un configure sans position", () => {
+        // Rétablit un état propre : top-right est le défaut.
+        HolafToast.configure({ position: "top-right", duration: 4000 });
+        document.body.innerHTML = "";
+        HolafToast.configure({ duration: 3000 }); // sans position → ne change pas le défaut
+        HolafToast.show({ message: "x", duration: 0 });
+        expect(containers(".holaf-toast-container--top-right").length).toBe(1);
+        expect(containers(".holaf-toast-container--top-center").length).toBe(0);
+    });
+
+    it("configure accepte les 6 presets et pose la classe positionnelle sur le conteneur", () => {
+        const presets = ["top-right", "top-center", "top-left", "bottom-right", "bottom-center", "bottom-left"];
+        presets.forEach((p) => {
+            document.body.innerHTML = "";
+            HolafToast.configure({ position: p });
+            HolafToast.show({ message: "x", duration: 0 });
+            expect(containers(".holaf-toast-container--" + p).length).toBe(1);
+        });
+    });
+
+    it("empilement bottom (défaut append) : le plus récent est collé au bord bas (dernier du DOM)", () => {
+        HolafToast.configure({ position: "bottom-center" });
+        HolafToast.show({ message: "premier", duration: 0 });
+        HolafToast.show({ message: "second", duration: 0 });
+        const msgs = document.querySelectorAll(".holaf-toast-container--bottom-center .holaf-toast__message");
+        expect(msgs[0].textContent).toBe("premier");  // plus ancien, plus haut
+        expect(msgs[1].textContent).toBe("second");   // plus récent, en bas (bord)
+    });
+
+    it("bottom-* : newestFirst:true ne renverse PAS l'empilement (le récent reste en bas)", () => {
+        HolafToast.configure({ position: "bottom-center", newestFirst: true });
+        HolafToast.show({ message: "premier", duration: 0 });
+        HolafToast.show({ message: "second", duration: 0 });
+        const msgs = document.querySelectorAll(".holaf-toast-container--bottom-center .holaf-toast__message");
+        expect(msgs[0].textContent).toBe("premier");
+        expect(msgs[1].textContent).toBe("second");   // prepend ignoré aux bottom
+        // top-* : newestFirst conserve son effet historique (récent en haut).
+        HolafToast.configure({ position: "top-left", newestFirst: true });
+        document.body.innerHTML = "";
+        HolafToast.show({ message: "p", duration: 0 });
+        HolafToast.show({ message: "s", duration: 0 });
+        const msgs2 = document.querySelectorAll(".holaf-toast-container--top-left .holaf-toast__message");
+        expect(msgs2[0].textContent).toBe("s");       // prepend appliqué aux top-*
+        expect(msgs2[1].textContent).toBe("p");
+        HolafToast.configure({ position: "top-right", newestFirst: false }); // reset
+    });
+
+    it("configure position inconnue → repli sûr top-right (pas de classe positionnelle)", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        document.body.innerHTML = "";
+        HolafToast.configure({ position: "middle-center" });
+        HolafToast.show({ message: "x", duration: 0 });
+        expect(containers(".holaf-toast-container--top-right").length).toBe(1);
+        expect(containers(".holaf-toast-container--middle-center").length).toBe(0);
+        expect(warn).toHaveBeenCalled();
+        warn.mockRestore();
+        HolafToast.configure({ position: "top-right" });
+    });
+
+    it("le CSS injecté contient les variantes d'animation d'entrée/sortie par position (base conservée)", () => {
+        document.body.innerHTML = "";
+        HolafToast.show({ message: "x", duration: 0 });
+        const css = document.querySelector("style#holaf-toast-style").textContent;
+        expect(css).toContain("holaf-toast-slide-in");       // base conservée
+        expect(css).toContain("holaf-toast-slide-in-right");
+        expect(css).toContain("holaf-toast-slide-in-left");
+        expect(css).toContain("holaf-toast-slide-in-up");
+        expect(css).toContain("holaf-toast-fade-out");       // base conservée
+        expect(css).toContain("holaf-toast-fade-out-right");
+        expect(css).toContain("holaf-toast-fade-out-left");
+        expect(css).toContain("holaf-toast-fade-out-down");
     });
 });

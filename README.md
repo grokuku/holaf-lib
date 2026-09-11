@@ -32,7 +32,7 @@ brique avec sa version et son fichier :
   "name": "holaf-lib",
   "bricks": {
     "modal":   { "version": "0.3.0", "file": "js/holaf-modal.js" },
-    "toast":   { "version": "0.4.0", "file": "js/holaf-toast.js" },
+    "toast":   { "version": "0.5.0", "file": "js/holaf-toast.js" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js" }
   }
@@ -50,7 +50,7 @@ Grâce à ça, le script `holaf` sait :
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
 | modal      | `js/holaf-modal.js` | 0.3.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom) |
-| toast      | `js/holaf-toast.js` | 0.4.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, 6 positions, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
+| toast      | `js/holaf-toast.js` | 0.5.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
@@ -99,6 +99,23 @@ pan / le fit d'une image et, en mode **content**, applique le CSS transform à u
 - **Zéro CSS injecté** : brique sans style, l'hôte fournit conteneur/contenu.
 
 Voir [`js/README-holaf-viewport.md`](js/README-holaf-viewport.md).
+
+## Nouveautés v0.5
+
+### HolafToast 0.4.0 → 0.5.0 — position configurable + empilement & animations par position
+
+- `configure({ position })` accepte les **6 presets** : `top-right` (défaut),
+  `top-center`, `top-left`, `bottom-right`, `bottom-center`, `bottom-left`.
+  Une position inconnue retombe **sûrement sur `top-right`**.
+- **Empilement adapté à la position** : pour les `bottom-*`, le toast le plus
+  récent reste **collé au bord bas** (la pile monte vers le haut), même avec
+  `newestFirst: true` (qui ne s'applique qu'aux positions `top-*`).
+- **Animations par position** : slide d'entrée / fondu de sortie depuis le côté
+  du bord auquel colle le conteneur (droite / gauche / haut / bas). Keyframes
+  homonymes historiques conservés comme base.
+
+100 % rétro-compatible : sans configuration, position `top-right` et
+comportement historique inchangés.
 
 ## Nouveautés v0.4
 

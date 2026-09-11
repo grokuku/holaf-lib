@@ -6,9 +6,28 @@ empilées, avec auto-dismiss, pause au survol, actions cliquables, **fonds
 teintés par type** (avec fallback), **thèmes** (registre + presets) et
 **6 positions**.
 
-**Version : 0.4.0**
+**Version : 0.5.0**
 
 ---
+
+## Nouveautés v0.5.0 — position configurable
+
+`HolafToast.configure({ position })` accepte désormais les **6 presets** et
+l'**empilement / les animations sont adaptés à chaque position** :
+
+- **Position configurable** : `top-right` (défaut), `top-center`, `top-left`,
+  `bottom-right`, `bottom-center`, `bottom-left`. Une valeur inconnue (ou une
+  configuration sans position) retombe **sûrement sur `top-right`**.
+- **Empilement bottom** : pour les positions `bottom-*`, le toast le plus
+  récent reste **collé au bord bas** (la pile grimpe vers le haut) — même avec
+  `newestFirst: true` (qui ne s'applique qu'aux positions `top-*`).
+- **Animations par position** : slide depuis le côté du bord auquel colle le
+  conteneur (droite pour `*-right`, gauche pour `*-left`, vers le haut pour
+  `bottom-center`, vers le bas pour `top-center`), sortie en fondu du même
+  côté. Les keyframes homonymes historiques restent la base.
+
+Rétrocompatible : sans configuration, le comportement historique est
+strictement inchangé.
 
 ## Inclusion
 
@@ -167,8 +186,15 @@ Pour un toast persistant (`duration: 0`), aucune barre n'est affichée.
   supprimé quand vide).
 - **Maximum 5 toasts visibles** par position : au-delà, le plus ancien est
   fermé automatiquement (`onClose` reçoit la raison `"replaced"`).
-- Les toasts entrent avec un slide-in, sortent en fondu. Les animations sont
-  désactivées si l'utilisateur préfère `prefers-reduced-motion`.
+- **Empilement adapté à la position (v0.5.0)** : pour les positions `top-*`,
+  la pile descend depuis le haut (défaut : récent en bas ; `newestFirst`
+  place le récent en haut) ; pour les positions `bottom-*`, la pile monte
+  depuis le bas — le **plus récent reste collé au bord bas**, et ce même
+  avec `newestFirst: true` (le prépend au haut irait à l'opposé du bord de
+  référence).
+- Les toasts entrent avec un slide-in adapté à la position (v0.5.0) et
+  sortent en fondu du même côté. Les animations sont désactivées si
+  l'utilisateur préfère `prefers-reduced-motion`.
 - Sur mobile (< 600 px), les toasts passent en **pleine largeur en bas**
   d'écran, quelle que soit la position demandée.
 
@@ -183,16 +209,17 @@ Pour un toast persistant (`duration: 0`), aucune barre n'est affichée.
 ## Positions
 
 Six positions disponibles, chacune avec son propre conteneur fixe (créé à la
-demande, empilement propre) :
+demande, empilement propre). Chaque position a son **animation d'entrée/sortie
+adaptée** (v0.5.0) :
 
-| Position         | Description            |
-|------------------|------------------------|
-| `top-right`      | coin haut droit (**défaut**) |
-| `top-left`       | coin haut gauche       |
-| `bottom-right`   | coin bas droit         |
-| `bottom-left`    | coin bas gauche        |
-| `top-center`     | centré en haut         |
-| `bottom-center`  | centré en bas          |
+| Position         | Description            | Animation d'entrée      | Sortie      |
+|------------------|------------------------|------------------------|-------------|
+| `top-right`      | coin haut droit (**défaut**) | slide depuis la droite | vers la droite |
+| `top-left`       | coin haut gauche       | slide depuis la gauche | vers la gauche |
+| `bottom-right`   | coin bas droit         | slide depuis la droite | vers la droite |
+| `bottom-left`    | coin bas gauche        | slide depuis la gauche | vers la gauche |
+| `top-center`     | centré en haut         | slide depuis en haut   | vers le haut  |
+| `bottom-center`  | centré en bas          | slide depuis en bas    | vers le bas   |
 
 ```js
 HolafToast.show({ message: "En haut au centre", position: "top-center" });
@@ -200,7 +227,8 @@ HolafToast.show({ message: "En bas au centre", position: "bottom-center" });
 ```
 
 Sans configuration, la position par défaut reste **`top-right`** (comportement
-historique inchangé).
+historique inchangé). Une position inconnue passée à `configure()` retombe
+sûrement sur `top-right`.
 
 ---
 
@@ -387,16 +415,21 @@ les toasts qui ne passent pas d'option explicite :
 
 ```js
 HolafToast.configure({
-    position: "bottom-center",   // position par défaut (top-right)
+    position: "bottom-center",   // position par défaut (top-right) ; 6 presets
     duration: 3000,              // durée par défaut en ms (4000 ; 0 = persistant)
     theme: "light",              // thème global par défaut (aucun) — équivaut à setTheme
-    newestFirst: true,           // v0.3.0 : nouveaux toasts en premier (false par défaut)
+    newestFirst: true,           // v0.3.0 : nouveaux toasts en premier (top-* uniquement)
 });
 ```
 
 - **Volatil, en mémoire uniquement** : rien n'est écrit en localStorage.
 - Une option explicite dans `show()` (ou un helper) **prime toujours** sur le
   défaut configuré.
+- `position` (v0.5.0) accepte les 6 presets ci-dessus. Une valeur inconnue
+  retombe **sûrement sur `top-right`** — sans appel à `configure()`,
+  top-right reste le défaut. Pour les positions `bottom-*`, le plus récent
+  reste collé au bord bas (l'empilement monte vers le haut), même avec
+  `newestFirst`.
 - Sans appel à `configure()`, les défauts historiques sont strictement
   conservés : position `top-right`, durée `4000 ms`, aucun thème, `newestFirst`
   désactivé.
