@@ -406,7 +406,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.3.0");
+        expect(HolafModal.version).toBe("0.4.0");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -645,6 +645,160 @@ describe("thèmes", () => {
         });
         expect(b.el.style.getPropertyValue("--hm-accent")).toBe("#123abc"); // vars > racine
         expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");     // preset intact
+    });
+});
+
+// ── Modale à contenu libre (v0.4.0) : `actions` + formulaire hôte ───────────
+// Couvre l'API additive : contenu custom injecté (Node), focus trap sur les
+// champs, bouton de soumission rendu type="submit" + form="…" (soumission
+// NATIVE), Échap/overlay, fermeture via ctrl.close, thèmes appliqués au
+// contenu, compat totale avec les API existantes.
+describe("modale à contenu libre (v0.4.0 actions)", () => {
+    // Construit un formulaire hôte (comme la modale de config de Homy) :
+    // un <form id> + quelques champs, puis un bouton action submit associé.
+    function buildForm(container) {
+        const form = document.createElement("form");
+        form.id = "settings-form-test";
+        form.setAttribute("novalidate", "");
+        form.innerHTML =
+            '<label>Nom<input type="text" name="name" value="Alice"></label>' +
+            '<label>Couleur<input type="text" name="color" value="#ff8800"></label>' +
+            '<select name="niv"><option>1</option><option>2</option></select>';
+        container.appendChild(form);
+        return form;
+    }
+
+    it("actions : bouton submit rendu type=submit avec attribut form + contenu injecté", () => {
+        const content = document.createElement("div");
+        const form = buildForm(content);
+        const ctrl = HolafModal.open({
+            title: "Config",
+            content,
+            actions: [{ label: "Enregistrer", type: "primary", form: "settings-form-test" }],
+        });
+        // Contenu custom injecté dans le body
+        expect(ctrl.body.contains(form)).toBe(true);
+        expect(ctrl.body.contains(content)).toBe(true);
+        // Bouton action dans le footer, type=submit, associé au formulaire
+        const btns = footerButtons(ctrl);
+        expect(btns).toHaveLength(1);
+        expect(btns[0].type).toBe("submit");
+        expect(btns[0].getAttribute("form")).toBe("settings-form-test");
+        expect(btns[0].textContent).toBe("Enregistrer");
+    });
+
+    it("soumission native : clic sur l'action soumet le formulaire (événement submit réel)", () => {
+        const content = document.createElement("div");
+        buildForm(content);
+        let submitted = false;
+        // Le hôte écoute le submit du form (comme le collect() de Homy)
+        content.querySelector("form").addEventListener("submit", (e) => {
+            e.preventDefault(); // le hôte gère son propre cycle (PATCH…)
+            submitted = true;
+        });
+        HolafModal.open({
+            title: "Config",
+            content,
+            actions: [{ label: "Enregistrer", form: "settings-form-test", type: "primary" }],
+        });
+        footerButtons(document.querySelector(".holaf-modal-root")._holafModalCtrl)[0].click();
+        expect(submitted).toBe(true); // vrai événement submit déclenché par le clic
+    });
+
+    it("action SANS form : onClick + close(value) → onClose, comme les buttons", () => {
+        let closedWith = null;
+        const content = document.createElement("div");
+        content.appendChild(document.createElement("input"));
+        const ctrl = HolafModal.open({
+            title: "T",
+            content,
+            actions: [{ label: "OK", value: "done", onClick: () => "valeur-override" }],
+            onClose: (v) => { closedWith = v; },
+        });
+        footerButtons(ctrl)[0].click();
+        expect(document.body.contains(ctrl.el)).toBe(false);
+        expect(closedWith).toBe("valeur-override");
+    });
+
+    it("action onClick qui retourne false refuse la fermeture", () => {
+        const ctrl = HolafModal.open({
+            title: "T",
+            actions: [{ label: "Refuse", value: "x", onClick: () => false }],
+        });
+        footerButtons(ctrl)[0].click();
+        expect(document.body.contains(ctrl.el)).toBe(true);
+    });
+
+    it("focus trap couvre les champs du contenu : Tab boucle dans la modale (champs + actions)", () => {
+        const content = document.createElement("div");
+        buildForm(content); // input, input, select
+        content.appendChild(document.createElement("input")); // 4e champ
+        const ctrl = HolafModal.open({
+            title: "T",
+            content,
+            actions: [{ label: "Enregistrer", form: "settings-form-test" }],
+        });
+        const focusables = ctrl.el.querySelectorAll(
+            "button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])"
+        );
+        // focus initial : 1er focusable (un champ du formulaire)
+        expect(document.activeElement).toBe(focusables[0]);
+        // Tab depuis le dernier → retour au premier (champ de formulaire)
+        focusables[focusables.length - 1].focus();
+        pressKey("Tab");
+        expect(document.activeElement).toBe(focusables[0]);
+        // Shift+Tab depuis le premier → dernier (boucle)
+        focusables[0].focus();
+        pressKey("Tab", { shiftKey: true });
+        expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+    });
+
+    it("Échap ferme le sommet même avec un contenu libre", () => {
+        const content = document.createElement("div");
+        buildForm(content);
+        const ctrl = HolafModal.open({ title: "T", content });
+        pressKey("Escape");
+        expect(document.body.contains(ctrl.el)).toBe(false);
+    });
+
+    it("clic overlay ferme (comportement existant) pour une modale à contenu libre", () => {
+        const content = document.createElement("div");
+        buildForm(content);
+        const ctrl = HolafModal.open({ title: "T", content });
+        ctrl.overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        expect(document.body.contains(ctrl.el)).toBe(false);
+    });
+
+    it("ctrl.close() depuis le onClose/hôte referme la modale (cycle save de Homy)", () => {
+        const content = document.createElement("div");
+        buildForm(content);
+        const ctrl = HolafModal.open({ title: "T", content });
+        ctrl.close();
+        expect(document.body.contains(ctrl.el)).toBe(false);
+        expect(roots()).toHaveLength(0);
+    });
+
+    it("thèmes appliqués au contenu : les --hm-* sont visibles dans le contenu injecté", () => {
+        const content = document.createElement("div");
+        buildForm(content);
+        const ctrl = HolafModal.open({ title: "T", content, theme: "dark" });
+        // Le thème est posé sur la racine de la modale ; le contenu en hérite
+        // (variables CSS héritées dans l'arbre de la modale).
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#1e1e1e");
+        expect(ctrl.body.style.getPropertyValue("--hm-accent")).toBe(""); // porté par la racine
+        expect(getComputedStyle(ctrl.el).getPropertyValue("--hm-bg")).toBe("#1e1e1e");
+    });
+
+    it("actions n'interfère pas avec buttons (deux footer possibles) — compat additive", () => {
+        const ctrl = HolafModal.open({
+            title: "T",
+            buttons: [{ text: "Annuler", value: false, type: "cancel" }],
+            actions: [{ label: "OK", value: true }],
+        });
+        const btns = footerButtons(ctrl);
+        expect(btns.length).toBe(2);
+        expect(btns[0].textContent).toBe("Annuler");
+        expect(btns[1].textContent).toBe("OK");
     });
 });
 

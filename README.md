@@ -31,7 +31,7 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.3.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "modal":   { "version": "0.4.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
     "toast":   { "version": "0.5.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
@@ -54,7 +54,7 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.3.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom) |
+| modal      | `js/holaf-modal.js` | 0.4.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`) |
 | toast      | `js/holaf-toast.js` | 0.5.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
@@ -164,6 +164,16 @@ par défaut**.
 - `labels: { ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement.
 - `alert(title, msg, { icon })` — icône au-dessus du message.
 - `themes.update(name, vars)` — fusionne les vars d'un thème enregistré.
+
+### HolafModal 0.3.0 → 0.4.0 — modale à contenu libre
+
+- Nouvelle option additive `actions` sur `open()` pour héberger un formulaire
+  du projet hôte : une action avec `form` (id d'un `<form>` du contenu) est
+  rendue en `type="submit"` + attribut HTML `form="…"` → la soumission NATIVE
+  du formulaire est déclenchée au clic (validation/PATCH gérés par le hôte),
+  le focus trap couvre les champs du contenu, Échap/overlay/thème inchangés.
+- 100 % additive/rétro-compatible : `buttons`, helpers (alert/confirm/prompt/
+  busy), fenêtre et registre de thèmes strictement inchangés.
 
 ### HolafToast 0.2.1 → 0.3.0
 

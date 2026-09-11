@@ -1,12 +1,13 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.3.0)
+# HolafModal — doc d'usage (brique holaf-lib v0.4.0)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
 (Échap ne ferme que la dernière ouverte), le blocage du scroll de fond, la
 navigation clavier (focus piégé dans la modale), l'accessibilité (aria), le
 mobile (92 % de largeur), une **bibliothèque de thèmes** (presets et thèmes
-customs, §3), et quatre raccourcis tout prêts : `alert`, `confirm`,
-`prompt`, `busy`.
+customs, §3), quatre raccourcis tout prêts : `alert`, `confirm`, `prompt`,
+`busy` — et, depuis **v0.4.0**, une **modale à contenu libre** (option
+`actions`, §2ter) pensée pour les formulaires du projet hôte.
 
 ---
 
@@ -102,6 +103,7 @@ ctrl.close();
 | `zoom`           | —      | **v0.3.0** : `true` ou `{ key, min, max, step }` → boutons −/+ sur le contenu |
 | `headerRight`    | —      | **v0.3.0** : Node inséré dans le header avant le bouton fermer          |
 | `labels`         | —      | **v0.3.0** : `{ ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement |
+| `actions`        | `[]`   | **v0.4.0** : modale à contenu libre — boutons du footer, dont la soumission de formulaires (§2ter) |
 
 ### Boutons
 
@@ -231,6 +233,90 @@ aucune icône) :
 ```js
 await HolafModal.alert("Attention", "Action irréversible.", { icon: "⚠️" });
 ```
+
+---
+
+## 2ter. Modale à contenu libre (v0.4.0) — `actions`
+
+L'option `actions` étend `open()` en **additif** pour le cas d'une modale
+qui héberge un **formulaire du projet hôte** (ex. la modale de config de
+Homy). Le `content` est un Node DOM (votre `<form>`), et les `actions` sont
+des boutons rendus dans le footer. Les API existantes (`buttons`, helpers,
+fenêtre, thèmes) sont **strictement inchangées** — on peut même utiliser
+`buttons` et `actions` ensemble.
+
+```js
+const form = document.createElement("form");
+form.id = "settings-form-1";
+form.setAttribute("novalidate", "");
+form.innerHTML = `
+    <label>Nom<input name="name" value="Alice"></label>
+    <label>Couleur<input name="color" value="#ff8800"></label>
+    <div id="errorEl" role="alert"></div>
+`;
+
+const ctrl = HolafModal.open({
+    title: "Configurer le widget",
+    content: form,                     // contenu libre : votre formulaire
+    actions: [{
+        label: "Enregistrer",
+        type: "primary",
+        form: "settings-form-1",       // → bouton type="submit" + form="settings-form-1"
+    }],
+});
+
+// Le projet hôte pilote TOUTE la logique de validation :
+form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const ok = collect();              // votre collect()/validation
+    if (!ok) { errorEl.textContent = "…"; return; } // erreur dans errorEl
+    await patch(...);
+    ctrl.close();                      // fermeture décidée par le hôte
+});
+```
+
+### Comment ça marche
+
+- Une action avec `form: "id"` (id d'un `<form>` du contenu) est rendue en
+  `type="submit"` avec l'attribut HTML `form="id"`. Le clic déclenche la
+  **soumission native** du formulaire → votre écouteur `submit` (qui fait la
+  validation, le PATCH… et appelle `ctrl.close()` quand tout est bon). C'est
+  le même mécanisme qu'un bouton situé hors du `<form>` mais associé via
+  `form=`. Le **bouton Save reste donc hors du formulaire** tout en
+  soumettant : le focus trap, Échap et le clic overlay fonctionnent dans la
+  coque, le hôte garde toute sa logique.
+- Une action **sans** `form` se comporte comme un `button` : elle peut porter
+  `value`, `onClick(ctrl)` (retour `false` = ne pas fermer), `className`,
+  `autoFocus`, `close`, `guard`. La fermeture est alors gérée par la brique
+  (comme les `buttons`).
+
+### Signature d'une action
+
+```js
+actions: [{
+    label: "Enregistrer", // libellé (texte brut)
+    type: "primary",      // primary (défaut) | danger | cancel
+    className: "",        // classe(s) supplémentaire(s) sur le bouton
+    value: true,          // valeur passée à onClose (si fermeture gérée par la brique)
+    form: "settings-form-1", // id d'un <form> du contenu → bouton submit natif
+    autoFocus: true,      // focus initial (1er focusable de la modale)
+    onClick: (ctrl) => {}, // callback (retour false = ne pas fermer)
+    close: true,          // false : le clic ne ferme pas la modale
+    guard: true,          // false : ce bouton ignore le guard global
+}]
+```
+
+### Focus trap, Échap, overlay — dans la coque
+
+- Le **focus trap couvre le contenu injecté** : `Tab`/`Shift+Tab` parcourent
+  en boucle les champs du formulaire, le bouton fermer et les actions (c'est
+  le sélecteur focusable historique, qui inclut `input`/`select`/`textarea`).
+- **Échap** ferme le sommet de la pile (si `closeOnEscape !== false`),
+  **clic overlay** ferme (si `closeOnOverlay !== false`) — comportement
+  inchangé, appliqué au contenu libre.
+- **Thèmes** : `theme` / `setTheme` s'appliquent aux variables de la racine
+  de la modale, et le contenu injecté les hérite (le formulaire de votre
+  projet est ainsi coloré par le thème de la coque).
 
 ---
 
@@ -451,7 +537,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.3.0).
+`HolafModal.version` (v0.4.0).
 
 ---
 

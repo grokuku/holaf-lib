@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "holaf-lib — briques JS maison, versionnées par brique avec copie pinnée dans les projets.",
   "type": "module",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "test": "vitest run"
