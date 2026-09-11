@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>holaf-ambient — banc d'essai (v0.1.0 vs 0.2.0)</title>
+<style>
+    :root {
+        --radius: 14px;
+        --panel: rgba(20, 24, 38, 0.72);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: #eaeefb;
+        --muted: #9aa6c4;
+        --accent: #7c9cff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        margin: 0;
+        font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: var(--text);
+        background: #0b1020;
+        overflow: hidden;
+    }
+    body[data-theme="light"] { background: #eef1f8; color: #1a2138; }
+    body[data-theme="wallpaper"] {
+        background:
+            radial-gradient(1200px 800px at 10% 0%, #243b6b 0%, transparent 60%),
+            radial-gradient(900px 700px at 90% 20%, #5b2a6b 0%, transparent 55%),
+            linear-gradient(160deg, #0d1730, #131a2e 45%, #1a1330);
+    }
+
+    /* ---- la couche canvas : exactement comme Homy (fixed, plein écran) ---- */
+    #bg-canvas {
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* ---- mock dashboard (verre dépoli au-dessus du fond) ---- */
+    #ui {
+        position: relative;
+        z-index: 1;
+        height: 100%;
+        padding: 18px 20px 20px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    body[data-ui="none"] #ui > *:not(#stage) { display: none; }
+    body[data-ui="none"] #ui { padding: 0; }
+
+    header.bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: color-mix(in srgb, var(--panel) 72%, transparent);
+        backdrop-filter: blur(14px) saturate(1.2);
+    }
+    .brand { font-weight: 650; letter-spacing: 0.2px; }
+    .brand small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+    .spacer { flex: 1; }
+    .chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; grid-auto-rows: 132px; }
+    .widget {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: color-mix(in srgb, var(--panel) 62%, transparent);
+        backdrop-filter: blur(14px) saturate(1.2);
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+    .widget h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+    .widget .big { font-size: 30px; font-weight: 600; }
+    .widget .sub { color: var(--muted); font-size: 12px; }
+    .span2 { grid-column: span 2; }
+    .tall { grid-row: span 2; }
+    .spark { flex: 1; display: flex; align-items: flex-end; gap: 4px; }
+    .spark i { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--accent), transparent); }
+    .rows { display: flex; flex-direction: column; gap: 7px; }
+    .row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+    /* ---- panneau de contrôle ---- */
+    #panel {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 5;
+        width: 320px;
+        max-height: calc(100vh - 28px);
+        overflow: auto;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: color-mix(in srgb, var(--panel) 88%, transparent);
+        backdrop-filter: blur(18px) saturate(1.25);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
+    body[data-panel="0"] #panel { display: none; }
+    #panel h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+    #panel .grp { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+    #panel label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 2px; }
+    #panel .val { float: right; color: var(--text); font-variant-numeric: tabular-nums; }
+    #panel select, #panel input[type="text"] {
+        width: 100%; padding: 6px 8px; border-radius: 8px;
+        border: 1px solid var(--border); background: rgba(0, 0, 0, 0.28); color: inherit;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .seg { display: flex; gap: 6px; margin-top: 4px; }
+    .seg button {
+        flex: 1; padding: 7px 8px; border-radius: 9px; cursor: pointer;
+        border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05); color: inherit; font-size: 12.5px;
+    }
+    .seg button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: #0b1020; font-weight: 600; }
+    .mini { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+    #cfg { font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
+    #diag { font-size: 12px; color: var(--muted); }
+    #diag li { margin-bottom: 4px; }
+    #diag summary { cursor: pointer; color: var(--text); }
+    #fps { position: fixed; left: 14px; bottom: 12px; z-index: 5; font: 11px/1 ui-monospace, monospace; color: var(--muted);
+           background: rgba(0,0,0,.35); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; }
+</style>
+</head>
+<body data-theme="dark" data-ui="dashboard" data-panel="1">
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="ui">
+    <header class="bar">
+        <div class="brand">Homy <small>dashboard (mock) — pour juger la lisibilité au-dessus du fond</small></div>
+        <div class="spacer"></div>
+        <span class="chip" id="chip-engine">—</span>
+        <span class="chip">⌘ thème · P panneau</span>
+    </header>
+
+    <div class="grid">
+        <div class="widget tall">
+            <h3>Climate</h3>
+            <div class="big">21.5°</div>
+            <div class="sub">Salon · humidité 46%</div>
+            <div class="spark"><i style="height:30%"></i><i style="height:52%"></i><i style="height:41%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:74%"></i><i style="height:62%"></i><i style="height:81%"></i></div>
+        </div>
+        <div class="widget span2">
+            <h3>Lights</h3>
+            <div class="rows">
+                <div class="row"><span class="dot"></span> Cuisine — 3 ampoules ON</div>
+                <div class="row"><span class="dot" style="background:#f7d36b"></span> Salon — lampe 40%</div>
+                <div class="row"><span class="dot" style="background:#6ad3a0"></span> Chambre — off</div>
+            </div>
+        </div>
+        <div class="widget">
+            <h3>Weather</h3>
+            <div class="big">12°</div>
+            <div class="sub">Nuageux · vent 18 km/h</div>
+        </div>
+        <div class="widget">
+            <h3>Média</h3>
+            <div class="big" style="font-size:18px">▶ Playlist</div>
+            <div class="sub">Bonobo — Kerala</div>
+        </div>
+        <div class="widget span2">
+            <h3>Caméras</h3>
+            <div class="sub">Entrée · Jardin · Garage — flux HLS</div>
+        </div>
+        <div class="widget tall">
+            <h3>Énergie</h3>
+            <div class="big">1.84<small style="font-size:14px"> kW</small></div>
+            <div class="sub">aujourd'hui 9,4 kWh</div>
+            <div class="spark"><i style="height:22%"></i><i style="height:38%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:33%"></i><i style="height:62%"></i><i style="height:88%"></i><i style="height:45%"></i></div>
+        </div>
+        <div class="widget">
+            <h3>Système</h3>
+            <div class="sub">CPU 12% · RAM 41%</div>
+            <div class="sub">uptime 6 j</div>
+        </div>
+    </div>
+</div>
+
+<div id="panel">
+    <h2>holaf-ambient — banc d'essai</h2>
+
+    <label>Moteur</label>
+    <div class="seg" id="seg-engine">
+        <button data-engine="v1">v0.1.0 (archive)</button>
+        <button data-engine="v2">v0.2.0 (brique)</button>
+    </div>
+
+    <label>Mode</label>
+    <select id="mode">
+        <option value="waves">waves</option>
+        <option value="particles">particles</option>
+        <option value="aurora">aurora</option>
+    </select>
+
+    <label>Densité <span class="val" id="v-density"></span></label>
+    <input type="range" id="density" min="1" max="100" step="1" />
+
+    <label>Vitesse <span class="val" id="v-speed"></span></label>
+    <input type="range" id="speed" min="0" max="3" step="0.05" />
+
+    <label>Opacité <span class="val" id="v-opacity"></span></label>
+    <input type="range" id="opacity" min="0" max="1" step="0.02" />
+
+    <label>Flou global <span class="val" id="v-blur"></span></label>
+    <input type="range" id="blur" min="0" max="40" step="1" />
+
+    <label>Palette</label>
+    <select id="palette">
+        <option value="default">Défaut (5 vives) — comme Homy</option>
+        <option value="aikore">AiKore (bleu/cyan/violet)</option>
+        <option value="homy">Homy froid</option>
+        <option value="sunset">Sunset</option>
+        <option value="mono">Mono bleu (2 tons)</option>
+    </select>
+    <label>Hex (séparés par des virgules)</label>
+    <input type="text" id="colors" />
+
+    <div class="grp">
+        <label>Contexte hôte</label>
+        <div class="seg" id="seg-theme">
+            <button data-theme="dark">dark</button>
+            <button data-theme="light">light</button>
+            <button data-theme="wallpaper">image</button>
+        </div>
+        <label>Aperçu</label>
+        <div class="seg" id="seg-ui">
+            <button data-ui="dashboard">dashboard</button>
+            <button data-ui="none">fond seul</button>
+        </div>
+        <label>Liens (particles)</label>
+        <div class="seg" id="seg-links">
+            <button data-links="1">on</button>
+            <button data-links="0">off</button>
+        </div>
+        <div class="seg" style="margin-top:10px">
+            <button id="btn-pause">pause</button>
+            <button id="btn-reset">reset</button>
+        </div>
+        <div class="mini">Mesures chiffrées (headless) : <a href="./ambient-measure.html?engine=v2&mode=waves">ambient-measure.html</a>
+            — ajoute <code>&amp;engine=v1|v2&amp;mode=…&amp;density=…</code>.</div>
+    </div>
+
+    <div class="grp">
+        <label>Config live</label>
+        <div id="cfg"></div>
+    </div>
+
+    <div class="grp">
+        <details id="diag">
+            <summary>Corrigés dans la 0.2.0</summary>
+            <ol>
+                <li><b>vitesse au carré</b> : waves/aurora multipliaient le temps <i>déjà</i> scalé par <code>speed</code> → <code>speed=2</code> = 4× plus rapide.</li>
+                <li><b>dépendance au framerate</b> : pas de <code>dt</code> (particules intégrées par frame) → 120 Hz = 2× plus vite que 60 Hz.</li>
+                <li><b>waves = rayures</b> : le trait de 2 px n'était jamais tracé (code mort) ; seul restait un trait de 40 px clippé dans des bandes régulières.</li>
+                <li><b>particules figées</b> : ~0,5 px/s (vx × 0,02), toutes de la même couleur, 10 par défaut.</li>
+                <li><b>aurora qui téléporte</b> : <code>(… + 1) % 1</code> faisait sauter les taches d'un bord à l'autre.</li>
+                <li><b>plaque opaque</b> : aurora peignait <code>rgba(8,10,18,.85)</code> plein écran → rectangle sombre sur thème clair, contraire au contrat « sans style ».</li>
+                <li><b>palette non étalée</b> : décalages de 260 ms pour un cycle de 3,6 s → tous les éléments quasi de la même couleur.</li>
+                <li><b>densité incohérente</b> : 1 seul slider (défaut 10) → 10 particules / 10 nappes géantes en aurora.</li>
+            </ol>
+        </details>
+    </div>
+</div>
+
+<div id="fps">— fps</div>
+
+<script type="module">
+import { HolafAmbient } from "../js/holaf-ambient.js";
+import { HolafAmbientV1 } from "./ambient-v0.1.0.js";
+
+const PRESETS = {
+    default: ["#3b82f6", "#22d3ee", "#a78bfa", "#f472b6", "#fbbf24"],
+    aikore: ["#4f8cff", "#22d3ee", "#a78bfa", "#6366f1", "#38bdf8"],
+    homy: ["#7dd3fc", "#38bdf8", "#818cf8", "#22d3ee"],
+    sunset: ["#ff7a59", "#ffb86b", "#ff5f9e", "#a855f7"],
+    mono: ["#4f8cff", "#0ea5e9"],
+};
+
+const qs = new URLSearchParams(location.search);
+const state = {
+    engine: qs.get("engine") === "v1" ? "v1" : "v2",
+    mode: qs.get("mode") || "waves",
+    density: Number(qs.get("density") ?? 10),
+    speed: Number(qs.get("speed") ?? 1),
+    opacity: Number(qs.get("opacity") ?? 1),
+    blur: Number(qs.get("blur") ?? 0),
+    links: qs.get("links") !== "0",
+    palette: qs.get("palette") || "default",
+    colors: qs.get("colors") || "",
+    theme: qs.get("theme") || "dark",
+    ui: qs.get("ui") || "dashboard",
+    panel: qs.get("panel") !== "0",
+    paused: false,
+};
+
+const canvas = document.getElementById("bg-canvas");
+let inst = null;
+let wasPaused = false;
+
+function currentColors() {
+    if (state.colors.trim()) {
+        return state.colors.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return PRESETS[state.palette] || PRESETS.default;
+}
+
+function opts() {
+    return {
+        target: canvas,
+        mode: state.mode,
+        speed: state.speed,
+        density: state.density,
+        opacity: state.opacity,
+        blur: state.blur,
+        links: state.links,
+        colors: currentColors(),
+    };
+}
+
+function rebuild() {
+    if (inst) inst.destroy();
+    inst = state.engine === "v1" ? HolafAmbientV1.create(opts()) : HolafAmbient.create(opts());
+    if (state.paused) inst.pause();
+    syncUrl();
+    syncPanel();
+}
+
+function applyConfig() {
+    if (!inst) return;
+    try {
+        inst.setConfig(opts());
+    } catch (e) {
+        console.warn(e);
+    }
+    syncUrl();
+    syncPanel();
+}
+
+function syncUrl() {
+    const q = new URLSearchParams({
+        engine: state.engine, mode: state.mode,
+        density: String(state.density), speed: String(state.speed),
+        opacity: String(state.opacity), blur: String(state.blur), links: state.links ? "1" : "0",
+        palette: state.palette, theme: state.theme, ui: state.ui,
+        panel: state.panel ? "1" : "0",
+    });
+    if (state.colors.trim()) q.set("colors", state.colors);
+    history.replaceState(null, "", "?" + q.toString());
+}
+
+// ---- panneau ----
+function bindSeg(id, key, cast = (v) => v) {
+    document.getElementById(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b || !b.dataset[key]) return;
+        state[key] = cast(b.dataset[key]);
+        applyConfig();
+    });
+}
+bindSeg("seg-engine", "engine");
+bindSeg("seg-theme", "theme");
+bindSeg("seg-ui", "ui");
+bindSeg("seg-links", "links", (v) => v === "1");
+
+document.getElementById("seg-engine").addEventListener("click", (e) => {
+    if (e.target.closest("button")) rebuild();
+});
+document.getElementById("seg-theme").addEventListener("click", () => {
+    document.body.dataset.theme = state.theme;
+});
+document.getElementById("seg-ui").addEventListener("click", () => {
+    document.body.dataset.ui = state.ui;
+});
+
+const modeSel = document.getElementById("mode");
+modeSel.addEventListener("change", () => { state.mode = modeSel.value; applyConfig(); });
+
+function range(id, key) {
+    const el = document.getElementById(id);
+    el.addEventListener("input", () => { state[key] = Number(el.value); applyConfig(); });
+}
+range("density", "density");
+range("speed", "speed");
+range("opacity", "opacity");
+range("blur", "blur");
+
+const palSel = document.getElementById("palette");
+palSel.addEventListener("change", () => { state.palette = palSel.value; state.colors = ""; colorsInput.value = ""; applyConfig(); });
+const colorsInput = document.getElementById("colors");
+colorsInput.addEventListener("input", () => { state.colors = colorsInput.value; applyConfig(); });
+
+document.getElementById("btn-pause").addEventListener("click", () => {
+    state.paused = !state.paused;
+    if (state.paused) inst.pause(); else inst.resume();
+    document.getElementById("btn-pause").textContent = state.paused ? "reprendre" : "pause";
+});
+document.getElementById("btn-reset").addEventListener("click", () => {
+    Object.assign(state, { engine: "v2", mode: "waves", density: 10, speed: 1, opacity: 1, blur: 0, links: true, palette: "default", colors: "", paused: false });
+    document.getElementById("btn-pause").textContent = "pause";
+    rebuild();
+});
+window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "p") { state.panel = !state.panel; document.body.dataset.panel = state.panel ? "1" : "0"; syncUrl(); }
+    if (k === "h") { /* legacy */ }
+});
+
+function syncPanel() {
+    document.body.dataset.theme = state.theme;
+    document.body.dataset.ui = state.ui;
+    document.body.dataset.panel = state.panel ? "1" : "0";
+    document.getElementById("chip-engine").textContent =
+        (state.engine === "v1" ? "v0.1.0" : "v0.2.0") + " · " + state.mode;
+    modeSel.value = state.mode;
+    for (const b of document.querySelectorAll("#seg-engine button")) b.setAttribute("aria-pressed", String(b.dataset.engine === state.engine));
+    for (const b of document.querySelectorAll("#seg-theme button")) b.setAttribute("aria-pressed", String(b.dataset.theme === state.theme));
+    for (const b of document.querySelectorAll("#seg-ui button")) b.setAttribute("aria-pressed", String(b.dataset.ui === state.ui));
+    for (const b of document.querySelectorAll("#seg-links button")) b.setAttribute("aria-pressed", String((b.dataset.links === "1") === state.links));
+    document.getElementById("density").value = String(state.density);
+    document.getElementById("speed").value = String(state.speed);
+    document.getElementById("opacity").value = String(state.opacity);
+    document.getElementById("blur").value = String(state.blur);
+    document.getElementById("v-density").textContent = state.density;
+    document.getElementById("v-speed").textContent = state.speed.toFixed(2);
+    document.getElementById("v-opacity").textContent = state.opacity.toFixed(2);
+    document.getElementById("v-blur").textContent = state.blur + " px";
+    palSel.value = state.palette;
+    colorsInput.value = state.colors;
+    document.getElementById("cfg").textContent = JSON.stringify(inst ? inst.getConfig() : {}, null, 1);
+    if (state.engine === "v2" && HolafAmbient.elementCount) {
+        const n = HolafAmbient.elementCount(state.mode, state.density);
+        document.getElementById("cfg").textContent += `\néléments: ${n}`;
+    }
+}
+
+// ---- fps ----
+let frames = 0, last = performance.now();
+function tickFps(now) {
+    frames++;
+    if (now - last > 700) {
+        document.getElementById("fps").textContent = Math.round((frames * 1000) / (now - last)) + " fps · " + canvas.width + "×" + canvas.height + " (backing)";
+        frames = 0; last = now;
+    }
+    requestAnimationFrame(tickFps);
+}
+requestAnimationFrame(tickFps);
+
+rebuild();
+
+// Mode capture (vérification/CI) : on fige l'animation après N frames pour que
+// la capture headless soit déterministe. Le canvas garde sa dernière frame.
+if (qs.get("capture") === "1") {
+    const target = Number(qs.get("frames") || 45);
+    let n = 0;
+    (function waitFreeze() {
+        n++;
+        if (n >= target) {
+            if (inst) inst.pause();
+            document.title = "READY " + state.engine + "/" + state.mode;
+            return;
+        }
+        requestAnimationFrame(waitFreeze);
+    })();
+}
+
+window.__lab = { state, get inst() { return inst; } };
+</script>
+</body>
+</html>

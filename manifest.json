@@ -35,10 +35,10 @@
       "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page)."
     },
     "ambient": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "file": "js/holaf-ambient.js",
       "category": "component",
-      "description": "Fonds animés canvas (waves/particles/aurora), brique sans style (l'hôte fournit le canvas)."
+      "description": "Fonds animés canvas (waves/particles/aurora) refondus : rubans liquides, halos en profondeur, nappes transparentes ; density = intensité, blur global, elementCount exposé, animation dt."
     },
     "icons": {
       "version": "0.1.0",

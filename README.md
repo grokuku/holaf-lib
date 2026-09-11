@@ -61,7 +61,7 @@ Grâce à ça, le script `holaf` sait :
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | color      | `js/holaf-color.js`  | 0.1.0 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG) |
 | tokens     | `js/holaf-tokens.js` | 0.1.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite) — voir section dédiée |
-| ambient    | `js/holaf-ambient.js` | 0.1.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora), brique sans style (l'hôte fournit le canvas) |
+| ambient    | `js/holaf-ambient.js` | 0.2.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) **refondus** : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
 > 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons

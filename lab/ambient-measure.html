@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>probe…</title>
+<style>#c{position:fixed;inset:0;width:100%;height:100%;display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<pre id="out">pending</pre>
+<script type="module">
+import { HolafAmbient } from "../js/holaf-ambient.js";
+import { HolafAmbientV1 as V1 } from "./ambient-v0.1.0.js";
+
+const q = new URLSearchParams(location.search);
+const engineName = q.get("engine") || "v2";
+const mode = q.get("mode") || "waves";
+const type = engineName === "v1" ? V1 : HolafAmbient;
+const canvas = document.getElementById("c");
+const out = document.getElementById("out");
+
+let err = "none";
+window.addEventListener("error", (e) => { err = "window: " + e.message + " @" + e.filename + ":" + e.lineno; });
+
+// trace les exceptions levées dans les callbacks rAF du moteur
+const origRAF = window.requestAnimationFrame.bind(window);
+let rafCalls = 0;
+window.requestAnimationFrame = (cb) => origRAF((ts) => {
+  try { cb(ts); } catch (e) { err = "raf: " + (e && e.message) + " | " + (e && e.stack || "").split("\n")[1]; }
+});
+// compte les frames vues par le probe
+let probeFrames = 0;
+(function loop() { probeFrames++; origRAF(loop); })();
+
+let inst = null;
+try {
+  inst = type.create({
+    target: canvas, mode,
+    density: Number(q.get("density") || 10),
+    speed: Number(q.get("speed") || 1),
+    opacity: Number(q.get("opacity") || 1),
+    blur: Number(q.get("blur") || 0),
+    colors: ["#3b82f6", "#22d3ee", "#a78bfa", "#f472b6", "#fbbf24"],
+  });
+} catch (e) { err = "create: " + e.message; }
+
+function measure() {
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const N = w * h;
+  let nz = 0, sumRGB = 0, maxA = 0, sumA = 0, lum = 0;
+  const hues = new Set();
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+    sumA += a;
+    // luminance « ajoutée » à l'écran (rgb pondéré par l'alpha) : métrique
+    // d'intensité perçue du fond, indépendante de la taille des halos.
+    lum += (v * a) / 255;
+    if (a > 4) { nz++; sumRGB += v; }
+    if (a > maxA) maxA = a;
+    if (a > 8) hues.add((d[i] >> 4) + "," + (d[i + 1] >> 4) + "," + (d[i + 2] >> 4));
+  }
+  return `backing=${w}x${h} couv=${(100 * nz / N).toFixed(2)}% moyRGB=${(sumRGB / Math.max(1, nz)).toFixed(0)} lumAjoutee=${(lum / N).toFixed(1)} alphaMoy=${(sumA / N).toFixed(1)} alphaMax=${maxA} teintes=${hues.size}`;
+}
+
+const FRAMES = Number(q.get("frames") || 0);
+let seen = 0;
+(function waitFrames() {
+  seen++;
+  if (FRAMES && seen >= FRAMES) { if (inst) inst.pause(); document.title = "FROZEN"; return; }
+  origRAF(waitFrames);
+})();
+
+setTimeout(() => {
+  const txt = [
+    `engine=${engineName} mode=${mode}`,
+    `err=${err}`,
+    `probeFrames=${probeFrames} framesCible=${FRAMES}`,
+    `cfg=${JSON.stringify(inst && inst.getConfig())}`,
+    measure(),
+  ].join(" || ");
+  document.title = "RES " + txt;
+  out.textContent = txt;
+}, 800);
+</script>
+</body></html>
