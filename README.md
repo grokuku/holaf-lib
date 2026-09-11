@@ -31,13 +31,18 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.3.0", "file": "js/holaf-modal.js" },
-    "toast":   { "version": "0.5.0", "file": "js/holaf-toast.js" },
-    "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js" },
-    "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js" }
+    "modal":   { "version": "0.3.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "toast":   { "version": "0.5.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
+    "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
+    "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
+    "tokens":  { "version": "0.1.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
   }
 }
 ```
+
+Le champ `category` documente le **rôle** d'une brique : `component` (comportement/UI,
+la majorité) ou `foundation` (pose des variables globales — seul `tokens`, voir
+« Brique fondation : tokens »).
 
 Grâce à ça, le script `holaf` sait :
 - quelle version une brique **devrait** avoir (manifest central),
@@ -54,7 +59,12 @@ Grâce à ça, le script `holaf` sait :
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
-| *(à venir)*| —                   | —       | 🔜 prévue  | Fenêtres « vraies », etc.                                 |
+| color      | `js/holaf-color.js`  | 0.1.0 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG) |
+| tokens     | `js/holaf-tokens.js` | 0.1.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite) — voir section dédiée |
+| ambient    | `js/holaf-ambient.js` | 0.1.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora), brique sans style (l'hôte fournit le canvas) |
+| icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
+
+> 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons
 
 ## Nouveautés v0.1
 
@@ -285,20 +295,59 @@ voir [`js/README-holaf-modal.md`](js/README-holaf-modal.md) pour modal.
 
 ```
 holaf-lib/
-├── manifest.json               ← manifest central : briques + versions + fichiers
+├── manifest.json               ← manifest central : briques + versions + fichiers + catégorie
 ├── js/                         ← les briques JS (1 fichier = 1 brique, + sa doc)
 │   ├── holaf-modal.js
 │   ├── README-holaf-modal.md
 │   ├── holaf-toast.js
-│   └── README-holaf-toast.md
+│   ├── README-holaf-toast.md
+│   ├── holaf-fetch.js
+│   ├── README-holaf-fetch.md
+│   ├── holaf-viewport.js
+│   ├── README-holaf-viewport.md
+│   ├── holaf-color.js
+│   ├── README-holaf-color.md
+│   ├── holaf-tokens.js
+│   ├── README-holaf-tokens.md
+│   ├── holaf-ambient.js
+│   ├── README-holaf-ambient.md
+│   ├── holaf-icons.js
+│   └── README-holaf-icons.md
 ├── python/                     ← les briques Python (stdlib pur, + leur doc)
 │   ├── holaf-notify.py
 │   └── README-holaf-notify.md
 ├── tests/                      ← tests automatisés (vitest + jsdom)
 ├── scripts/
-│   └── holaf                   ← commande de gestion (install / check / upgrade / adopt)
+│   └── holaf                   ← commande de gestion (install / check / upgrade / adopt / list)
 └── README.md                   ← ce fichier
 ```
+
+## Brique fondation : tokens
+
+`tokens` (`js/holaf-tokens.js`) est la **brique fondation** du kit — celle qui pose
+le **thème global de page**. Elle implique une doctrine particulière qu'il vaut
+mieux comprendre avant de s'en servir.
+
+### La doctrine
+
+- **La SEULE brique autorisée à poser des variables sur `:root`.** Dans tout le kit,
+  la règle reste stricte : *« chaque brique scope son CSS sous ses propres classes,
+  jamais sur l'élément racine »*. `tokens` est **l'exception à cette règle**, par
+  contrat **explicite et opt-in** : on ne la met pas par accident, on décide de
+  l'installer parce qu'on veut un thème global.
+- **Préfixe réservé `--holaf-*`.** Toutes les variables qu'elle pose vivent sous ce
+  préfixe réservé (`--holaf-surface`, `--holaf-text`, `--holaf-accent`, `--holaf-danger`…).
+  Aucune autre brique n'a le droit de poser de variable sur `:root`, et aucune ne
+  s'appuie sur un `--holaf-*` que `tokens` n'aurait pas garanti.
+- **Sans rendu.** `tokens` ne rend **aucun** élément : son CSS auto-injecté est
+  minimal (un simple marqueur) ; elle ne fait que poser/retirer des variables
+  sur `document.documentElement`.
+- **Contrat de surface.** Les noms posés sont documentés (voir
+  [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md)) et la brique peut
+  retirer ce qu'elle a posé. Installer `tokens`, c'est savoir (opt-in) qu'on
+  installe un thème global : elle prend le contrôle de la palette de la page.
+
+Voir le design dans [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md).
 
 ## Notes techniques
 

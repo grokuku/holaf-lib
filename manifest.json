@@ -21,6 +21,30 @@
     "notify": {
       "version": "0.1.0",
       "file": "python/holaf-notify.py"
+    },
+    "color": {
+      "version": "0.1.0",
+      "file": "js/holaf-color.js",
+      "category": "component",
+      "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG)."
+    },
+    "tokens": {
+      "version": "0.1.0",
+      "file": "js/holaf-tokens.js",
+      "category": "foundation",
+      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page)."
+    },
+    "ambient": {
+      "version": "0.1.0",
+      "file": "js/holaf-ambient.js",
+      "category": "component",
+      "description": "Fonds animés canvas (waves/particles/aurora), brique sans style (l'hôte fournit le canvas)."
+    },
+    "icons": {
+      "version": "0.1.0",
+      "file": "js/holaf-icons.js",
+      "category": "component",
+      "description": "36 icônes SVG en trait (style Feather, MIT), zéro CSS, stroke=currentColor."
     }
   }
 }
