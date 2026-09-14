@@ -61,7 +61,7 @@ Grâce à ça, le script `holaf` sait :
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | color      | `js/holaf-color.js`  | 0.1.0 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG) |
 | tokens     | `js/holaf-tokens.js` | 0.1.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite) — voir section dédiée |
-| ambient    | `js/holaf-ambient.js` | 0.2.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) **refondus** : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), brique sans style (l'hôte fournit le canvas) |
+| ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
 > 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons
@@ -126,6 +126,29 @@ Voir [`js/README-holaf-viewport.md`](js/README-holaf-viewport.md).
 
 100 % rétro-compatible : sans configuration, position `top-right` et
 comportement historique inchangés.
+
+## Nouveautés v0.5
+
+Mise à jour **100 % additive** (rétro-compatible : les projets existants ne
+changent pas de comportement — les deux nouvelles options sont neutres par
+défaut). Une seule brique concernée.
+
+### HolafAmbient 0.2.0 → 0.3.0 — options de performance `scale` / `fps`
+
+- **`scale`** (0.25..1, défaut 1) : facteur de résolution du **buffer interne**.
+  Backing store = `round(css × dpr × scale)` (min 1 px), le canvas garde ses
+  dimensions CSS → l'agrandissement (bilinéaire) est fait par le compositeur,
+  `image-rendering` auto. Coexiste avec le `ResizeObserver` (buffer recalculé au
+  resize) et le dpr (un seul produit `css × dpr × scale`, jamais doublé). Le flou
+  et le grain suivent le même ratio.
+- **`fps`** (entier ≥ 10, défaut `0` = non plafonné) : plafond de framerate. La
+  boucle rAF continue mais ne redessine qu'à échéance ; l'horloge d'effet avance
+  à chaque tick et le dt est cumulé entre deux paints → la **vitesse horloge de
+  l'animation est inchangée**, seul son taux de rafraîchissement baisse.
+- Priorités préservées : `visibilitychange` (pause) et `prefers-reduced-motion`
+  (frame unique) restent **au-dessus** du throttle `fps`.
+- `setConfig({ scale })` redimensionne le buffer et redessine immédiatement ;
+  `setConfig({ fps })` prend effet au tick suivant. **Zéro breaking**.
 
 ## Nouveautés v0.4
 

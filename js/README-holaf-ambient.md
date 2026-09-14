@@ -1,4 +1,4 @@
-# HolafAmbient — doc d'usage (brique holaf-lib v0.2.0)
+# HolafAmbient — doc d'usage (brique holaf-lib v0.3.0)
 
 Fonds animés canvas, **sans style** : la brique dessine MAIS ne touche pas au
 layout. Le host fournit un `<canvas>` (existant ou via sélecteur) et le
@@ -62,9 +62,12 @@ listant les 3 valeurs valides.
 | `links`     | `true`                    | Particles : dessine les liaisons entre particules proches. |
 | `blur`      | `0`                       | **Flou gaussien global** du rendu, en px CSS (`0..40`). Implémenté par canvas hors-écran + `ctx.filter` → toujours **zéro CSS** sur l'élément, et ignoré (rendu net) là où `ctx.filter` n'existe pas (Safari < 18). |
 | `grain`     | `0.022`                   | (Avancé) intensité du bruit anti-banding `source-atop` (`0` = désactivé). Sauté automatiquement si `blur >= 2`, si le canvas est très grand, ou si le contexte ne permet pas de fabriquer la texture. |
+| `scale`     | `1`                       | **Facteur de résolution du buffer interne** (`0.25..1`). Le backing store devient `round(css × dpr × scale)` (min 1 px) tandis que le canvas garde ses dimensions CSS → l'image est **agrandie par le compositeur** (upscale bilinéaire, `image-rendering` auto). À 0.5 le coût de rasterisation est divisé par ~4, quasi invisible sur des dégradés doux. Coexiste avec le dpr (jamais double-appliqué : buffer = css × dpr × scale) et le ResizeObserver (buffer recalculé au resize en respectant `scale`). |
+| `fps`       | `0`                       | **Plafond de framerate** : entier ≥ 10 = nombre max de paints/s ; `0` (défaut) = non plafonné. La boucle rAF continue mais ne redessine qu'à échéance ; l'horloge d'effet avance à chaque tick et le dt est cumulé → la **vitesse horloge de l'animation est inchangée**, seul le taux de rafraîchissement baisse. La pause `visibilitychange` et le frame statique `prefers-reduced-motion` restent prioritaires (au-dessus du throttle). |
 
 Options invalides : `mode` inconnu → exception ; `colors` filtrées (au moins une
-couleur garantie) ; `speed`, `density`, `opacity`, `blur`, `grain` bornés.
+couleur garantie) ; `speed`, `density`, `opacity`, `blur`, `grain` bornés ;
+`scale` borné 0.25..1 ; `fps` non entier / < 10 → `0` (non plafonné).
 
 ### 3.1 `density` → nombre d'éléments
 
@@ -92,7 +95,9 @@ a.setConfig({ mode: "particles", density: 40, links: false });
 
 `setConfig(partial)` valide chaque champ (mode inconnu → erreur, colors filtrées).
 Changer `mode`, `density` ou `colors` régénère ce qu'il faut (particules,
-sprites) ; changer `blur` crée le tampon hors-écran à la volée.
+sprites) ; changer `blur` crée le tampon hors-écran à la volée ; changer
+`scale` redimensionne le buffer et redessine immédiatement ; changer `fps`
+prend effet au tick suivant.
 
 ---
 
@@ -101,7 +106,12 @@ sprites) ; changer `blur` crée le tampon hors-écran à la volée.
 - **`requestAnimationFrame`** : une seule boucle par instance (pas de `setInterval`).
 - **Horloge dt** (bornée à 50 ms) : l'animation est **indépendante du
   framerate** (60 Hz / 120 Hz / frame perdue = même vitesse apparente).
-- **`devicePixelRatio` respecté** : backing store = `css × dpr`, `ctx.setTransform(dpr, …)`.
+- **`devicePixelRatio` respecté** : backing store = `css × dpr × scale` (option
+  `scale`, défaut 1 = pleine résolution), `ctx.setTransform(dpr × scale, …)`.
+- **`fps > 0`** : plafond de framerate — la boucle rAF ne redessine qu'à
+  échéance (`1000/fps`), sans ralentir l'animation (horloge + dt cumulés).
+  Les mécanismes de cycle de vie (pause visibility, reduced-motion) restent
+  prioritaires.
 - **Pause automatique** sur `document.visibilitychange` (`hidden`) → la boucle
   s'arrête ; `visible` → reprise.
 - **`prefers-reduced-motion`** → rendu **statique** : une seule frame, aucune boucle.
@@ -123,7 +133,7 @@ sprites) ; changer `blur` crée le tampon hors-écran à la volée.
 const a = HolafAmbient.create({ target: canvas });
 a.pause();                 // coupe la boucle
 a.resume();                // relance
-const cfg = a.getConfig(); // { mode, colors, speed, density, opacity, links, blur, grain }
+const cfg = a.getConfig(); // { mode, colors, speed, density, opacity, links, blur, grain, scale, fps }
 a.destroy();               // cancel + disconnect + listeners retirés
 ```
 
@@ -142,6 +152,9 @@ HolafAmbient.create({
     density: 10,
     opacity: 0.9,
     blur: 10,
+    // Performance (0.3.0) : buffer à 50 % de la résolution + plafond 30 fps.
+    scale: 0.5,
+    fps: 30,
 });
 ```
 
