@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.4.0)
+# HolafModal — doc d'usage (brique holaf-lib v0.4.2)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -104,6 +104,7 @@ ctrl.close();
 | `headerRight`    | —      | **v0.3.0** : Node inséré dans le header avant le bouton fermer          |
 | `labels`         | —      | **v0.3.0** : `{ ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement |
 | `actions`        | `[]`   | **v0.4.0** : modale à contenu libre — boutons du footer, dont la soumission de formulaires (§2ter) |
+| `injectStyles`   | `true` | **v0.4.2** : `false` → la brique n'injecte PAS son `<style>` (mode CSS externe, §5ter) |
 
 ### Boutons
 
@@ -523,6 +524,78 @@ await HolafModal.confirm("Passer en clair ?", "Toute l'app suivra.", { theme: "l
 
 ---
 
+## 5bis. CSP strict (nonce) — optionnel et rétrocompatible
+
+Un hôte à CSP stricte (`style-src 'self'`, **sans** `'unsafe-inline'`) bloque
+le `<style id="holaf-modal-style">` injecté par la brique. Fournissez le
+**nonce** de la page, de deux façons (la seconde prime sur la première) :
+
+```js
+// 1) Nonce GLOBAL (une fois à l'init) :
+HolafModal.setStyleNonce(monNonce);
+HolafModal.setStyleNonce(null);   // réinitialiser → comportement par défaut
+
+// 2) Nonce PAR APPEL (prime sur le global) :
+HolafModal.open({ title: "…" }, { nonce: monNonce });
+HolafModal.open({ title: "…", nonce: monNonce }); // ou champ `nonce` des options
+// Les helpers acceptent aussi `nonce` :
+await HolafModal.alert("Titre", "Message", { nonce: monNonce });
+```
+
+- **Optionnel** : sans nonce configuré, le `<style>` est injecté exactement
+  comme avant — même `id`, même CSS, même point d'insertion, **aucun attribut
+  ajouté**. Un appelant existant n'a rien à modifier.
+- Le nonce est posé sur l'élément **avant** son insertion dans le `<head>`.
+- `setStyleNonce(null)` (ou `""`) réinitialise ; une valeur `null`/`""`
+  passée par appel est un « aucun nonce » explicite qui surcharge le global.
+
+---
+
+## 5ter. Mode CSS Externe (`getCss()` + `injectStyles`) — v0.4.2
+
+Alternative propre au nonce pour un hôte à CSP strict (`style-src 'self'`) :
+**servir le CSS comme fichier `.css` statique** et désactiver l'injection JS.
+
+1. **Récupérer le CSS** via `HolafModal.getCss()` (chaîne complète, strictement
+   identique au contenu du `<style id="holaf-modal-style">` injecté par défaut).
+   Écrivez-la une fois dans un fichier servi par votre projet :
+
+   ```js
+   HolafModal.getCss(); // → chaîne CSS complète → ex. vendor/holaf/holaf-modal.css
+   ```
+
+   ```html
+   <link rel="stylesheet" href="/vendor/holaf/holaf-modal.css">
+   ```
+
+2. **Désactiver l'injection** avec l'option `injectStyles` (boolean, défaut
+   `true`) :
+
+   ```js
+   // Global (une fois à l'init) :
+   HolafModal.configure({ injectStyles: false });
+   HolafModal.configure({ injectStyles: true });  // rétablir le défaut
+
+   // …ou par appel (prime sur le réglage global) :
+   HolafModal.open({ title: "…" }, { injectStyles: false });
+   HolafModal.open({ title: "…", injectStyles: false }); // champ des options
+   // Les helpers acceptent aussi l'option :
+   await HolafModal.alert("Titre", "Message", { injectStyles: false });
+   ```
+
+- **Priorité** : option par appel (2ᵉ argument, puis champ `opts`) >
+  `configure({ injectStyles })` global > défaut `true`. Seul `false` désactive
+  l'injection.
+- Avec `injectStyles: false`, **aucune** balise `<style>` n'est créée ni
+  insérée : la brique considère que le CSS est déjà chargé.
+- **Avantage majeur** : compatibilité **totale** avec `style-src 'self'`
+  **sans nonce** — inutile de gérer/passer un nonce côté backend. Le mode nonce
+  (§5bis) reste disponible si l'on préfère l'injection JS.
+- **Rétrocompatible** : sans configuration, le comportement historique
+  (injection du `<style>`) est strictement inchangé.
+
+---
+
 ## 6. Procédure de sync (mettre à jour / installer dans un projet)
 
 Le fichier consommé vit dans `vendor/holaf/` du projet cible. Depuis ce dépôt
@@ -537,7 +610,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.4.0).
+`HolafModal.version` (v0.4.2).
 
 ---
 

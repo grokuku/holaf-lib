@@ -6,7 +6,7 @@ empilées, avec auto-dismiss, pause au survol, actions cliquables, **fonds
 teintés par type** (avec fallback), **thèmes** (registre + presets) et
 **6 positions**.
 
-**Version : 0.5.0**
+**Version : 0.5.2**
 
 ---
 
@@ -54,6 +54,72 @@ Classes scoppées `.holaf-toast-*`, variables `--ht-*` déclarées sur la racine
 du conteneur (`.holaf-toast-container`), jamais sur `:root` — surchargez-les
 par sélecteur CSS dans votre projet si besoin.
 
+## CSP strict (nonce) — optionnel et rétrocompatible
+
+Un hôte à CSP stricte (`style-src 'self'`, **sans** `'unsafe-inline'`) bloque
+le `<style id="holaf-toast-style">` injecté par la brique. Fournissez le
+**nonce** de la page, de deux façons (la seconde prime sur la première) :
+
+```js
+// 1) Nonce GLOBAL (une fois à l'init) :
+HolafToast.setStyleNonce(monNonce);
+HolafToast.setStyleNonce(null);   // réinitialiser → comportement par défaut
+
+// 2) Nonce PAR APPEL (prime sur le global) :
+HolafToast.show({ message: "…" }, { nonce: monNonce });
+HolafToast.show({ message: "…", nonce: monNonce }); // ou champ `nonce` des options
+// Les helpers transmettent `nonce` :
+HolafToast.success("Enregistré", { nonce: monNonce });
+```
+
+- **Optionnel** : sans nonce configuré, le `<style>` est injecté exactement
+  comme avant — même `id`, même CSS, même point d'insertion, **aucun attribut
+  ajouté**. Un appelant existant n'a rien à modifier.
+- Le nonce est posé sur l'élément **avant** son insertion dans le `<head>`.
+- `setStyleNonce(null)` (ou `""`) réinitialise ; une valeur `null`/`""`
+  passée par appel est un « aucun nonce » explicite qui surcharge le global.
+
+## Mode CSS Externe — alternative au nonce (v0.5.2)
+
+Alternative propre au nonce pour un hôte à CSP strict (`style-src 'self'`) :
+**servir le CSS comme fichier `.css` statique** et désactiver l'injection JS.
+
+1. **Récupérer le CSS** via `HolafToast.getCss()` (chaîne complète, strictement
+   identique au contenu du `<style id="holaf-toast-style">` injecté par défaut) :
+
+   ```js
+   HolafToast.getCss(); // → chaîne CSS complète → ex. vendor/holaf/holaf-toast.css
+   ```
+
+   ```html
+   <link rel="stylesheet" href="/vendor/holaf/holaf-toast.css">
+   ```
+
+2. **Désactiver l'injection** avec l'option `injectStyles` (boolean, défaut
+   `true`) :
+
+   ```js
+   // Global (une fois à l'init) :
+   HolafToast.configure({ injectStyles: false });
+   HolafToast.configure({ injectStyles: true });  // rétablir le défaut
+
+   // …ou par appel (prime sur le réglage global) :
+   HolafToast.show({ message: "…", injectStyles: false });
+   // Les helpers acceptent aussi l'option :
+   HolafToast.success("OK", { injectStyles: false });
+   ```
+
+- **Priorité** : option par appel (2ᵉ argument, puis champ `opts`) >
+  `configure({ injectStyles })` global > défaut `true`. Seul `false` désactive
+  l'injection.
+- Avec `injectStyles: false`, **aucune** balise `<style>` n'est créée ni
+  insérée : la brique considère que le CSS est déjà chargé.
+- **Avantage majeur** : compatibilité **totale** avec `style-src 'self'`
+  **sans nonce** — inutile de gérer/passer un nonce côté backend. Le mode nonce
+  (section précédente) reste disponible si l'on préfère l'injection JS.
+- **Rétrocompatible** : sans configuration, le comportement historique
+  (injection du `<style>`) est strictement inchangé.
+
 ## Usage
 
 ### `HolafToast.show(options)` → `{ close, update }`
@@ -69,6 +135,7 @@ const t = HolafToast.show({
     closeOnClick: true,                    // fermer en cliquant le toast (false)
     onShow: (ctrl) => {},
     onClose: (reason) => {},               // 'timeout' | 'click' | 'manual' | 'replaced'
+    injectStyles: true,                    // v0.5.2 : false → pas d'injection du <style> (CSS externe)
 });
 
 t.update({ message: "Fini à 100 %", type: "success" }); // modifie à chaud
@@ -419,6 +486,7 @@ HolafToast.configure({
     duration: 3000,              // durée par défaut en ms (4000 ; 0 = persistant)
     theme: "light",              // thème global par défaut (aucun) — équivaut à setTheme
     newestFirst: true,           // v0.3.0 : nouveaux toasts en premier (top-* uniquement)
+    injectStyles: false,         // v0.5.2 : désactive l'injection du <style> (mode CSS externe)
 });
 ```
 
@@ -430,6 +498,8 @@ HolafToast.configure({
   top-right reste le défaut. Pour les positions `bottom-*`, le plus récent
   reste collé au bord bas (l'empilement monte vers le haut), même avec
   `newestFirst`.
+- `injectStyles` (v0.5.2) : `false` désactive l'injection du `<style>`
+  (mode CSS externe, voir § Mode CSS Externe) ; l'option par appel prime.
 - Sans appel à `configure()`, les défauts historiques sont strictement
   conservés : position `top-right`, durée `4000 ms`, aucun thème, `newestFirst`
   désactivé.

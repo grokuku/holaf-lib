@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafToast · version 0.5.0
+ * Holaf UI — Brique HolafToast · version 0.5.2
  * ─────────────────────────────────────────────────────────────────────────────
  * Notifications flottantes (toasts) autonomes, zéro dépendance runtime :
  * 4 types (info/success/warning/error) avec icône, empilement par position
@@ -19,6 +19,27 @@
  * comme base (top-center), variantes ajoutées (right/left/up/down), toujours
  * sans fill-mode d'entrée (le to{opacity:1} garantit l'état final).
  * Rétrocompatible : sans configuration, comportement historique identique.
+ *
+ * v0.5.1 — NONCE CSP (additif, STRICTEMENT rétrocompatible) : les hôtes à CSP
+ * strict (style-src 'self', sans 'unsafe-inline') bloquent le <style> injecté
+ * par JS. setStyleNonce(nonce) pose un nonce GLOBAL (setStyleNonce(null)
+ * réinitialise) ; l'option par appel — 2ᵉ argument de show() { nonce } ou champ
+ * `nonce` de opts (helpers inclus) — PRIME sur le global. Le nonce est appliqué
+ * au <style id="holaf-toast-style"> AVANT son insertion dans le <head>. Sans
+ * nonce configuré : même id, même CSS, même point d'insertion, aucun attribut
+ * ajouté (comportement d'origine à l'identique). Aucune signature existante ne
+ * change.
+ *
+ * v0.5.2 — MODE CSS EXTERNE (additif, STRICTEMENT rétrocompatible) :
+ * alternative propre au nonce pour les hôtes à CSP strict (style-src 'self').
+ * HolafToast.getCss() expose la chaîne CSS complète de la brique (à servir
+ * comme fichier .css statique) ; l'option `injectStyles` (boolean, défaut
+ * true) désactive l'injection du <style> — globalement via
+ * configure({ injectStyles: false }), ou par appel (2ᵉ argument de show()
+ * { injectStyles } ou champ `injectStyles` de opts, helpers inclus), l'appel
+ * primant sur le global. Avec injectStyles:false, AUCUNE balise <style> n'est
+ * créée ni insérée (l'hôte charge le CSS via son propre fichier). Défaut
+ * inchangé.
  *
  * v0.4.0 — fond teinté PAR TYPE (info/success/warning/error) avec fallback :
  * nouvelles variables de thème OPTIONNELLES --ht-bg-info, --ht-bg-success,
@@ -54,7 +75,7 @@
 const HolafToast = (function () {
     "use strict";
 
-    const VERSION = "0.5.0";
+    const VERSION = "0.5.2";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const CSS_ID = "holaf-toast-style";
@@ -334,6 +355,9 @@ const HolafToast = (function () {
     // v0.3.0 : si true, les nouveaux toasts s'insèrent EN PREMIER dans le
     // conteneur (prepend) au lieu d'ajouter à la fin (append, défaut historique).
     let newestFirst = false;
+    // v0.5.2 : mode CSS externe — si false, la brique n'injecte PAS son
+    // <style> (l'hôte sert le CSS via HolafToast.getCss()). Défaut true.
+    let injectStylesGlobal = true;
 
     function configure(opts) {
         opts = opts || {};
@@ -360,6 +384,29 @@ const HolafToast = (function () {
         if (opts.newestFirst !== undefined) {
             newestFirst = !!opts.newestFirst;
         }
+        if (opts.injectStyles !== undefined) {
+            // Seul `false` désactive l'injection (toute autre valeur = actif).
+            injectStylesGlobal = opts.injectStyles !== false;
+        }
+    }
+
+    // Injection effective des styles : 2ᵉ argument (callOpts.injectStyles) >
+    // champ opts.injectStyles > réglage global. Seul `false` désactive (toute
+    // autre valeur = actif). Un `undefined` (option absente) laisse jouer le
+    // global. Voir aussi getCss() (mode CSS externe).
+    function resolveInjectStyles(opts, callOpts) {
+        let value;
+        if (callOpts && callOpts.injectStyles !== undefined) value = callOpts.injectStyles;
+        else if (opts && opts.injectStyles !== undefined) value = opts.injectStyles;
+        else return injectStylesGlobal;
+        return value !== false;
+    }
+
+    // CSS COMPLET de la brique — à écrire dans un fichier .css servi par
+    // l'hôte quand l'injection JS est désactivée (injectStyles: false). Retour
+    // strictement identique au contenu injecté par ensureStyle().
+    function getCss() {
+        return CSS_TEXT;
     }
 
     // ─── CSS auto-injecté (une seule fois) ───────────────────────────────────
@@ -589,11 +636,55 @@ const HolafToast = (function () {
 }
 `;
 
-    function ensureStyle() {
+    // ─── Nonce CSP (v0.5.1 — OPTIONNEL, additif) ────────────────────────────
+    // Les hôtes à CSP strict (style-src 'self', SANS 'unsafe-inline')
+    // bloquent un <style> inséré par JS tant qu'il ne porte pas le nonce de la
+    // page. On peut le fournir de deux façons, la seconde primant sur la
+    // première :
+    //   1) globalement : HolafToast.setStyleNonce("<nonce>") ;
+    //      HolafToast.setStyleNonce(null) réinitialise le comportement d'origine.
+    //   2) par appel : show(opts, { nonce }) ou champ `nonce` de opts (les
+    //      helpers success/error/warning/info le transmettent) — une valeur
+    //      null/vide = « aucun nonce » explicite (surcharge le global).
+    // Le nonce est posé sur l'élément AVANT son insertion dans le <head>.
+    // SANS nonce configuré : aucun attribut ajouté, comportement historique.
+    let styleNonce = null;
+
+    // Normalise une valeur de nonce : null/undefined/"" = aucun nonce.
+    function normalizeNonce(value) {
+        if (value === null || value === undefined || value === "") return null;
+        return String(value);
+    }
+
+    // Lit le nonce d'un élément : on privilégie l'IDL `el.nonce`, qui reste
+    // fiable même quand l'attribut est « masqué » après insertion (anti-
+    // exfiltration navigateur) ; repli getAttribute pour les vieux moteurs.
+    function readNonce(el) {
+        if (typeof el.nonce === "string") return normalizeNonce(el.nonce);
+        return normalizeNonce(el.getAttribute("nonce"));
+    }
+
+    // Réglage GLOBAL du nonce ; null/undefined/"" = réinitialisation.
+    function setStyleNonce(nonce) {
+        styleNonce = normalizeNonce(nonce);
+    }
+
+    function ensureStyle(nonceOpt) {
         if (typeof document === "undefined") return;
-        if (document.getElementById(CSS_ID)) return;
-        const style = document.createElement("style");
+        // Nonce effectif : option d'appel (nonceOpt) > réglage global. Un
+        // `undefined` (option absente) laisse donc jouer le réglage global.
+        const effective = nonceOpt === undefined ? styleNonce : normalizeNonce(nonceOpt);
+        let style = document.getElementById(CSS_ID);
+        const current = style ? readNonce(style) : null;
+        // Cas par défaut (aucun nonce des deux côtés) : le style existant est
+        // conservé tel quel — strictement identique à l'historique.
+        if (style && current === effective) return;
+        // Le nonce a changé (configuration tardive ou réinitialisation) : on
+        // recrée l'élément pour que le nonce soit appliqué AVANT l'insertion.
+        if (style && style.parentNode) style.parentNode.removeChild(style);
+        style = document.createElement("style");
         style.id = CSS_ID;
+        if (effective) style.setAttribute("nonce", effective);
         style.textContent = CSS_TEXT;
         document.head.appendChild(style);
     }
@@ -647,12 +738,19 @@ const HolafToast = (function () {
     }
 
     // ─── Cœur : show() ───────────────────────────────────────────────────────
-    function show(opts) {
+    function show(opts, callOpts) {
         opts = opts || {};
         if (typeof document === "undefined") {
             throw new Error("[HolafToast] DOM requis (show() appelé hors navigateur).");
         }
-        ensureStyle();
+        // Nonce CSP effectif : 2ᵉ argument (callOpts.nonce) > champ opts.nonce
+        // > réglage global setStyleNonce. `undefined` = on retombe sur le global.
+        const nonceOpt = (callOpts && Object.prototype.hasOwnProperty.call(callOpts, "nonce"))
+            ? callOpts.nonce
+            : (Object.prototype.hasOwnProperty.call(opts, "nonce") ? opts.nonce : undefined);
+        // Mode CSS externe : injectStyles:false → on n'injecte PAS le <style>
+        // (l'hôte sert le CSS via HolafToast.getCss()). Défaut : injection.
+        if (resolveInjectStyles(opts, callOpts)) ensureStyle(nonceOpt);
 
         // ── id métier (v0.3.0) : un toast vivant portant déjà cet id est MIS
         // À JOUR au lieu d'en créer un nouveau. Retourne le contrôleur existant.
@@ -964,7 +1062,14 @@ const HolafToast = (function () {
         // passent pas d'option `theme` — voir README section « Thèmes ».
         setTheme: setTheme,
         clearTheme: clearTheme,
-        // Défauts globaux (position, durée, thème, newestFirst) — voir README.
+        // Nonce CSP (v0.5.1) — global, surchargeable par appel : voir ensureStyle.
+        setStyleNonce: setStyleNonce,
+        // Mode CSS externe (v0.5.2) : getCss() renvoie le CSS complet de la
+        // brique ; configure({ injectStyles:false }) — ou show(...,
+        // { injectStyles:false }) par appel — désactivent l'injection du
+        // <style> (l'hôte sert alors son propre fichier .css).
+        getCss: getCss,
+        // Défauts globaux (position, durée, thème, newestFirst, injectStyles) — voir README.
         configure: configure,
         // Registre de thèmes (préréglages + customs) :
         //   themes.register(name, vars) — enregistre/remplace (retourne une copie protégée)

@@ -209,7 +209,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.5.0");
+        expect(HolafToast.version).toBe("0.5.2");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -639,5 +639,174 @@ describe("HolafToast — position configurable (v0.5.0)", () => {
         expect(css).toContain("holaf-toast-fade-out-right");
         expect(css).toContain("holaf-toast-fade-out-left");
         expect(css).toContain("holaf-toast-fade-out-down");
+    });
+});
+
+// ── Nonce CSP (v0.5.1) ───────────────────────────────────────────────────────
+// API additive setStyleNonce() + option par appel ; sans nonce, comportement
+// d'origine strictement conservé (aucun attribut, même id, même CSS).
+describe("HolafToast — nonce CSP (v0.5.1)", () => {
+    const CSS_ID = "holaf-toast-style";
+
+    function styleEl() {
+        return document.getElementById(CSS_ID);
+    }
+    function removeStyle() {
+        const el = document.getElementById(CSS_ID);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    afterEach(() => {
+        HolafToast.setStyleNonce(null);
+        removeStyle();
+    });
+
+    it("(a) sans nonce : le <style> inséré ne porte AUCUN attribut nonce", () => {
+        removeStyle();
+        HolafToast.setStyleNonce(null);
+        HolafToast.show({ message: "a", duration: 0 });
+        const el = styleEl();
+        expect(el).not.toBeNull();
+        expect(el.hasAttribute("nonce")).toBe(false);
+        expect(el.id).toBe(CSS_ID);
+        expect(el.parentNode).toBe(document.head);
+        expect(el.textContent).toContain("--ht-");
+    });
+
+    it("(b) nonce global → le <style> porte le nonce", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("global-t");
+        HolafToast.show({ message: "b", duration: 0 });
+        expect(styleEl().getAttribute("nonce")).toBe("global-t");
+    });
+
+    it("(c) nonce par appel (2ᵉ argument) prime sur le global", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("global-t");
+        HolafToast.show({ message: "c", duration: 0 }, { nonce: "call-t" });
+        expect(styleEl().getAttribute("nonce")).toBe("call-t");
+    });
+
+    it("(c-bis) nonce via champ opts.nonce (les helpers le transmettent)", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("global-t");
+        HolafToast.success("ok", { duration: 0, nonce: "opts-t" });
+        expect(styleEl().getAttribute("nonce")).toBe("opts-t");
+    });
+
+    it("(d) setStyleNonce(null) → retour au défaut (aucun attribut)", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("temp-t");
+        HolafToast.show({ message: "d1", duration: 0 });
+        expect(styleEl().getAttribute("nonce")).toBe("temp-t");
+
+        HolafToast.setStyleNonce(null);
+        HolafToast.show({ message: "d2", duration: 0 }); // recrée le style sans nonce
+        expect(styleEl().hasAttribute("nonce")).toBe(false);
+        expect(styleEl().getAttribute("nonce")).toBeNull();
+    });
+
+    it("le nonce est appliqué AVANT l'insertion", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("avant-t");
+        HolafToast.show({ message: "e", duration: 0 });
+        const el = styleEl();
+        expect(el.isConnected).toBe(true);
+        expect(el.getAttribute("nonce")).toBe("avant-t");
+    });
+
+    it("nonce global stable : le même <style> est réutilisé (pas de recréation à chaque show)", () => {
+        removeStyle();
+        HolafToast.setStyleNonce("stable-t");
+        HolafToast.show({ message: "s1", duration: 0 });
+        const first = styleEl();
+        HolafToast.show({ message: "s2", duration: 0 });
+        expect(styleEl()).toBe(first); // même élément → comparaison via l'IDL el.nonce
+        expect(styleEl().getAttribute("nonce")).toBe("stable-t");
+    });
+});
+
+// ── Mode CSS externe (v0.5.2) ────────────────────────────────────────────────
+// Couvre l'API additive getCss() + l'option injectStyles (défaut true) :
+// injectStyles:false n'ajoute AUCUNE balise <style> ; la priorité appel > global
+// est respectée ; le défaut reste strictement identique (injection).
+describe("HolafToast — mode CSS externe (v0.5.2)", () => {
+    const CSS_ID = "holaf-toast-style";
+    function styleEl() {
+        return document.getElementById(CSS_ID);
+    }
+    function removeStyle() {
+        const el = document.getElementById(CSS_ID);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    afterEach(() => {
+        HolafToast.configure({ injectStyles: true }); // rétablit le défaut global
+        removeStyle();
+    });
+
+    it("getCss() retourne le CSS complet de la brique (chaîne non vide, scoppée)", () => {
+        const css = HolafToast.getCss();
+        expect(typeof css).toBe("string");
+        expect(css.length).toBeGreaterThan(0);
+        expect(css).toContain(".holaf-toast-container");
+        expect(css).toContain("--ht-");
+        expect(css).not.toContain(":root");
+    });
+
+    it("getCss() est strictement identique au contenu du <style> injecté par défaut", () => {
+        removeStyle();
+        HolafToast.show({ message: "x", duration: 0 });
+        expect(styleEl()).not.toBeNull();
+        expect(styleEl().textContent).toBe(HolafToast.getCss());
+    });
+
+    it("défaut (injectStyles true) : le <style> est bien injecté (rétrocompatibilité)", () => {
+        removeStyle();
+        HolafToast.show({ message: "d", duration: 0 });
+        expect(styleEl()).not.toBeNull();
+    });
+
+    it("show({ injectStyles:false }) → AUCUNE balise <style> ajoutée au DOM", () => {
+        removeStyle();
+        HolafToast.show({ message: "x", duration: 0, injectStyles: false });
+        expect(styleEl()).toBeNull();
+        expect(document.querySelectorAll("style#" + CSS_ID)).toHaveLength(0);
+    });
+
+    it("show(opts, { injectStyles:false }) via le 2ᵉ argument → pas d'injection non plus", () => {
+        removeStyle();
+        HolafToast.show({ message: "x", duration: 0 }, { injectStyles: false });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("configure({ injectStyles:false }) désactive l'injection globale", () => {
+        removeStyle();
+        HolafToast.configure({ injectStyles: false });
+        HolafToast.show({ message: "x", duration: 0 });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("l'option par appel PRIME sur le réglage global (dans les deux sens)", () => {
+        // global false, appel true → injecte
+        removeStyle();
+        HolafToast.configure({ injectStyles: false });
+        HolafToast.show({ message: "x", duration: 0, injectStyles: true });
+        expect(styleEl()).not.toBeNull();
+
+        // global true, appel false → n'injecte pas
+        removeStyle();
+        HolafToast.configure({ injectStyles: true });
+        HolafToast.show({ message: "y", duration: 0, injectStyles: false });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("les helpers transmettent injectStyles (via opts)", () => {
+        removeStyle();
+        HolafToast.configure({ injectStyles: false });
+        HolafToast.success("ok", { duration: 0 }); // global false → pas d'injection
+        expect(styleEl()).toBeNull();
+        HolafToast.info("re", { duration: 0, injectStyles: true }); // appel true → injecte
+        expect(styleEl()).not.toBeNull();
     });
 });

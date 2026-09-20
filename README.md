@@ -31,8 +31,8 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.4.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
-    "toast":   { "version": "0.5.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
+    "modal":   { "version": "0.4.2", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "toast":   { "version": "0.5.2", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
     "tokens":  { "version": "0.1.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
@@ -54,8 +54,8 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.4.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`) |
-| toast      | `js/holaf-toast.js` | 0.5.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle) |
+| modal      | `js/holaf-modal.js` | 0.4.2   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| toast      | `js/holaf-toast.js` | 0.5.2   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
@@ -65,6 +65,95 @@ Grâce à ça, le script `holaf` sait :
 | icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
 > 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons
+
+## CSP strict (nonce) — briques à injection de style
+
+Certains hôtes servent leurs pages avec une CSP stricte (`style-src 'self'`,
+**sans** `'unsafe-inline'`, comme `Yuki`). Dans ce cas, un `<style>` injecté
+par JavaScript est bloqué s'il ne porte pas le **nonce** de la page. Les deux
+briques qui injectent réellement du CSS — **modal** et **toast** — acceptent
+donc un nonce **optionnel** :
+
+```js
+// 1) Réglage GLOBAL (une fois à l'init) — une brique à la fois :
+HolafModal.setStyleNonce(monNonce);
+HolafToast.setStyleNonce(monNonce);
+HolafModal.setStyleNonce(null); // réinitialiser → comportement par défaut
+
+// 2) Surcharge PAR APPEL (prime sur le global) :
+HolafModal.open({ title: "…" }, { nonce: monNonce });
+HolafToast.show({ message: "…" }, { nonce: monNonce });
+// …ou via le champ `nonce` des options (helpers inclus) :
+HolafModal.alert("…", "…", { nonce: monNonce });
+HolafToast.success("…", { nonce: monNonce });
+```
+
+- **Optionnel et rétrocompatible** : sans nonce configuré, le `<style>` est
+  inséré exactement comme avant — même `id`, même CSS, même point d'insertion,
+  **aucun attribut ajouté**. L'API est purement additive.
+- Le nonce est appliqué à l'élément **avant** son insertion dans le `<head>`.
+- Le nonce par appel prime sur le réglage global ; `null`/`""` = « aucun
+  nonce » explicite.
+- Seules **modal** et **toast** injectent des règles CSS via un `<style>`.
+  `fetch`, `viewport`, `color`, `icons` et `ambient` n'injectent aucun style
+  (viewport ne fait que poser un `transform` sur l'élément de l'hôte).
+  `tokens` insère un `<style>` **ne contenant qu'un commentaire** (aucune
+  règle) et pose ses variables via CSSOM (`setProperty`), non régi par
+  `style-src` — donc non concerné par le nonce.
+
+## Mode CSS Externe — alternative au nonce (CSP `style-src 'self'`)
+
+Plutôt que de faire injecter le CSS par JavaScript (et devoir fournir un
+nonce géré par le backend), on peut **servir le CSS comme fichier `.css`
+statique** et demander à la brique de ne **pas** injecter son `<style>`. C'est
+la solution la plus propre pour un hôte à CSP strict comme `Yuki`
+(`style-src 'self'`).
+
+Les deux briques CSS-injectantes — **modal** et **toast** — exposent :
+
+1. **`getCss()`** : renvoie la chaîne CSS **complète** de la brique (identique
+   au contenu du `<style>` qu'elle injecte). Écrivez-la dans un fichier `.css`
+   servi par votre projet :
+
+   ```js
+   // (dev/build) publier le CSS de chaque brique comme fichier statique :
+   HolafModal.getCss();   // → chaîne CSS complète → vendor/holaf/holaf-modal.css
+   HolafToast.getCss();   // → chaîne CSS complète → vendor/holaf/holaf-toast.css
+   ```
+
+   ```html
+   <link rel="stylesheet" href="/vendor/holaf/holaf-modal.css">
+   <link rel="stylesheet" href="/vendor/holaf/holaf-toast.css">
+   ```
+
+2. **`injectStyles`** (boolean, défaut `true`) : à `false`, la brique ne crée
+   ni n'insère la balise `<style>` — elle considère que le CSS est déjà chargé
+   via le fichier externe.
+
+   ```js
+   // Global (une fois à l'init) — une brique à la fois :
+   HolafModal.configure({ injectStyles: false });
+   HolafToast.configure({ injectStyles: false });
+
+   // …ou par appel (prime sur le réglage global) :
+   HolafModal.open({ title: "…" }, { injectStyles: false });
+   HolafModal.open({ title: "…", injectStyles: false }); // champ des options
+   HolafToast.show({ message: "…", injectStyles: false });
+   ```
+
+- **Priorité** : `injectStyles` par appel (2ᵉ argument, puis champ `opts`) >
+  `configure({ injectStyles })` global > défaut `true`. Seul `false` désactive
+  l'injection.
+- **Rétrocompatibilité totale** : sans rien configurer, le comportement
+  historique est strictement inchangé (injection du `<style>` comme avant).
+- **Avantage majeur** : compatibilité **totale** avec `style-src 'self'`
+  **sans aucun nonce** — plus besoin de gérer/passer un nonce côté backend. Le
+  mode nonce (section précédente) reste disponible si l'on préfère l'injection
+  JS.
+
+> Les helpers (`HolafModal.alert/confirm/prompt/busy`,
+> `HolafToast.success/error/…`) acceptent aussi `injectStyles` dans leurs
+> options et le transmettent à l'ouverture.
 
 ## Nouveautés v0.1
 

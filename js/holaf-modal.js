@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafModal · version 0.4.0
+ * Holaf UI — Brique HolafModal · version 0.4.2
  * ─────────────────────────────────────────────────────────────────────────────
  * Modale autonome (zéro dépendance runtime) : overlay, pile d'overlays
  * document-level, helpers Promise (alert / confirm / prompt / busy), focus
@@ -17,6 +17,24 @@
  * NATIVE du formulaire se déclenche au clic, la validation restant dans le
  * hôte. Les API existantes (alert / confirm / prompt / busy, fenêtre, thèmes)
  * sont strictement inchangées.
+ * v0.4.1 — NONCE CSP (additif, STRICTEMENT rétrocompatible) : les hôtes à CSP
+ * strict (style-src 'self', sans 'unsafe-inline') bloquent le <style> injecté
+ * par JS. setStyleNonce(nonce) pose un nonce GLOBAL (setStyleNonce(null)
+ * réinitialise) ; l'option par appel — 2ᵉ argument de open() { nonce } ou
+ * champ `nonce` de opts — PRIME sur le global. Le nonce est appliqué au
+ * <style id="holaf-modal-style"> AVANT son insertion dans le <head>. Sans
+ * nonce configuré : même id, même CSS, même point d'insertion, aucun attribut
+ * ajouté (comportement d'origine à l'identique). Aucune signature existante ne
+ * change.
+ * v0.4.2 — MODE CSS EXTERNE (additif, STRICTEMENT rétrocompatible) :
+ * alternative propre au nonce pour les hôtes à CSP strict (style-src 'self').
+ * HolafModal.getCss() expose la chaîne CSS complète de la brique (à servir
+ * comme fichier .css statique) ; l'option `injectStyles` (boolean, défaut
+ * true) désactive l'injection du <style> — globalement via
+ * configure({ injectStyles: false }), ou par appel (2ᵉ argument de open()
+ * { injectStyles } ou champ `injectStyles` de opts), l'appel primant sur le
+ * global. Avec injectStyles:false, AUCUNE balise <style> n'est créée ni
+ * insérée (l'hôte charge le CSS via son propre fichier). Défaut inchangé.
  * Fichier DUAL : module ES (export) + global window.HolafModal — se
  * charge via <script type="module"> ou `import { HolafModal }`.
  *
@@ -33,7 +51,7 @@
 const HolafModal = (function () {
     "use strict";
 
-    const VERSION = "0.4.0";
+    const VERSION = "0.4.2";
 
     // ─── État global du module (partagé par toutes les modales) ──────────────
     // Pile des modales ouvertes : la DERNIÈRE entrée est le « sommet », la
@@ -402,17 +420,95 @@ body.holaf-modal-open { overflow: hidden; }
 .holaf-modal-alert-icon { font-size: 28px; text-align: center; margin-bottom: 10px; }
 `;
 
-    let cssInjected = false;
-    function ensureCss() {
-        if (cssInjected) return;
+    // ─── Nonce CSP (v0.4.1 — OPTIONNEL, additif) ────────────────────────────
+    // Les hôtes à CSP strict (style-src 'self', SANS 'unsafe-inline')
+    // bloquent un <style> inséré par JS tant qu'il ne porte pas le nonce de la
+    // page. On peut le fournir de deux façons, la seconde primant sur la
+    // première :
+    //   1) globalement : HolafModal.setStyleNonce("<nonce>") ;
+    //      HolafModal.setStyleNonce(null) réinitialise le comportement d'origine.
+    //   2) par appel : open(opts, { nonce }) ou champ `nonce` de opts — une
+    //      valeur null/vide = « aucun nonce » explicite (surcharge le global).
+    // Le nonce est posé sur l'élément AVANT son insertion dans le <head>.
+    // SANS nonce configuré : aucun attribut ajouté, comportement historique.
+    let styleNonce = null;
+
+    // Normalise une valeur de nonce : null/undefined/"" = aucun nonce.
+    function normalizeNonce(value) {
+        if (value === null || value === undefined || value === "") return null;
+        return String(value);
+    }
+
+    // Lit le nonce d'un élément : on privilégie l'IDL `el.nonce`, qui reste
+    // fiable même quand l'attribut est « masqué » après insertion (anti-
+    // exfiltration navigateur) ; repli getAttribute pour les vieux moteurs.
+    function readNonce(el) {
+        if (typeof el.nonce === "string") return normalizeNonce(el.nonce);
+        return normalizeNonce(el.getAttribute("nonce"));
+    }
+
+    // Réglage GLOBAL du nonce ; null/undefined/"" = réinitialisation.
+    function setStyleNonce(nonce) {
+        styleNonce = normalizeNonce(nonce);
+    }
+
+    function ensureCss(nonceOpt) {
         if (typeof document === "undefined") return;
-        if (!document.getElementById(CSS_ID)) {
-            const style = document.createElement("style");
-            style.id = CSS_ID;
-            style.textContent = HOLAF_MODAL_CSS;
-            document.head.appendChild(style);
+        // Nonce effectif : option d'appel (nonceOpt) > réglage global. Un
+        // `undefined` (option absente) laisse donc jouer le réglage global.
+        const effective = nonceOpt === undefined ? styleNonce : normalizeNonce(nonceOpt);
+        let style = document.getElementById(CSS_ID);
+        const current = style ? readNonce(style) : null;
+        // Cas par défaut (aucun nonce des deux côtés) : le style existant est
+        // conservé tel quel — strictement identique à l'historique.
+        if (style && current === effective) return;
+        // Le nonce a changé (configuration tardive ou réinitialisation) : on
+        // recrée l'élément pour que le nonce soit appliqué AVANT l'insertion.
+        if (style && style.parentNode) style.parentNode.removeChild(style);
+        style = document.createElement("style");
+        style.id = CSS_ID;
+        if (effective) style.setAttribute("nonce", effective);
+        style.textContent = HOLAF_MODAL_CSS;
+        document.head.appendChild(style);
+    }
+
+    // ─── Mode CSS externe (v0.4.2 — OPTIONNEL, additif) ─────────────────────
+    // Alternative propre au nonce pour les hôtes à CSP strict (style-src
+    // 'self') : servir le CSS de la brique comme FICHIER .css statique et
+    // demander à la brique de NE PAS injecter son <style>. Le CSS est récupéré
+    // via HolafModal.getCss(), écrit dans un fichier .css servi par l'hôte, et
+    // l'injection est désactivée de deux façons (la seconde primant) :
+    //   1) globalement : HolafModal.configure({ injectStyles: false }) ;
+    //   2) par appel : open(opts, { injectStyles: false }) ou champ
+    //      `injectStyles` de opts — prime sur le réglage global.
+    // Par défaut (true) : comportement historique STRICTEMENT inchangé.
+    let injectStylesGlobal = true;
+
+    // Réglage global de l'injection des styles — `configure` est cohérent avec
+    // HolafToast (extensible à d'autres options le cas échéant).
+    function configure(opts) {
+        opts = opts || {};
+        if (opts.injectStyles !== undefined) {
+            injectStylesGlobal = opts.injectStyles !== false;
         }
-        cssInjected = true;
+    }
+
+    // Injection effective : 2ᵉ argument (callOpts.injectStyles) > champ
+    // opts.injectStyles > réglage global. Seul `false` désactive (toute autre
+    // valeur = actif). Un `undefined` (option absente) laisse jouer le global.
+    function resolveInjectStyles(opts, callOpts) {
+        let value;
+        if (callOpts && callOpts.injectStyles !== undefined) value = callOpts.injectStyles;
+        else if (opts && opts.injectStyles !== undefined) value = opts.injectStyles;
+        else return injectStylesGlobal;
+        return value !== false;
+    }
+
+    // CSS COMPLET de la brique — à écrire dans un fichier .css servi par
+    // l'hôte quand l'injection JS est désactivée (injectStyles: false). Retour
+    // strictement identique au contenu injecté par ensureCss().
+    function getCss() {
+        return HOLAF_MODAL_CSS;
     }
 
     // ─── Scroll-lock avec compteur ───────────────────────────────────────────
@@ -481,7 +577,7 @@ body.holaf-modal-open { overflow: hidden; }
     }
 
     // ─── Noyau : HolafModal.open(options) ────────────────────────────────────
-    function open(opts) {
+    function open(opts, callOpts) {
         opts = opts || {};
         if (typeof document === "undefined") {
             throw new Error("[HolafModal] nécessite un navigateur (document indisponible).");
@@ -497,7 +593,14 @@ body.holaf-modal-open { overflow: hidden; }
             }
         }
 
-        ensureCss();
+        // Nonce CSP effectif : 2ᵉ argument (callOpts.nonce) > champ opts.nonce
+        // > réglage global setStyleNonce. `undefined` = on retombe sur le global.
+        const nonceOpt = (callOpts && Object.prototype.hasOwnProperty.call(callOpts, "nonce"))
+            ? callOpts.nonce
+            : (Object.prototype.hasOwnProperty.call(opts, "nonce") ? opts.nonce : undefined);
+        // Mode CSS externe : injectStyles:false → on n'injecte PAS le <style>
+        // (l'hôte sert le CSS via HolafModal.getCss()). Défaut : injection.
+        if (resolveInjectStyles(opts, callOpts)) ensureCss(nonceOpt);
         installKeyHandler();
 
         // ── Options (valeurs par défaut) ─────────────────────────────────────
@@ -1068,7 +1171,7 @@ body.holaf-modal-open { overflow: hidden; }
                 labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: () => resolve(undefined),
-            });
+            }, { nonce: opts.nonce, injectStyles: opts.injectStyles });
         });
     }
 
@@ -1095,7 +1198,7 @@ body.holaf-modal-open { overflow: hidden; }
                 labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: (v) => resolve(v === true),
-            });
+            }, { nonce: opts.nonce, injectStyles: opts.injectStyles });
         });
     }
 
@@ -1128,7 +1231,7 @@ body.holaf-modal-open { overflow: hidden; }
                 labels: opts.labels,
                 closeOnOverlay: false,
                 _onResolve: (v) => resolve(typeof v === "string" ? v : null),
-            });
+            }, { nonce: opts.nonce, injectStyles: opts.injectStyles });
             // Entrée dans le champ = valider (comme un <form>).
             input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
@@ -1162,7 +1265,7 @@ body.holaf-modal-open { overflow: hidden; }
             closeOnEscape: false,
             closeOnOverlay: false,
             focusTrap: false,
-        });
+        }, { nonce: opts.nonce, injectStyles: opts.injectStyles });
         return {
             set(msg) {
                 if (msg !== undefined && msg !== null) label.textContent = String(msg);
@@ -1186,6 +1289,14 @@ body.holaf-modal-open { overflow: hidden; }
         // passent pas d'option `theme` — voir README section « Thèmes ».
         setTheme: setTheme,
         clearTheme: clearTheme,
+        // Nonce CSP (v0.4.1) — global, surchargeable par appel : voir ensureCss.
+        setStyleNonce: setStyleNonce,
+        // Mode CSS externe (v0.4.2) : getCss() renvoie le CSS complet de la
+        // brique ; configure({ injectStyles:false }) — ou open(...,
+        // { injectStyles:false }) par appel — désactivent l'injection du
+        // <style> (l'hôte sert alors son propre fichier .css).
+        getCss: getCss,
+        configure: configure,
         // Registre de thèmes (préréglages + customs) :
         //   themes.register(name, vars) — enregistre/remplace (retourne une copie protégée)
         //   themes.get(name)            — copie des variables ou null

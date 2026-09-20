@@ -3,11 +3,11 @@
   "description": "Briques maison (JS et Python), versionnées par brique. Chaque brique est un fichier autonome, copié (pinné) dans les projets qui en ont besoin.",
   "bricks": {
     "modal": {
-      "version": "0.4.0",
+      "version": "0.4.2",
       "file": "js/holaf-modal.js"
     },
     "toast": {
-      "version": "0.5.0",
+      "version": "0.5.2",
       "file": "js/holaf-toast.js"
     },
     "fetch": {

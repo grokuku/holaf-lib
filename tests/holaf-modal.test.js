@@ -406,7 +406,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.4.0");
+        expect(HolafModal.version).toBe("0.4.2");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -973,5 +973,213 @@ describe("fenêtre (v0.3.0)", () => {
         expect(warn).toHaveBeenCalledTimes(1);
         expect(HolafModal.themes.get("nouveau")["--hm-bg"]).toBe("#333");
         expect(ret).toEqual({ "--hm-bg": "#333" });
+    });
+});
+
+// ── Nonce CSP (v0.4.1) ───────────────────────────────────────────────────────
+// Couvre l'API additive setStyleNonce() + l'option par appel, et prouve que
+// SANS nonce le comportement d'origine est strictement conservé (aucun attribut
+// nonce, même id, même CSS).
+describe("nonce CSP (v0.4.1)", () => {
+    const CSS_ID = "holaf-modal-style";
+
+    function styleEl() {
+        return document.getElementById(CSS_ID);
+    }
+    // Retire le style injecté pour forcer une (ré)injection propre à chaque cas.
+    function removeStyle() {
+        const el = document.getElementById(CSS_ID);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    afterEach(() => {
+        HolafModal.setStyleNonce(null);
+        removeStyle();
+    });
+
+    it("(a) sans nonce : le <style> inséré ne porte AUCUN attribut nonce (comportement d'origine)", () => {
+        HolafModal.setStyleNonce(null);
+        removeStyle();
+        HolafModal.open({ title: "a" });
+        const el = styleEl();
+        expect(el).not.toBeNull();
+        expect(el.hasAttribute("nonce")).toBe(false);
+        expect(el.getAttribute("nonce")).toBeNull();
+        // id, contenu et point d'insertion identiques à l'historique.
+        expect(el.id).toBe(CSS_ID);
+        expect(el.parentNode).toBe(document.head);
+        expect(el.textContent).toContain("--hm-accent");
+    });
+
+    it("(b) nonce global posé via setStyleNonce → le <style> porte le nonce", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("global-abc");
+        HolafModal.open({ title: "b" });
+        const el = styleEl();
+        expect(el).not.toBeNull();
+        expect(el.getAttribute("nonce")).toBe("global-abc");
+    });
+
+    it("(c) nonce par appel (2ᵉ argument) → prime sur le nonce global", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("global-abc");
+        HolafModal.open({ title: "c" }, { nonce: "call-xyz" });
+        expect(styleEl().getAttribute("nonce")).toBe("call-xyz");
+    });
+
+    it("(c-bis) nonce par appel via le champ opts.nonce → prime aussi", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("global-abc");
+        HolafModal.open({ title: "c2", nonce: "opts-123" });
+        expect(styleEl().getAttribute("nonce")).toBe("opts-123");
+    });
+
+    it("(c-ter) les helpers forwardent le nonce par appel à open()", async () => {
+        removeStyle();
+        HolafModal.setStyleNonce("global-h");
+        const p = HolafModal.alert("T", "M", { nonce: "helper-n" });
+        expect(styleEl().getAttribute("nonce")).toBe("helper-n");
+        document.querySelector(".holaf-modal-btn-primary").click();
+        await expect(p).resolves.toBeUndefined();
+    });
+
+    it("(d) setStyleNonce(null) → retour au comportement par défaut (aucun attribut)", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("temporaire");
+        HolafModal.open({ title: "d1" });
+        expect(styleEl().getAttribute("nonce")).toBe("temporaire");
+
+        HolafModal.setStyleNonce(null);
+        HolafModal.open({ title: "d2" }); // la réinitialisation recrée le style sans nonce
+        expect(styleEl().hasAttribute("nonce")).toBe(false);
+        expect(styleEl().getAttribute("nonce")).toBeNull();
+    });
+
+    it("le nonce est appliqué AVANT l'insertion (attribut présent dès la connexion)", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("avant-insert");
+        HolafModal.open({ title: "e" });
+        const el = styleEl();
+        expect(el.isConnected).toBe(true);
+        expect(el.getAttribute("nonce")).toBe("avant-insert");
+    });
+
+    it("nonce global stable : le même <style> est réutilisé (pas de recréation à chaque open)", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("stable-n");
+        HolafModal.open({ title: "s1" });
+        const first = styleEl();
+        HolafModal.open({ title: "s2" });
+        expect(styleEl()).toBe(first); // même élément → comparaison via l'IDL el.nonce
+        expect(styleEl().getAttribute("nonce")).toBe("stable-n");
+    });
+});
+
+// ── Mode CSS externe (v0.4.2) ────────────────────────────────────────────────
+// Couvre l'API additive getCss() + l'option injectStyles (défaut true) :
+// injectStyles:false n'ajoute AUCUNE balise <style> ; la priorité appel > global
+// est respectée ; le défaut reste strictement identique (injection).
+describe("mode CSS externe (v0.4.2)", () => {
+    const CSS_ID = "holaf-modal-style";
+    function styleEl() {
+        return document.getElementById(CSS_ID);
+    }
+    function removeStyle() {
+        const el = document.getElementById(CSS_ID);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    afterEach(() => {
+        HolafModal.configure({ injectStyles: true }); // rétablit le défaut global
+        removeStyle();
+    });
+
+    it("getCss() retourne le CSS complet de la brique (chaîne non vide, scoppée)", () => {
+        const css = HolafModal.getCss();
+        expect(typeof css).toBe("string");
+        expect(css.length).toBeGreaterThan(0);
+        expect(css).toContain("--hm-accent");
+        expect(css).toContain(".holaf-modal-root");
+        expect(css).toContain("body.holaf-modal-open");
+        expect(css).not.toContain(":root");
+    });
+
+    it("getCss() est strictement identique au contenu du <style> injecté par défaut", () => {
+        removeStyle();
+        HolafModal.open({ title: "css" });
+        expect(styleEl()).not.toBeNull();
+        expect(styleEl().textContent).toBe(HolafModal.getCss());
+    });
+
+    it("défaut (injectStyles true) : le <style> est bien injecté (rétrocompatibilité)", () => {
+        removeStyle();
+        HolafModal.open({ title: "d" });
+        expect(styleEl()).not.toBeNull();
+    });
+
+    it("injectStyles:false par appel → AUCUNE balise <style> ajoutée au DOM", () => {
+        removeStyle();
+        HolafModal.open({ title: "x", injectStyles: false });
+        expect(styleEl()).toBeNull();
+        expect(document.querySelectorAll("style#" + CSS_ID)).toHaveLength(0);
+    });
+
+    it("injectStyles:false via le 2ᵉ argument de open() → pas d'injection non plus", () => {
+        removeStyle();
+        HolafModal.open({ title: "x" }, { injectStyles: false });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("configure({ injectStyles:false }) désactive l'injection globale", () => {
+        removeStyle();
+        HolafModal.configure({ injectStyles: false });
+        HolafModal.open({ title: "g" });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("l'option par appel PRIME sur le réglage global (dans les deux sens)", () => {
+        // global false, appel true → injecte
+        removeStyle();
+        HolafModal.configure({ injectStyles: false });
+        HolafModal.open({ title: "a", injectStyles: true });
+        expect(styleEl()).not.toBeNull();
+
+        // global true, appel false → n'injecte pas
+        removeStyle();
+        HolafModal.configure({ injectStyles: true });
+        HolafModal.open({ title: "b", injectStyles: false });
+        expect(styleEl()).toBeNull();
+    });
+
+    it("configure({ injectStyles:true }) rétablit le comportement par défaut", () => {
+        removeStyle();
+        HolafModal.configure({ injectStyles: false });
+        HolafModal.configure({ injectStyles: true });
+        HolafModal.open({ title: "r" });
+        expect(styleEl()).not.toBeNull();
+    });
+
+    it("les helpers transmettent injectStyles à open()", async () => {
+        removeStyle();
+        HolafModal.configure({ injectStyles: false });
+        // helper sans injectStyles → suit le global (false) → pas d'injection
+        const p = HolafModal.alert("T", "M");
+        expect(styleEl()).toBeNull();
+        document.querySelector(".holaf-modal-btn-primary").click();
+        await expect(p).resolves.toBeUndefined();
+        removeStyle();
+        // helper avec injectStyles:true → prime sur le global false
+        const p2 = HolafModal.alert("T", "M", { injectStyles: true });
+        expect(styleEl()).not.toBeNull();
+        document.querySelector(".holaf-modal-btn-primary").click();
+        await expect(p2).resolves.toBeUndefined();
+    });
+
+    it("injection active + nonce global → le <style> porte toujours le nonce (compat)", () => {
+        removeStyle();
+        HolafModal.setStyleNonce("n-ext");
+        HolafModal.open({ title: "n", injectStyles: true });
+        expect(styleEl().getAttribute("nonce")).toBe("n-ext");
+        HolafModal.setStyleNonce(null);
     });
 });
