@@ -9,6 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafModal } from "../js/holaf-modal.js";
+import { HolafTokens } from "../js/holaf-tokens.js";
 
 // ── Helpers de test ──────────────────────────────────────────────────────────
 function pressKey(key, init = {}) {
@@ -406,7 +407,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.4.2");
+        expect(HolafModal.version).toBe("0.5.0");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -434,11 +435,58 @@ describe("thèmes", () => {
         "--hm-busy-bg": "rgba(30, 30, 30, 0.82)",
     };
 
-    it("enregistre les 4 presets génériques au chargement", () => {
+    // 10 combinaisons famille × mode (v0.5.0) + 4 noms historiques.
+    const COMBOS_10 = [
+        "indigo-light", "indigo-dark",
+        "midnight-light", "midnight-dark",
+        "slate-light", "slate-dark",
+        "emerald-light", "emerald-dark",
+        "amber-light", "amber-dark",
+    ];
+
+    it("enregistre les 10 combinaisons famille×mode + les 4 noms historiques", () => {
         const names = HolafModal.themes.list();
-        for (const n of ["dark", "light", "midnight", "slate"]) {
+        for (const n of [...COMBOS_10, "dark", "light", "midnight", "slate"]) {
             expect(names).toContain(n);
             expect(HolafModal.themes.get(n)).not.toBeNull();
+        }
+        expect(names.length).toBe(14); // 10 combos + 4 historiques
+    });
+
+    it("les 4 noms historiques sont des alias EXACTS de leur palette de famille", () => {
+        expect(HolafModal.themes.get("dark")).toEqual(HolafModal.themes.get("indigo-dark"));
+        expect(HolafModal.themes.get("light")).toEqual(HolafModal.themes.get("indigo-light"));
+        expect(HolafModal.themes.get("midnight")).toEqual(HolafModal.themes.get("midnight-dark"));
+        expect(HolafModal.themes.get("slate")).toEqual(HolafModal.themes.get("slate-dark"));
+    });
+
+    it("cohérence inter-briques : chaque preset <famille>-<mode> reflète HolafTokens", () => {
+        const HOMOLOG = {
+            "--hm-bg": "surface",
+            "--hm-bg-secondary": "surface-elev",
+            "--hm-bg-input": "surface-raised",
+            "--hm-text": "text",
+            "--hm-text-secondary": "text-muted",
+            "--hm-border": "border",
+            "--hm-accent": "accent",
+            "--hm-accent-hover": "accent-hover",
+            "--hm-accent-text": "accent-text",
+            "--hm-danger": "danger",
+            "--hm-danger-text": "danger-text",
+        };
+        for (const name of COMBOS_10) {
+            const brick = HolafModal.themes.get(name);
+            const tokens = HolafTokens.PRESETS[name];
+            expect(tokens, name).toBeTruthy();
+            for (const [hm, tok] of Object.entries(HOMOLOG)) {
+                expect(brick[hm], name + " / " + hm).toBe(tokens[tok]);
+            }
+            // danger-hover n'existe QUE dans les presets GÉNÉRÉS de HolafTokens.
+            if (tokens["danger-hover"]) {
+                expect(brick["--hm-danger-hover"], name).toBe(tokens["danger-hover"]);
+            }
+            // La brique ne fige JAMAIS la largeur (compatibilité sm/md/lg/xl).
+            expect(brick["--hm-width"]).toBeUndefined();
         }
     });
 

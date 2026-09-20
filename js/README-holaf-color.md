@@ -1,11 +1,11 @@
-# HolafColor — utilitaires couleur (brique holaf-lib v0.1.0)
+# HolafColor — utilitaires couleur (brique holaf-lib v0.1.1)
 
 Brique **sans style** (comme `viewport`) : des utilitaires couleur en **PUR JS,
 sans DOM ni CSS**. Un seul fichier (`holaf-color.js`), zéro dépendance. Elle ne
 touche pas au DOM, ne pose aucune variable CSS ni feuille de style — c'est une
 boîte à outils pure.
 
-**Version : 0.1.0**
+**Version : 0.1.1**
 
 ---
 
@@ -61,6 +61,7 @@ import { HolafColor } from "./vendor/holaf/holaf-color.js";
 | Fonction | Rôle |
 |----------|------|
 | `generateTheme(accent, options?)` | Retourne un objet de tokens **couleur** calculés à partir d'un accent (pur calcul, **rien n'est posé**). |
+| `generateFamily(accent, options?)` | Retourne **`{ light, dark }`** : deux palettes `generateTheme`, une par fond (clair/sombre), le texte s'adaptant par contraste. |
 
 ### `generateTheme` — sortie (clés)
 
@@ -91,6 +92,43 @@ Options :
 
 ---
 
+### `generateFamily` — paire clair / sombre
+
+`generateFamily(accent, options?)` appelle `generateTheme` **deux fois** avec
+des fonds **opposés** et renvoie `{ light, dark }`. Comme le texte est calculé
+par `readableText` (contraste **≥ 4.5:1**), il s'adapte à chaque fond : texte
+**sombre** sur fond clair, texte **clair** sur fond sombre.
+
+`options` :
+
+| Option | Rôle |
+|--------|------|
+| `light` | Options transmises à `generateTheme` pour le **mode clair** (`background`, `surface`, `text`, `danger`, `accentText`, `dangerText`…). |
+| `dark` | Idem pour le **mode sombre**. |
+| `hoverRatio`, `borderRatio`, `radius`, `shadow` | Valeurs **partagées** par les deux modes (chaque mode peut les surcharger). |
+
+Défauts : fond clair `"#ffffff"`, fond sombre `"#111111"`.
+
+```js
+import { HolafColor } from "./vendor/holaf/holaf-color.js";
+
+const fam = HolafColor.generateFamily("#818cf8", {
+    light: { background: "#f6f7fc", surface: "#ffffff" },
+    dark:  { background: "#10111d", surface: "#181a2c" },
+    radius: "12px",
+});
+
+fam.light.text;       // texte sombre sur le fond clair
+fam.dark.text;        // texte clair sur le fond sombre
+HolafColor.contrastRatio(fam.light.text, fam.light.background); // ≥ 4.5
+HolafColor.contrastRatio(fam.dark.text,  fam.dark.background);  // ≥ 4.5
+```
+
+> `generateFamily` est **exposée dans les deux modes** : `HolafColor.generateFamily`
+> (global) **et** l'export ESM (`import { HolafColor }`).
+
+---
+
 ## 3. Notes
 
 - **Zéro CSS / zéro DOM** : la brique ne pose aucun style et ne lit aucun
@@ -107,4 +145,6 @@ Options :
 
 ## 4. Version
 
+- **0.1.1** — ajout de `generateFamily(accent, options?)` → `{ light, dark }`
+  (deux palettes `generateTheme`, fonds clair/sombre, texte adaptatif).
 - **0.1.0** — première version (brique autonome, sans style).

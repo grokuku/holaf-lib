@@ -3,12 +3,16 @@
   "description": "Briques maison (JS et Python), versionnées par brique. Chaque brique est un fichier autonome, copié (pinné) dans les projets qui en ont besoin.",
   "bricks": {
     "modal": {
-      "version": "0.4.2",
-      "file": "js/holaf-modal.js"
+      "version": "0.5.0",
+      "file": "js/holaf-modal.js",
+      "category": "component",
+      "description": "Modale autonome (overlay, pile, helpers Promise, thèmes). Catalogue à 2 axes : 10 presets <famille>-<mode> (indigo/midnight/slate/emerald/amber × light/dark) miroirs de HolafTokens + 4 alias historiques (dark/light/midnight/slate)."
     },
     "toast": {
-      "version": "0.5.2",
-      "file": "js/holaf-toast.js"
+      "version": "0.6.0",
+      "file": "js/holaf-toast.js",
+      "category": "component",
+      "description": "Notifications flottantes autonomes (types, pause, positions, fonds teintés). Catalogue à 2 axes : 10 presets <famille>-<mode> (cohérence surface/texte/bordure avec HolafTokens) ; light/midnight/slate alias exacts, dark gelé (défaut CSS)."
     },
     "fetch": {
       "version": "0.2.0",
@@ -23,16 +27,16 @@
       "file": "python/holaf-notify.py"
     },
     "color": {
-      "version": "0.1.0",
+      "version": "0.1.1",
       "file": "js/holaf-color.js",
       "category": "component",
-      "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG)."
+      "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG, generateTheme, generateFamily)."
     },
     "tokens": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "file": "js/holaf-tokens.js",
       "category": "foundation",
-      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page)."
+      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). Catalogue à 2 axes : 5 familles × clair/sombre (10 presets <famille>-<mode>) + 4 alias historiques."
     },
     "ambient": {
       "version": "0.3.0",

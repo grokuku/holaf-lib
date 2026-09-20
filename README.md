@@ -31,11 +31,11 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.4.2", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
-    "toast":   { "version": "0.5.2", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
+    "modal":   { "version": "0.5.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "toast":   { "version": "0.6.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
-    "tokens":  { "version": "0.1.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
+    "tokens":  { "version": "0.2.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
   }
 }
 ```
@@ -54,13 +54,13 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.4.2   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), thèmes prédéfinis/customs, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
-| toast      | `js/holaf-toast.js` | 0.5.2   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, thèmes/presets, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| modal      | `js/holaf-modal.js` | 0.5.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), **10 thèmes `<famille>-<mode>`** (miroirs de `HolafTokens`) + 4 alias historiques, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| toast      | `js/holaf-toast.js` | 0.6.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, **10 thèmes `<famille>-<mode>`** cohérents avec `HolafTokens`, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
-| color      | `js/holaf-color.js`  | 0.1.0 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG) |
-| tokens     | `js/holaf-tokens.js` | 0.1.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite) — voir section dédiée |
+| color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
+| tokens     | `js/holaf-tokens.js` | 0.2.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 5 familles × clair/sombre (10 presets `<famille>-<mode>`) + 4 alias historiques — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
@@ -155,7 +155,69 @@ Les deux briques CSS-injectantes — **modal** et **toast** — exposent :
 > `HolafToast.success/error/…`) acceptent aussi `injectStyles` dans leurs
 > options et le transmettent à l'ouverture.
 
+## Nouveautés v0.6
+
+### HolafModal 0.4.2 → 0.5.0 & HolafToast 0.5.2 → 0.6.0 — catalogue de thèmes à 2 axes (famille × mode)
+
+Les deux briques de **feedback** alignent leur registre de thèmes sur le
+catalogue de `HolafTokens` : **10 combinaisons `<famille>-<mode>`** (5 familles
+`indigo`, `midnight`, `slate`, `emerald`, `amber` × 2 modes `light`/`dark`) :
+`indigo-light`, `indigo-dark`, `midnight-light`, `midnight-dark`,
+`slate-light`, `slate-dark`, `emerald-light`, `emerald-dark`, `amber-light`,
+`amber-dark`.
+
+- **Cohérence inter-briques** : chaque preset est le **miroir** du preset
+  homonyme de `HolafTokens` 0.2.0 — mêmes surfaces, même texte, même accent
+  (`--hm-bg`/`--ht-bg` ← `surface`, `--hm-text`/`--ht-fg` ← `text`,
+  `--hm-border`/`--ht-border` ← `border`, …). Un test importe directement
+  `holaf-tokens.js` et compare valeur par valeur.
+- **Données littérales**, aucune génération dupliquée : les hex sont calculés
+  une fois puis embarqués — les briques restent **autonomes** (zéro dépendance
+  runtime, aucun import croisé).
+- **Alias historiques** : côté `HolafModal`, `dark` ≡ `indigo-dark`, `light` ≡
+  `indigo-light`, `midnight` ≡ `midnight-dark`, `slate` ≡ `slate-dark`. Côté
+  `HolafToast`, `light`/`midnight`/`slate` sont aussi des alias exacts, mais
+  `dark` reste **gelé** (fond `#2b2b2b`, défaut CSS du toast) et diffère
+  volontairement de `indigo-dark` (`#1e1e1e`) : écart documenté, **zéro
+  rupture**. Aucune API existante ne change.
+
+```js
+HolafModal.setTheme("emerald-dark");   // ou "amber-light", "slate-light", …
+HolafToast.setTheme("amber-light");
+```
+
+Voir [`js/README-holaf-modal.md`](js/README-holaf-modal.md) et
+[`js/README-holaf-toast.md`](js/README-holaf-toast.md).
+
 ## Nouveautés v0.1
+
+### HolafTokens 0.1.0 → 0.2.0 — catalogue de thèmes à 2 axes (famille × mode)
+
+Le thème n'est plus une **liste plate** mais un **catalogue à deux axes** :
+**5 familles** (`indigo`, `midnight`, `slate`, `emerald`, `amber`) × **2 modes**
+(`light` / `dark`) = **10 presets `<famille>-<mode>`**, plus les **4 presets
+historiques conservés comme alias** (`dark` ≡ `indigo-dark`, `light` ≡
+`indigo-light`, `midnight` ≡ `midnight-dark`, `slate` ≡ `slate-dark`) aux
+**valeurs rigoureusement identiques** — zéro rupture visuelle.
+
+- `indigo` réutilise les deux palettes historiques ; `midnight` et `slate`
+  gardent leur mode **sombre** historique et reçoivent un mode **clair généré** ;
+  `emerald` et `amber` sont **générées** dans les deux modes.
+- Les modes générés sont calculés par un **miroir interne** de
+  `HolafColor.generateTheme` (brique autonome, zéro dépendance) ; le texte
+  s'adapte au fond (**≥ 4.5:1**, vérifié par test sur les 10 presets).
+- Nouvelle API : `setFamily(family, mode?)`, `getFamily()`, `getMode()`,
+  `listFamilies()` ; `FAMILIES` et `ALIASES` exposés.
+
+### HolafColor 0.1.0 → 0.1.1 — `generateFamily`
+
+`HolafColor.generateFamily(accent, options?)` appelle `generateTheme` **deux
+fois** (fonds clair/sombre opposés) et renvoie **`{ light, dark }`** — le texte
+s'adapte par contraste (sombre sur fond clair, clair sur fond sombre). Exposée
+en global **et** en ESM.
+
+Voir [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md) et
+[`js/README-holaf-color.md`](js/README-holaf-color.md).
 
 ### HolafNotify 0.1.0 — brique émetteur Python (webhooks OpenClaw) — 1ʳᵉ brique du rayon `python/`
 

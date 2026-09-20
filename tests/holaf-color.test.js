@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { HolafColor } from "../js/holaf-color.js";
 
-const { hexToRgb, rgbToHex, hexToHsl, hslToHex, rgbToHsl, hslToRgb, mix, lighten, darken, contrastRatio, readableText, generateTheme } = HolafColor;
+const { hexToRgb, rgbToHex, hexToHsl, hslToHex, rgbToHsl, hslToRgb, mix, lighten, darken, contrastRatio, readableText, generateTheme, generateFamily } = HolafColor;
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -189,5 +189,72 @@ describe("HolafColor — generateTheme", () => {
         const t = generateTheme("#4f46e5", { background: "#10111d", surface: "#181a2c", danger: "#ef4444" });
         expect(t.surface.toLowerCase()).toBe("#181a2c");
         expect(t.danger.toLowerCase()).toBe("#ef4444");
+    });
+});
+
+describe("HolafColor — generateFamily (2 axes clair/sombre)", () => {
+    it("retourne bien deux palettes { light, dark } complètes", () => {
+        const fam = generateFamily("#6366f1");
+        expect(fam.light).toBeTruthy();
+        expect(fam.dark).toBeTruthy();
+        ["accent", "accentHover", "accentText", "border", "borderSubtle",
+            "surface", "surfaceHover", "background", "text", "textMuted",
+            "danger", "dangerHover", "dangerText", "radius", "shadow"].forEach((k) => {
+            expect(fam.light[k], "light." + k).toBeTruthy();
+            expect(fam.dark[k], "dark." + k).toBeTruthy();
+        });
+    });
+
+    it("texte ADAPTATIF : sombre sur fond clair, clair sur fond sombre", () => {
+        const fam = generateFamily("#6366f1");
+        // lisibles ≥ 4.5:1 sur leur propre fond
+        expect(contrastRatio(fam.light.text, fam.light.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(fam.dark.text, fam.dark.background)).toBeGreaterThanOrEqual(4.5);
+        // le texte clair est plus proche du blanc que du noir…
+        expect(contrastRatio(fam.light.text, "#ffffff")).toBeGreaterThan(contrastRatio(fam.light.text, "#000000"));
+        // …et inversement : le texte sombre est plus proche du noir.
+        expect(contrastRatio(fam.dark.text, "#000000")).toBeGreaterThan(contrastRatio(fam.dark.text, "#ffffff"));
+    });
+
+    it("équivaut à DEUX appels generateTheme (fonds opposés)", () => {
+        const fam = generateFamily("#818cf8", {
+            light: { background: "#ffffff" },
+            dark: { background: "#111111" },
+        });
+        expect(fam.light).toEqual(generateTheme("#818cf8", { background: "#ffffff" }));
+        expect(fam.dark).toEqual(generateTheme("#818cf8", { background: "#111111" }));
+    });
+
+    it("permet de fixer les fonds clair/sombre et la surface", () => {
+        const fam = generateFamily("#818cf8", {
+            light: { background: "#f6f7fc", surface: "#ffffff" },
+            dark: { background: "#10111d", surface: "#181a2c" },
+        });
+        expect(fam.light.background.toLowerCase()).toBe("#f6f7fc");
+        expect(fam.light.surface.toLowerCase()).toBe("#ffffff");
+        expect(fam.dark.background.toLowerCase()).toBe("#10111d");
+        expect(fam.dark.surface.toLowerCase()).toBe("#181a2c");
+    });
+
+    it("transmet les options PARTAGÉES (radius, hoverRatio) aux deux modes", () => {
+        const fam = generateFamily("#4f46e5", { radius: "8px", hoverRatio: 0.2 });
+        expect(fam.light.radius).toBe("8px");
+        expect(fam.dark.radius).toBe("8px");
+        expect(fam.light.accentHover).toBe(mix(fam.light.accent, fam.light.surface, 0.2));
+        expect(fam.dark.accentHover).toBe(mix(fam.dark.accent, fam.dark.surface, 0.2));
+    });
+
+    it("accent invalide → lève une Error claire", () => {
+        expect(() => generateFamily("nope")).toThrow(/hex invalide/i);
+    });
+});
+
+describe("HolafColor — exposition duale de generateFamily", () => {
+    it("disponible en global (window.HolafColor) ET en export ESM", () => {
+        expect(typeof generateFamily).toBe("function");
+        expect(window.HolafColor).toBe(HolafColor);
+        expect(typeof window.HolafColor.generateFamily).toBe("function");
+        const fam = window.HolafColor.generateFamily("#4f46e5");
+        expect(fam.light && fam.dark).toBeTruthy();
     });
 });

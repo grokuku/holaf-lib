@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafColor · version 0.1.0
+ * Holaf UI — Brique HolafColor · version 0.1.1
  * ─────────────────────────────────────────────────────────────────────────────
  * Utilitaires couleur en PUR JS, SANS DOM et SANS CSS.
  * Brique « sans style » (comme viewport) : elle ne touche à aucun DOM, ne pose
@@ -20,6 +20,7 @@
  *   contrastRatio(a, b)         → nombre      WCAG 2.1 (1..21, luminance relative)
  *   readableText(bg, dark?, light?)                            → "#rrggbb"
  *   generateTheme(accent, options?)                            → objet palette
+ *   generateFamily(accent, options?)                           → { light, dark } (2 palettes)
  *
  * Contraite de contraste : textes ≥ 4.5:1 (WCAG AA) — voir contrastRatio /
  * readableText / generateTheme.
@@ -35,7 +36,7 @@
 const HolafColor = (function () {
     "use strict";
 
-    const VERSION = "0.1.0";
+    const VERSION = "0.1.1";
 
     // ─── Validation / parsing d'un hex ─────────────────────────────────────
     // Accepte "#rgb" ou "#rrggbb" (le '#' est facultatif). Lève une Error
@@ -234,6 +235,41 @@ const HolafColor = (function () {
         };
     }
 
+    // ─── Génération d'une FAMILLE (paire clair / sombre) ──────────────────
+    // generateFamily(accent, options?) appelle generateTheme DEUX fois avec des
+    // fonds OPPOSÉS et renvoie { light, dark }. Comme le texte est calculé par
+    // readableText (contraste ≥ 4.5:1), il s'adapte automatiquement à chaque
+    // fond : texte sombre sur fond clair, texte clair sur fond sombre.
+    //
+    // options :
+    //   light        : options transmises à generateTheme pour le mode clair
+    //                  (background, surface, text, danger, accentText, dangerText,
+    //                   hoverRatio, borderRatio, radius, shadow…)
+    //   dark         : idem pour le mode sombre
+    //   hoverRatio, borderRatio, radius, shadow : valeurs PARTAGÉES par les deux
+    //                  modes (chaque mode peut les surcharger)
+    // Défauts : fond clair "#ffffff", fond sombre "#111111" (fond neutre ;
+    // l'appelant peut fixer les deux, ex. midnight #10111d / surface #181a2c).
+    function generateFamily(accent, options) {
+        const opts = options || {};
+        const shared = {};
+        ["hoverRatio", "borderRatio", "radius", "shadow"].forEach(function (k) {
+            if (opts[k] !== undefined && opts[k] !== null) shared[k] = opts[k];
+        });
+        const lightOpts = Object.assign({}, shared, opts.light || {});
+        if (lightOpts.background === undefined || lightOpts.background === null) {
+            lightOpts.background = "#ffffff";
+        }
+        const darkOpts = Object.assign({}, shared, opts.dark || {});
+        if (darkOpts.background === undefined || darkOpts.background === null) {
+            darkOpts.background = "#111111";
+        }
+        return {
+            light: generateTheme(accent, lightOpts),
+            dark: generateTheme(accent, darkOpts),
+        };
+    }
+
     return {
         VERSION,
         hexToRgb,
@@ -248,6 +284,7 @@ const HolafColor = (function () {
         contrastRatio,
         readableText,
         generateTheme,
+        generateFamily,
     };
 })();
 

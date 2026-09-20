@@ -7,6 +7,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafTokens } from "../js/holaf-tokens.js";
+import { HolafColor } from "../js/holaf-color.js";
 
 function getVar(name) {
     return document.documentElement.style.getPropertyValue(name);
@@ -24,8 +25,14 @@ beforeEach(() => {
 });
 
 describe("HolafTokens — presets", () => {
-    it("expose les 4 presets du kit (cohérents avec modal)", () => {
-        expect(HolafTokens.listPresets().sort()).toEqual(["dark", "light", "midnight", "slate"]);
+    it("expose les 4 alias historiques + les 10 presets <famille>-<mode>", () => {
+        const names = HolafTokens.listPresets();
+        ["dark", "light", "midnight", "slate"].forEach((alias) => expect(names).toContain(alias));
+        ["indigo", "midnight", "slate", "emerald", "amber"].forEach((fam) => {
+            expect(names).toContain(fam + "-light");
+            expect(names).toContain(fam + "-dark");
+        });
+        expect(names).toHaveLength(14);
     });
 
     it("setTheme : pose les variables --holaf-* sur :root", () => {
@@ -166,5 +173,133 @@ describe("HolafTokens — applyPalette", () => {
         HolafTokens.reset();
         expect(getVar("--holaf-accent")).toBe("");
         expect(getVar("--holaf-border")).toBe("");
+    });
+});
+
+describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
+    const CANON = ["indigo-light", "indigo-dark", "midnight-light", "midnight-dark",
+        "slate-light", "slate-dark", "emerald-light", "emerald-dark", "amber-light", "amber-dark"];
+    const KEYS14 = ["surface", "surface-elev", "surface-raised", "border", "text", "text-muted",
+        "accent", "accent-hover", "accent-text", "danger", "danger-text", "radius", "shadow", "font-size"];
+
+    it("expose les 5 familles", () => {
+        expect(HolafTokens.listFamilies()).toEqual(["indigo", "midnight", "slate", "emerald", "amber"]);
+    });
+
+    it("les 10 presets <famille>-<mode> existent et couvrent les 14 clés", () => {
+        CANON.forEach((name) => {
+            const p = HolafTokens.PRESETS[name];
+            expect(p, name).toBeTruthy();
+            KEYS14.forEach((k) => expect(p[k], name + "." + k).toBeTruthy());
+        });
+    });
+
+    it("CONTRASTE : text ≥ 4.5:1 sur surface pour les 10 presets", () => {
+        CANON.forEach((name) => {
+            const p = HolafTokens.PRESETS[name];
+            const r = HolafColor.contrastRatio(p.text, p.surface);
+            expect(r, name + " ratio=" + r).toBeGreaterThanOrEqual(4.5);
+        });
+    });
+
+    it("setTheme accepte les noms <famille>-<mode>", () => {
+        HolafTokens.setTheme("slate-light");
+        expect(getVar("--holaf-surface")).toBe("#F4F6F8");
+        expect(HolafTokens.getTheme().name).toBe("slate-light");
+    });
+
+    it("setFamily(famille, mode) applique le bon preset", () => {
+        HolafTokens.setFamily("emerald", "dark");
+        expect(HolafTokens.getTheme().name).toBe("emerald-dark");
+        expect(getVar("--holaf-accent")).toBe("#34D399");
+    });
+
+    it("setFamily sans mode : garde le mode courant, sinon light", () => {
+        HolafTokens.setFamily("amber", "dark");
+        HolafTokens.setFamily("amber");
+        expect(HolafTokens.getTheme().name).toBe("amber-dark");
+        HolafTokens.setFamily("slate");
+        expect(HolafTokens.getTheme().name).toBe("slate-light");
+    });
+
+    it("getFamily / getMode décrivent le thème courant (alias résolus)", () => {
+        HolafTokens.setTheme("dark");
+        expect(HolafTokens.getFamily()).toBe("indigo");
+        expect(HolafTokens.getMode()).toBe("dark");
+        HolafTokens.setTheme("midnight");
+        expect(HolafTokens.getFamily()).toBe("midnight");
+        expect(HolafTokens.getMode()).toBe("dark");
+        HolafTokens.setTheme("slate-light");
+        expect(HolafTokens.getFamily()).toBe("slate");
+        expect(HolafTokens.getMode()).toBe("light");
+    });
+
+    it("setFamily / setTheme : familles et modes inconnus → throw clair", () => {
+        expect(() => HolafTokens.setFamily("lime")).toThrow(/famille inconnue/i);
+        expect(() => HolafTokens.setFamily("slate", "sepia")).toThrow(/mode inconnu/i);
+        expect(() => HolafTokens.setTheme("slate-sepia")).toThrow(/preset inconnu/i);
+    });
+
+    it("expose FAMILIES (graines + descripteurs de modes) et ALIASES", () => {
+        expect(Object.keys(HolafTokens.FAMILIES).sort()).toEqual(["amber", "emerald", "indigo", "midnight", "slate"]);
+        expect(HolafTokens.FAMILIES.slate.accent).toBe("#94a3b8");
+        expect(HolafTokens.ALIASES).toEqual({
+            dark: "indigo-dark", light: "indigo-light", midnight: "midnight-dark", slate: "slate-dark",
+        });
+    });
+});
+
+describe("HolafTokens — non-régression des alias historiques", () => {
+    // Valeurs FIGÉES des 4 presets tels qu'ils existaient en 0.1.0.
+    const FROZEN = {
+        dark: {
+            surface: "#1e1e1e", "surface-elev": "#27272a", "surface-raised": "#1a1a1a",
+            border: "#3f3f46", text: "#e4e4e7", "text-muted": "#a1a1aa",
+            accent: "#6366f1", "accent-hover": "#818cf8", "accent-text": "#ffffff",
+            danger: "#ef4444", "danger-text": "#ffffff",
+            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px",
+        },
+        light: {
+            surface: "#ffffff", "surface-elev": "#f4f4f5", "surface-raised": "#fafafa",
+            border: "#d4d4d8", text: "#18181b", "text-muted": "#52525b",
+            accent: "#4f46e5", "accent-hover": "#6366f1", "accent-text": "#ffffff",
+            danger: "#dc2626", "danger-text": "#ffffff",
+            radius: "12px", shadow: "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px",
+        },
+        midnight: {
+            surface: "#10111d", "surface-elev": "#181a2c", "surface-raised": "#0c0d17",
+            border: "#272a44", text: "#e2e4f0", "text-muted": "#9aa0c3",
+            accent: "#818cf8", "accent-hover": "#a5b4fc", "accent-text": "#10111d",
+            danger: "#ef4444", "danger-text": "#ffffff",
+            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.6)", "font-size": "14px",
+        },
+        slate: {
+            surface: "#1f232b", "surface-elev": "#292e38", "surface-raised": "#191d24",
+            border: "#3a4150", text: "#e6e9ee", "text-muted": "#9aa3b2",
+            accent: "#94a3b8", "accent-hover": "#b6c2d4", "accent-text": "#1f232b",
+            danger: "#ef4444", "danger-text": "#ffffff",
+            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.5)", "font-size": "14px",
+        },
+    };
+
+    it("dark / light / midnight / slate ont EXACTEMENT les valeurs historiques", () => {
+        Object.keys(FROZEN).forEach((name) => {
+            Object.keys(FROZEN[name]).forEach((k) => {
+                expect(HolafTokens.PRESETS[name][k], name + "." + k).toBe(FROZEN[name][k]);
+            });
+        });
+    });
+
+    it("les alias sont égaux à leurs jumeaux <famille>-<mode>", () => {
+        expect(HolafTokens.PRESETS.dark).toEqual(HolafTokens.PRESETS["indigo-dark"]);
+        expect(HolafTokens.PRESETS.light).toEqual(HolafTokens.PRESETS["indigo-light"]);
+        expect(HolafTokens.PRESETS.midnight).toEqual(HolafTokens.PRESETS["midnight-dark"]);
+        expect(HolafTokens.PRESETS.slate).toEqual(HolafTokens.PRESETS["slate-dark"]);
+    });
+
+    it("les alias ne portent QUE les 14 clés historiques", () => {
+        Object.keys(FROZEN).forEach((name) => {
+            expect(Object.keys(HolafTokens.PRESETS[name]).sort()).toEqual(Object.keys(FROZEN[name]).sort());
+        });
     });
 });
