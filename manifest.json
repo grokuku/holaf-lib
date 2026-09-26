@@ -49,6 +49,12 @@
       "file": "js/holaf-icons.js",
       "category": "component",
       "description": "36 icônes SVG en trait (style Feather, MIT), zéro CSS, stroke=currentColor."
+    },
+    "collection": {
+      "version": "0.1.0",
+      "file": "js/holaf-collection.js",
+      "category": "component",
+      "description": "Cœur de données PUR (sans DOM) pour liste paginée virtualisée : tableau creux + cache de fenêtres (window|append) + réconciliation incrémentale (insertTop/removeByIds/applyDelta avec seuil de suppression de masse)."
     }
   }
 }
