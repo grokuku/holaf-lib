@@ -55,6 +55,12 @@
       "file": "js/holaf-collection.js",
       "category": "component",
       "description": "Cœur de données PUR (sans DOM) pour liste paginée virtualisée : tableau creux + cache de fenêtres (window|append) + réconciliation incrémentale (insertTop/removeByIds/applyDelta avec seuil de suppression de masse)."
+    },
+    "thumbcache": {
+      "version": "0.1.0",
+      "file": "js/holaf-thumbcache.js",
+      "category": "component",
+      "description": "Cache + ordonnanceur de vignettes PUR (sans DOM/CSS) : LRU à éviction (revoke des blobs en 'blob'), concurrence bornée, dédup in-flight, prefetch basse priorité, timeout + retries bornés, protocole 202 + Retry-After (onPending), priorisation des vignettes visibles débouncée (onVisible) et stratégies 'blob' | 'url' | custom."
     }
   }
 }
