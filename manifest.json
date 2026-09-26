@@ -67,6 +67,12 @@
       "file": "js/holaf-virtual-grid.js",
       "category": "component",
       "description": "Grille virtualisée DOM GÉNÉRIQUE et instanciable : layout (colonnes/gap/aspect/buffer), pool de cellules recyclées + squelettes, resize avec ancrage de rangée, sélection mono/multi (shift/ctrl) avec délégation click/dblclick, navigation clavier de grille, scroll/alignement. Source de données, renderer de cellule (cell.create/update/release) et cache INJECTÉS ; CSS scopé --hl-*/holaf-grid-* avec getCss() + injectStyles + nonce."
+    },
+    "lightbox": {
+      "version": "0.1.0",
+      "file": "js/holaf-lightbox.js",
+      "category": "component",
+      "description": "Visionneuse plein écran/inline GÉNÉRIQUE et instanciable : machine à états idle⇄zoom⇄fullscreen avec restauration de la vue source, navigation item→item (wrap-around) et grille (↑/↓ ±colonnes), préchargement des N suivants (annulation des jobs périmés) + garde de stale-load (serial), clavier avec shouldHandleKey injectable, délégation zoom/pan à HolafViewport (injecté). Média (img/vidéo/audio/éditeur) produit par un renderMedia injecté (el/destroy/AbortSignal) ; source d'items injectée ; overlay/nav/spinner par défaut ou conteneurs fournis par l'hôte ; CSS scopé --hl-*/holaf-lightbox-* avec getCss() + injectStyles + nonce."
     }
   }
 }
