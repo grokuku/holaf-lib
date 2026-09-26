@@ -61,6 +61,12 @@
       "file": "js/holaf-thumbcache.js",
       "category": "component",
       "description": "Cache + ordonnanceur de vignettes PUR (sans DOM/CSS) : LRU à éviction (revoke des blobs en 'blob'), concurrence bornée, dédup in-flight, prefetch basse priorité, timeout + retries bornés, protocole 202 + Retry-After (onPending), priorisation des vignettes visibles débouncée (onVisible) et stratégies 'blob' | 'url' | custom."
+    },
+    "virtualgrid": {
+      "version": "0.1.0",
+      "file": "js/holaf-virtual-grid.js",
+      "category": "component",
+      "description": "Grille virtualisée DOM GÉNÉRIQUE et instanciable : layout (colonnes/gap/aspect/buffer), pool de cellules recyclées + squelettes, resize avec ancrage de rangée, sélection mono/multi (shift/ctrl) avec délégation click/dblclick, navigation clavier de grille, scroll/alignement. Source de données, renderer de cellule (cell.create/update/release) et cache INJECTÉS ; CSS scopé --hl-*/holaf-grid-* avec getCss() + injectStyles + nonce."
     }
   }
 }
