@@ -73,6 +73,12 @@
       "file": "js/holaf-lightbox.js",
       "category": "component",
       "description": "Visionneuse plein écran/inline GÉNÉRIQUE et instanciable : machine à états idle⇄zoom⇄fullscreen avec restauration de la vue source, navigation item→item (wrap-around) et grille (↑/↓ ±colonnes), préchargement des N suivants (annulation des jobs périmés) + garde de stale-load (serial), clavier avec shouldHandleKey injectable, délégation zoom/pan à HolafViewport (injecté). Média (img/vidéo/audio/éditeur) produit par un renderMedia injecté (el/destroy/AbortSignal) ; source d'items injectée ; overlay/nav/spinner par défaut ou conteneurs fournis par l'hôte ; CSS scopé --hl-*/holaf-lightbox-* avec getCss() + injectStyles + nonce."
+    },
+    "infopane": {
+      "version": "0.1.0",
+      "file": "js/holaf-infopane.js",
+      "category": "component",
+      "description": "Panneau d'informations média GÉNÉRIQUE et instanciable : états vide/chargement/erreur/prêt, champs label/valeur (empilables, valeurs absentes omises), blocs de texte copiables (textarea auto-redimensionnée bornée, libellé de confirmation puis retour, placement avant/après), actions par bloc (confirmation injectable, disabled/isEnabled) et actions globales du panneau, preview synchrone optionnelle puis remplacement par resolve(item,{signal}) — annulation (AbortSignal) à chaque changement d'item/clear/refresh/destroy. Texte échappé par défaut (html:false), rien d'injecté sans opt-in ; CSS scopé --hl-*/holaf-infopane-* avec getCss() + injectStyles + nonce."
     }
   }
 }
