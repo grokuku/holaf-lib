@@ -10,7 +10,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafToast } from "../js/holaf-toast.js";
-import { HolafTokens } from "../js/holaf-tokens.js";
+// 0.3.0 : HolafTokens n'a plus d'export nommé → import par effet de bord.
+import "../js/holaf-tokens.js";
+const { HolafTokens } = window;
 
 function containers(sel = ".holaf-toast-container") {
     return document.querySelectorAll(sel);

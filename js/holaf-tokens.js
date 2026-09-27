@@ -1,7 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafTokens · version 0.2.0
+ * Holaf UI — Brique HolafTokens · version 0.3.0
  * ─────────────────────────────────────────────────────────────────────────────
  * BRIQUE « FONDATION » — les tokens CSS de PAGE.
+ *
+ * ▸ ÉVOLUTION 0.3.0 (additive + 2 correctifs) ────────────────────────────────
+ *   23 clés optionnelles (13 dérivables + 5 d'état + 5 d'identité), registre
+ *   de PACKS hôte (registerPreset / updatePreset / unregisterPreset /
+ *   getPreset / alpha), PURGE PAR POSSESSION D'ENSEMBLE, et fichier désormais
+ *   chargeable en <script> classique (file:// ET HTTP) : AUCUN export
+ *   top-level (l'`export { HolafTokens }` de la 0.2.0 est retiré).
+ *   Rétrocompatibilité 0.2.0 totale : mêmes valeurs, même API, même événement.
  *
  * ▸ PRIVILÈGE (par CONTRAT EXPLICITE) ───────────────────────────────────────
  *   HolafTokens est la SEULE brique du kit autorisée à poser des variables
@@ -21,6 +29,15 @@
  *     surface, surface-elev, surface-raised, border, text, text-muted,
  *     accent, accent-hover, accent-text, danger, danger-hover, danger-text,
  *     radius, shadow, font-size.
+ *   Clés OPTIONNELLES 0.3.0 (23 — jamais posées par les 14 intégrés) :
+ *     groupe A (dérivables) : accent-soft, accent-glow, accent-gradient,
+ *       accent-gradient-hover, accent-shadow, danger-soft, danger-shadow,
+ *       danger-gradient*, border-muted, text-faint, surface-hover,
+ *       chrome-header, chrome-footer          (* hors dérivation par défaut)
+ *     groupe B (états, fournis par le pack) : ok, ok-text, ok-soft, warn,
+ *       warn-text
+ *     groupe C (identité) : bg-image, txt-glow*, radius-sm, font-sans,
+ *       font-mono                              (* opt-in : jamais dérivés)
  *   Mapping hôte (ex. Homy — ses 11 vars actuelles) :
  *     --bg         → var(--holaf-surface)
  *     --bg-elev    → var(--holaf-surface-elev)
@@ -46,31 +63,51 @@
  *   applique au chargement le preset initial issu de `prefers-color-scheme`
  *   (dark/light).
  *
- * ▸ API ──────────────────────────────────────────────────────────────────────
- *   HolafTokens.setTokens({ name?, values })      — pose des tokens (--holaf-*)
- *   HolafTokens.setTheme(presetName)              — applique un preset (alias inclus)
- *   HolafTokens.setFamily(family, mode?)          — applique <famille>-<mode>
- *   HolafTokens.getTheme()                        → { name, vars } | null
- *   HolafTokens.getFamily() / getMode()           → famille / mode courants | null
- *   HolafTokens.listFamilies()                    → noms des familles
- *   HolafTokens.applyPalette(accentHex, opts?)    — palette calculée (mix/contrast internes)
- *   HolafTokens.reset()                           — retire TOUTES les vars --holaf-*
- *   HolafTokens.FAMILIES / HolafTokens.PRESETS / HolafTokens.VERSION
- *   Événement : document.dispatchEvent(new CustomEvent("holaf-tokens-changed",
- *               { detail : { theme } })) à CHAQUE changement (setTokens /
- *               setTheme / applyPalette / reset / initial).
+ * ▸ API 0.3.0 ────────────────────────────────────────────────────────────────
+ *   setTokens / setTheme / setFamily / getTheme / getFamily / getMode /
+ *   applyPalette / reset / listPresets / listFamilies / FAMILIES / PRESETS /
+ *   ALIASES / PREFIX / VERSION                    — INCHANGÉS (0.2.0)
+ *   registerPreset(name, tokens, options?)   → { name, vars } (remplace si repris)
+ *   updatePreset(name, tokens)               → { name, vars } (fusion + re-dérivés)
+ *   unregisterPreset(name)                   → boolean (false si intégré/inconnu)
+ *   getPreset(name)                          → copie | null (intégré/alias/pack)
+ *   alpha(color, a)                          → hex → rgba (non-hex inchangé)
+ *   listPresets() = 14 intégrés PUIS packs dans l'ordre d'enregistrement.
+ *   Événement : à CHAQUE changement de palette appliquée (setTokens / setTheme /
+ *   applyPalette / reset / initial). register / update / unregister n'émettent
+ *   PAS ; setTheme("<pack>") émet comme les autres.
+ *
+ * ▸ REGISTRE DE PACKS (0.3.0) ───────────────────────────────────────────────
+ *   Un PACK hôte est un preset nommé enregistré via registerPreset, sans
+ *   toucher aux 14 intégrés. options.extends : nom d'un intégré / alias / pack
+ *   (base = copie complète). options.derive : true (défaut = groupe A+B moins
+ *   danger-gradient/txt-glow) | false | tableau de clés. Priorité de fusion :
+ *   spec explicite > extends > dérivé. Une dérivation dont la source est
+ *   absente ou non-hex est SAUTÉE silencieusement (clé non posée, pas d'erreur).
+ *   Noms réservés : les 10 <famille>-<mode> + 4 alias + 5 familles → throw.
+ *   Registre VOLATILE : les packs sont perdus au rechargement, l'hôte les
+ *   ré-enregistre au boot. getFamily() / getMode() renvoient null pour un pack.
+ *
+ * ▸ PURGE PAR POSSESSION D'ENSEMBLE (correctif 0.3.0) ─────────────────────────
+ *   La brique mémorise un Set des clés qu'ELLE a posées. À chaque application,
+ *   elle retire d'abord les clés possédées ABSENTES du nouveau lot puis pose le
+ *   nouveau lot (même tâche JS → aucun flash). reset() retire tout le set. Les
+ *   variables posées HORS brique ne sont jamais touchées. Corrige le résidu
+ *   constaté en 0.2.0 (ex. --holaf-danger-hover restant après emerald-dark → dark).
  *
  * Autonome : la brique RÉIMPLÉMENTE une version minimale de mix/contrast (pas
  * de dépendance inter-briques vers HolafColor).
  *
- * Fichier DUAL : module ES (export) + global window.HolafTokens — se charge
- * via <script type="module"> ou `import { HolafTokens }`.
+ * Fichier CLASSIC-COMPATIBLE (correctif 0.3.0) : AUCUN export top-level —
+ * chargeable en <script> classique (file:// ET HTTP), en <script type="module"
+ * src> et en import ESM par effet de bord (`import "./holaf-tokens.js"`).
+ * L'API est exposée via window.HolafTokens (repli globalThis).
  * ═════════════════════════════════════════════════════════════════════════ */
 
 const HolafTokens = (function () {
     "use strict";
 
-    const VERSION = "0.2.0";
+    const VERSION = "0.3.0";
 
     // Préfixe RÉSERVÉ : toutes les variables posées sont sous --holaf-*.
     const PREFIX = "--holaf-";
@@ -81,6 +118,14 @@ const HolafTokens = (function () {
     let appliedVars = null;      // dernières variables posées (clés --holaf-*)
     let initialized = false;     // le preset initial par défaut a-t-il été posé ?
     let explicitChoice = false;  // l'hôte a-t-il choisi lui-même ?
+    // POSSESSION D'ENSEMBLE (correctif 0.3.0) : toutes les clés --holaf-* que
+    // la brique a posées AU MOINS UNE FOIS. Seules celles-ci sont purgées ; une
+    // variable posée hors brique n'entre jamais dans ce set.
+    const ownedKeys = new Set();
+    // REGISTRE DE PACKS (0.3.0) : name → { spec, resolved }. `spec` garde la
+    // spec explicite + les options (pour updatePreset) ; `resolved` est la carte
+    // finale (extends + spec + dérivées) réellement applicable.
+    const PACKS = new Map();
 
     // ─── Utilitaires internes (pas dépendance inter-briques) ──────────────
     function parseHex(hex) {
@@ -323,6 +368,140 @@ const HolafTokens = (function () {
         PRESETS[alias] = Object.assign({}, PRESETS[ALIASES[alias]]);
     });
 
+    // ─── Noms réservés (0.3.0) ──────────────────────────────────────────────
+    // Les 10 <famille>-<mode>, les 4 alias et les 5 noms de familles sont
+    // RÉSERVÉS : un pack hôte ne peut pas les reprendre (throw clair).
+    const RESERVED_NAMES = new Set(Object.keys(PRESETS).concat(FAMILY_NAMES));
+
+    // ─── Clés optionnelles 0.3.0 (23) + moteur de dérivation ───────────────
+    // Groupe A (dérivables) : accent-soft … chrome-footer, plus danger-gradient
+    //   (dérivable mais HORS DÉFAUT : opt-in).
+    // Groupe B (états, fournis par le pack puis dérivés) : ok / warn et leurs
+    //   dérivées ok-text, ok-soft, warn-text.
+    // Groupe C (identité) : bg-image, txt-glow (opt-in, aucune règle), radius-sm
+    //   (dérivable à la demande), font-sans, font-mono.
+    // Une règle reçoit la carte fusionnée (clés non préfixées) et retourne la
+    // valeur dérivée, ou undefined si la source manque / n'est pas exploitable :
+    // la clé n'est alors PAS posée, silencieusement (pas d'erreur).
+    function hexToken(value) {
+        if (typeof value !== "string") return null;
+        try { return parseHex(value); } catch (e) { return null; }
+    }
+    function hexOf(value) {
+        const c = hexToken(value);
+        return c ? toHex(c[0], c[1], c[2]) : null;
+    }
+    // Dérivée de couleur : null si la source n'est pas un hex exploitable.
+    function rgbaOf(value, a) {
+        return hexToken(value) ? alpha(value, a) : null;
+    }
+    // Ordre = ordre des dépendances (accent-soft avant accent-shadow…).
+    const DERIVE_RULES = {
+        // — Groupe A —
+        "accent-soft": (t) => rgbaOf(t.accent, 0.16),
+        "accent-glow": (t) => rgbaOf(t.accent, 0.5),
+        "accent-gradient": (t) => {
+            const a = hexOf(t.accent);
+            const h = hexOf(t["accent-hover"]);
+            return a && h ? "linear-gradient(135deg, " + a + ", " + h + ")" : undefined;
+        },
+        "accent-gradient-hover": (t) => {
+            const a = hexOf(t.accent);
+            const h = hexOf(t["accent-hover"]);
+            return a && h
+                ? "linear-gradient(135deg, " + mix(a, "#ffffff", 0.12) + ", " + mix(h, "#ffffff", 0.12) + ")"
+                : undefined;
+        },
+        "accent-shadow": (t) => (t["accent-soft"] ? "0 0 18px var(--holaf-accent-soft)" : undefined),
+        "danger-soft": (t) => rgbaOf(t.danger, 0.12),
+        "danger-shadow": (t) => (t["danger-soft"] ? "0 0 16px var(--holaf-danger-soft)" : undefined),
+        // danger-gradient : dérivable mais HORS DÉFAUT (opt-in via derive:[…]).
+        "danger-gradient": (t) => {
+            const d = hexOf(t.danger);
+            const h = hexOf(t["danger-hover"]);
+            return d && h ? "linear-gradient(135deg, " + d + ", " + h + ")" : undefined;
+        },
+        "border-muted": (t) => rgbaOf(t.border, 0.45),
+        "text-faint": (t) => {
+            const a = hexOf(t["text-muted"]);
+            const b = hexOf(t.surface);
+            return a && b ? mix(a, b, 0.42) : undefined;
+        },
+        "surface-hover": (t) => rgbaOf(t["surface-raised"], 0.7),
+        "chrome-header": (t) => {
+            const a = rgbaOf(t.surface, 0.92);
+            const b = rgbaOf(t.surface, 0.66);
+            return a && b ? "linear-gradient(180deg, " + a + ", " + b + ")" : undefined;
+        },
+        "chrome-footer": (t) => {
+            const a = rgbaOf(t.surface, 0.95);
+            const b = rgbaOf(t.surface, 0.66);
+            return a && b ? "linear-gradient(0deg, " + a + ", " + b + ")" : undefined;
+        },
+        // — Groupe B (états) —
+        "ok-text": (t) => (hexToken(t.ok) ? readableText(hexOf(t.ok)) : undefined),
+        "ok-soft": (t) => rgbaOf(t.ok, 0.1),
+        "warn-text": (t) => (hexToken(t.warn) ? readableText(hexOf(t.warn)) : undefined),
+        // — Groupe C —
+        "radius-sm": (t) => (typeof t.radius === "string" && t.radius.trim()
+            ? "calc(" + t.radius.trim() + " - 2px)"
+            : undefined),
+    };
+    const DERIVE_ORDER = Object.keys(DERIVE_RULES);
+    // Dérivations par DÉFAUT = « liste A+B » moins les opt-in : danger-gradient
+    // et txt-glow restent HORS défaut.
+    const DEFAULT_DERIVE = [
+        "accent-soft", "accent-glow", "accent-gradient", "accent-gradient-hover",
+        "accent-shadow", "danger-soft", "danger-shadow", "border-muted",
+        "text-faint", "surface-hover", "chrome-header", "chrome-footer",
+        "ok-text", "ok-soft", "warn-text",
+    ];
+
+    function deriveInto(tokens, requested) {
+        DERIVE_ORDER.forEach((key) => {
+            if (!requested.has(key)) return;
+            // Priorité : spec explicite > extends > dérivé.
+            if (Object.prototype.hasOwnProperty.call(tokens, key)) return;
+            const rule = DERIVE_RULES[key];
+            if (!rule) return; // clé sans règle (opt-in) → sautée silencieusement
+            const value = rule(tokens);
+            if (value !== undefined && value !== null && value !== "") tokens[key] = value;
+        });
+    }
+
+    // options.derive → Set de clés. true / undefined = liste par défaut.
+    function deriveList(derive) {
+        if (derive === undefined || derive === null || derive === true) return new Set(DEFAULT_DERIVE);
+        if (derive === false) return new Set();
+        if (Array.isArray(derive)) return new Set(derive.filter((k) => typeof k === "string"));
+        throw new Error("[HolafTokens] options.derive : attendu true | false | tableau de clés.");
+    }
+
+    // Preset intégré, alias ou pack → carte (clés non préfixées) ; null sinon.
+    function findPreset(name) {
+        if (typeof name !== "string" || !name) return null;
+        if (PACKS.has(name)) return PACKS.get(name).resolved;
+        if (Object.prototype.hasOwnProperty.call(PRESETS, name)) return PRESETS[name];
+        return null;
+    }
+
+    // Résolution d'un pack : base (extends) → spec explicite → dérivations.
+    function resolvePack(tokens, options) {
+        const opts = options || {};
+        let base = {};
+        if (opts.extends !== undefined && opts.extends !== null) {
+            const inherited = findPreset(opts.extends);
+            if (!inherited) {
+                throw new Error('[HolafTokens] options.extends : preset inconnu "' + opts.extends + '".');
+            }
+            base = Object.assign({}, inherited);
+        }
+        const merged = Object.assign({}, base, tokens);
+        const requested = deriveList(opts.derive);
+        if (requested.size) deriveInto(merged, requested);
+        return merged;
+    }
+
     // ─── Application DOM ────────────────────────────────────────────────────
     function root() {
         return typeof document !== "undefined" ? document.documentElement : null;
@@ -356,8 +535,15 @@ const HolafTokens = (function () {
         const el = root();
         const vars = tokenVars(values);
         if (el) {
+            // PURGE PAR POSSESSION D'ENSEMBLE (correctif 0.3.0) : retire d'abord
+            // les clés possédées ABSENTES du nouveau lot, PUIS pose le nouveau
+            // lot — même tâche JS, donc aucun flash intermédiaire.
+            ownedKeys.forEach((k) => {
+                if (!Object.prototype.hasOwnProperty.call(vars, k)) el.style.removeProperty(k);
+            });
             Object.keys(vars).forEach((k) => el.style.setProperty(k, vars[k]));
         }
+        Object.keys(vars).forEach((k) => ownedKeys.add(k));
         currentName = name || null;
         appliedVars = vars;
         if (explicit) explicitChoice = true;
@@ -391,20 +577,22 @@ const HolafTokens = (function () {
     // setTheme(presetName) — applique un preset par son nom. Accepte les
     // <famille>-<mode> (ex. "slate-light") ET les alias (dark/light/midnight/slate).
     function setTheme(presetName) {
-        const preset = PRESETS[presetName];
+        const preset = findPreset(presetName);
         if (!preset) {
             throw new Error(
                 '[HolafTokens] setTheme : preset inconnu "' + presetName + '" — disponibles : ' +
-                Object.keys(PRESETS).join(", ") + "."
+                listPresets().join(", ") + "."
             );
         }
         applyTokens(preset, presetName, true);
         return getTheme();
     }
 
-    // listPresets() → TOUS les noms valides (10 familles×modes + 4 alias).
+    // listPresets() → TOUS les noms valides : 10 familles×modes + 4 alias
+    // (intégrés, ordre historique) PUIS les packs hôte dans leur ordre
+    // d'enregistrement (0.3.0).
     function listPresets() {
-        return Object.keys(PRESETS);
+        return Object.keys(PRESETS).concat(Array.from(PACKS.keys()));
     }
 
     // listFamilies() → noms des familles (axe 1).
@@ -436,8 +624,11 @@ const HolafTokens = (function () {
     }
 
     // describeName(name) → { name, family, mode } | null (résout aussi les alias).
+    // Un PACK hôte ne décrit jamais une famille / un mode : getFamily() et
+    // getMode() renvoient null pour un pack (contrat 0.3.0).
     function describeName(name) {
         if (!name) return null;
+        if (PACKS.has(name)) return null;
         if (ALIASES[name]) {
             const twin = ALIASES[name];
             const i = twin.indexOf("-");
@@ -476,8 +667,11 @@ const HolafTokens = (function () {
     function applyPalette(accentHex, opts) {
         const options = opts || {};
         // Base : les surfaces du preset en cours, sinon dark.
-        const baseName = (currentName && PRESETS[currentName]) ? currentName : "dark";
-        const base = PRESETS[baseName];
+        // Base : les surfaces du preset en cours, sinon dark. Le pack (ou le
+        // preset) est fusionné PAR-DESSUS dark pour garantir une base complète
+        // même si un pack hôte ne fournit qu'une partie des clés.
+        const baseName = (currentName && findPreset(currentName)) ? currentName : "dark";
+        const base = Object.assign({}, PRESETS.dark, findPreset(baseName));
         const accent = options.accent || accentHex;
         // Validation de l'accent (throw clair) avant tout calcul.
         parseHex(accent);
@@ -512,14 +706,113 @@ const HolafTokens = (function () {
     // reset() — retire TOUTES les variables --holaf-* posées par la brique.
     function reset() {
         const el = root();
-        if (el && appliedVars) {
-            Object.keys(appliedVars).forEach((k) => el.style.removeProperty(k));
+        // Retire TOUT le set possédé (pas seulement appliedVars) : les clés
+        // posées lors d'applications antérieures sont purgées elles aussi.
+        if (el) {
+            ownedKeys.forEach((k) => el.style.removeProperty(k));
         }
+        ownedKeys.clear();
         currentName = null;
         appliedVars = null;
         // Ne réarme PAS le presets initial automatique : après reset, on est
         // « sans thème » jusqu'au prochain choix de l'hôte.
         dispatch(null);
+    }
+
+    // ─── API 0.3.0 — registre de packs hôte (additive) ─────────────────────
+    // Les 14 presets INTÉGRÉS sont figés : registerPreset ne les touche jamais.
+    // Le registre est VOLATILE (perdu au rechargement) : l'hôte ré-enregistre
+    // ses packs au boot, avant de rejouer setTheme.
+    function isPlainObject(v) {
+        return v !== null && typeof v === "object" && !Array.isArray(v);
+    }
+
+    function validatePackName(name) {
+        const clean = typeof name === "string" ? name.trim() : "";
+        if (!clean) {
+            throw new Error("[HolafTokens] registerPreset : nom de pack vide (chaîne non vide attendue).");
+        }
+        if (RESERVED_NAMES.has(clean)) {
+            throw new Error(
+                '[HolafTokens] registerPreset : nom réservé "' + clean +
+                '" (preset intégré, alias ou famille) — choisissez un autre nom.'
+            );
+        }
+        return clean;
+    }
+
+    // registerPreset(name, tokens, options?) → { name, vars } (copie protégée).
+    // Un nom déjà enregistré est REMPLACÉ (le pack, pas les intégrés). N'émet
+    // PAS d'événement : setTheme("<pack>") émet comme n'importe quel preset.
+    function registerPreset(name, tokens, options) {
+        const packName = validatePackName(name);
+        if (tokens !== undefined && !isPlainObject(tokens)) {
+            throw new Error("[HolafTokens] registerPreset : tokens attendu sous forme d'objet { clé: valeur }.");
+        }
+        if (options !== undefined && !isPlainObject(options)) {
+            throw new Error("[HolafTokens] registerPreset : options attendu sous forme d'objet { extends?, derive? }.");
+        }
+        const opts = options || {};
+        // Copie protégée : le registre ne partage AUCUNE référence avec l'hôte
+        // (ni les tokens, ni le tableau derive).
+        const spec = {
+            tokens: Object.assign({}, tokens || {}),
+            options: {
+                extends: opts.extends,
+                derive: Array.isArray(opts.derive) ? opts.derive.slice() : opts.derive,
+            },
+        };
+        const resolved = resolvePack(spec.tokens, spec.options);
+        PACKS.set(packName, { spec, resolved });
+        return { name: packName, vars: Object.assign({}, resolved) };
+    }
+
+    // updatePreset(name, tokens) → { name, vars }. Fusionne dans la spec
+    // explicite puis re-résout : les dérivées non re-fournies par l'appel sont
+    // recalculées depuis les nouvelles sources. Throw si intégré ou inconnu.
+    function updatePreset(name, tokens) {
+        if (typeof name === "string" && RESERVED_NAMES.has(name)) {
+            throw new Error(
+                '[HolafTokens] updatePreset : "' + name +
+                '" est un preset intégré (figé) — seuls les packs enregistrés sont modifiables.'
+            );
+        }
+        const pack = PACKS.get(name);
+        if (!pack) {
+            throw new Error(
+                '[HolafTokens] updatePreset : pack inconnu "' + String(name) + '" — packs enregistrés : ' +
+                (PACKS.size ? Array.from(PACKS.keys()).join(", ") : "(aucun)") + "."
+            );
+        }
+        if (!isPlainObject(tokens)) {
+            throw new Error("[HolafTokens] updatePreset : tokens attendu sous forme d'objet { clé: valeur }.");
+        }
+        Object.assign(pack.spec.tokens, tokens);
+        pack.resolved = resolvePack(pack.spec.tokens, pack.spec.options);
+        return { name: name, vars: Object.assign({}, pack.resolved) };
+    }
+
+    // unregisterPreset(name) → boolean : false si intégré (jamais dans PACKS)
+    // ou inconnu. N'émet PAS d'événement ; la palette déjà posée n'est pas retirée.
+    function unregisterPreset(name) {
+        return PACKS.delete(name);
+    }
+
+    // getPreset(name) → copie (clés non préfixées) d'un intégré / alias / pack,
+    // null si inconnu. Copie protégée : muter le retour n'affecte pas le registre.
+    function getPreset(name) {
+        const preset = findPreset(name);
+        return preset ? Object.assign({}, preset) : null;
+    }
+
+    // alpha(color, a) — utilitaire public : hex → "rgba(r, g, b, a)", alpha
+    // borné à [0, 1]. Couleur non-hex ou alpha non numérique → valeur inchangée.
+    function alpha(color, a) {
+        const c = hexToken(color);
+        if (!c) return color;
+        if (a !== undefined && (typeof a !== "number" || !isFinite(a))) return color;
+        const av = a === undefined ? 1 : Math.max(0, Math.min(1, a));
+        return "rgba(" + c[0] + ", " + c[1] + ", " + c[2] + ", " + av + ")";
     }
 
     // ─── Injection CSS minimale (une seule fois) ────────────────────────────
@@ -555,6 +848,12 @@ const HolafTokens = (function () {
         reset,
         listPresets,
         listFamilies,
+        // — API 0.3.0 (additive) —
+        registerPreset,
+        updatePreset,
+        unregisterPreset,
+        getPreset,
+        alpha,
         PREFIX,
         PRESETS: (function () { const c = {}; Object.keys(PRESETS).forEach((k) => { c[k] = Object.assign({}, PRESETS[k]); }); return c; })(),
         FAMILIES: (function () {
@@ -569,10 +868,17 @@ const HolafTokens = (function () {
     };
 })();
 
-// Exposition globale (scripts classiques de la page).
+// ─── Exposition (correctif 0.3.0 : AUCUN export top-level) ───────────────────
+// Le fichier est chargeable À LA FOIS :
+//   • en <script> classique (file:// ET HTTP)   → window.HolafTokens ;
+//   • en <script type="module" src>             → window.HolafTokens ;
+//   • en import ESM par effet de bord (`import "./holaf-tokens.js"`) → globalThis.
+// La ligne `export { HolafTokens }` de la 0.2.0 est SUPPRIMÉE : elle rendait le
+// fichier inutilisable en <script> classique (SyntaxError) alors qu'il pose ses
+// variables dès l'évaluation. Conséquence : un consommateur doit désormais
+// faire `import "./holaf-tokens.js"; const { HolafTokens } = window;`.
 if (typeof window !== "undefined") {
     window.HolafTokens = HolafTokens;
+} else if (typeof globalThis !== "undefined") {
+    globalThis.HolafTokens = HolafTokens;
 }
-
-// Export ESM (import { HolafTokens } from "./holaf-tokens.js").
-export { HolafTokens };

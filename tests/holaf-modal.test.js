@@ -9,7 +9,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HolafModal } from "../js/holaf-modal.js";
-import { HolafTokens } from "../js/holaf-tokens.js";
+// 0.3.0 : HolafTokens n'a plus d'export nommé → import par effet de bord.
+import "../js/holaf-tokens.js";
+const { HolafTokens } = window;
 
 // ── Helpers de test ──────────────────────────────────────────────────────────
 function pressKey(key, init = {}) {

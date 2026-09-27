@@ -35,7 +35,7 @@ brique avec sa version et son fichier :
     "toast":   { "version": "0.6.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
-    "tokens":  { "version": "0.2.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
+    "tokens":  { "version": "0.3.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
   }
 }
 ```
@@ -60,7 +60,7 @@ Grâce à ça, le script `holaf` sait :
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
-| tokens     | `js/holaf-tokens.js` | 0.2.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 5 familles × clair/sombre (10 presets `<famille>-<mode>`) + 4 alias historiques — voir section dédiée |
+| tokens     | `js/holaf-tokens.js` | 0.3.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 5 familles × clair/sombre (10 presets `<famille>-<mode>`) + 4 alias historiques. **0.3.0** : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** (plus de résidu `--holaf-*`) et **fichier classic-compatible** (chargeable en `<script>` classique `file://`/HTTP, sans export nommé) — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
@@ -530,6 +530,28 @@ mieux comprendre avant de s'en servir.
   [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md)) et la brique peut
   retirer ce qu'elle a posé. Installer `tokens`, c'est savoir (opt-in) qu'on
   installe un thème global : elle prend le contrôle de la palette de la page.
+
+### Nouveautés 0.3.0
+
+- **23 clés optionnelles** (ex. `accent-soft`, `accent-glow`, `accent-gradient`,
+  `chrome-header`, `text-faint`, `surface-hover` ; états `ok`/`ok-text`/`ok-soft`
+  et `warn`/`warn-text` ; identité `bg-image`/`txt-glow`/`radius-sm`/
+  `font-sans`/`font-mono`), **jamais ajoutées aux 14 presets intégrés** — elles
+  viennent d'un **pack hôte** et/ou sont **dérivées** par la brique.
+- **Registre de packs hôte** : `registerPreset` / `updatePreset` /
+  `unregisterPreset` / `getPreset` / `alpha`. Un projet enregistre son identité
+  (ex. `bxrgb-neon`) avec `extends` un intégré, sans forker la brique. Registre
+  **volatile** (à ré-enregistrer au boot).
+- **Purge par possession d'ensemble** : passer d'un preset riche à un preset
+  pauvre ne laisse plus de résidu `--holaf-*` ; les variables posées hors brique
+  ne sont jamais touchées.
+- **Fichier classic-compatible** : l'`export { HolafTokens }` a été retiré, la
+  brique est chargeable en **`<script>` classique (`file://` ET HTTP)**, en
+  `<script type="module" src>` et en **import par effet de bord**
+  (`import "./holaf-tokens.js"; const { HolafTokens } = window;`).
+
+> ⚠️ **Rupture d'inclusion** : `import { HolafTokens } from …` ne fonctionne
+> plus (volontairement). Migrer vers l'import par effet de bord ci-dessus.
 
 Voir le design dans [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md).
 

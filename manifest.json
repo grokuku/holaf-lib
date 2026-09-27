@@ -33,10 +33,10 @@
       "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG, generateTheme, generateFamily)."
     },
     "tokens": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "file": "js/holaf-tokens.js",
       "category": "foundation",
-      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). Catalogue à 2 axes : 5 familles × clair/sombre (10 presets <famille>-<mode>) + 4 alias historiques."
+      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). Catalogue à 2 axes : 5 familles × clair/sombre (10 presets <famille>-<mode>) + 4 alias historiques. 0.3.0 : 23 clés optionnelles (dérivables accent-soft/glow/gradient(-hover)/shadow, danger-soft/shadow/gradient*, border-muted, text-faint, surface-hover, chrome-header/footer, états ok/ok-text/ok-soft/warn/warn-text, identité bg-image/txt-glow*/radius-sm/font-sans/font-mono ; * = opt-in), registre de packs hôte (registerPreset/updatePreset/unregisterPreset/getPreset/alpha), purge par possession d'ensemble, fichier chargeable en <script> classique (file:// ET HTTP) sans export top-level."
     },
     "ambient": {
       "version": "0.3.0",
