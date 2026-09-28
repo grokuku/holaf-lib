@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.0)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.1)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -31,7 +31,8 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 
 ## 2. Liste des icônes (stroke-currentColor, 24×24, stroke-width 2, fill none)
 
-`layout` · `link` · `clock` · `image` · `bookmark` · `search` · `edit` ·
+`bar-chart` · `shield` · `globe` · `layout` · `link` · `clock` · `image` ·
+`bookmark` · `search` · `edit` ·
 `cloud` · `x` · `plus` · `trash` · `pencil` · `gear` · `play` · `pause` ·
 `arrow-right` · `eye` · `eye-off` · `chevron-down` · `chevron-up` ·
 `chevron-left` · `chevron-right` · `check` · `alert-triangle` · `info` ·
@@ -138,3 +139,13 @@ SOFTWARE.
    `stroke="currentColor"`, `stroke-width="2"` — appliqués par le wrapper.
 4. (Optionnel) documente l'icône dans la liste de la « §2 », et **incrémente la
    version PATCH** : en-tête + `const VERSION` du fichier.
+
+---
+
+## 7. Version
+
+- **0.1.1** — ajout de `bar-chart`, `shield` et `globe` ; clarification du
+  crédit : `bar-chart` est un tracé propre au set (style Feather, mais **pas**
+  un tracé Feather littéral). En-tête + `const VERSION` + `manifest.json`
+  synchronisés (règle du §6, étape 4).
+- **0.1.0** — première version (36 icônes en trait, zéro CSS).

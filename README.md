@@ -62,7 +62,7 @@ Grâce à ça, le script `holaf` sait :
 | color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
 | tokens     | `js/holaf-tokens.js` | 0.3.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 5 familles × clair/sombre (10 presets `<famille>-<mode>`) + 4 alias historiques. **0.3.0** : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** (plus de résidu `--holaf-*`) et **fichier classic-compatible** (chargeable en `<script>` classique `file://`/HTTP, sans export nommé) — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
-| icons      | `js/holaf-icons.js` | 0.1.0 | ✅ prête | 36 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
+| icons      | `js/holaf-icons.js` | 0.1.1 | ✅ prête | 39 icônes SVG en trait (style Feather, MIT), zéro CSS, `stroke=currentColor` |
 
 > 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons
 

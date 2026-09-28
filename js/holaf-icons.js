@@ -1,14 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.0
+ * Holaf UI — Brique HolafIcons · version 0.1.1
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
  * l'hôte le soin de la colorer via son propre CSS (color / currentColor).
  *
  * Chaque icône est un trait 24×24 (`viewBox="0 0 24 24"`), `fill="none"`,
- * `stroke-width="2"`, lignes/arrondis propres au style Feather. Les tracés
- * sont repris du jeu d'icônes **Feather Icons** (licence MIT — voir
- * `README-holaf-icons.md` pour le crédit complet).
+ * `stroke-width="2"`, lignes/arrondis dans le style Feather. La plupart des
+ * tracés sont repris du jeu d'icônes **Feather Icons** (licence MIT — voir
+ * `README-holaf-icons.md` pour le crédit complet) ; certaines icônes ajoutées
+ * ensuite (ex. `bar-chart`) reprennent ce style mais ne sont PAS des tracés
+ * Feather littéraux.
  *
  * API :
  *   HolafIcons.get(name)                          → string SVG (complet, 24px)
@@ -23,15 +25,16 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.0";
+    const VERSION = "0.1.1";
 
     const NS = "http://www.w3.org/2000/svg";
 
     // ── Corpus des icônes : nom → corps SVG (traits internes, sans wrapper).
     // Style « feather » : 24×24, stroke currentColor, stroke-width 2, fill none.
-    // Tracés : jeu Feather Icons (MIT).
+    // Tracés : majoritairement le jeu Feather Icons (MIT) ; icônes ajoutées
+    // (ex. bar-chart) dessinées dans le même style, non reprises de Feather.
     const ICONS = {
-        // Graphique / stats.
+        // Graphique / stats (tracé propre au set, style Feather — pas Feather).
         "bar-chart":
             '<rect x="3" y="10" width="4" height="10" rx="1" ry="1"></rect>' +
             '<rect x="10" y="6" width="4" height="14" rx="1" ry="1"></rect>' +
