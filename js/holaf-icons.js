@@ -31,7 +31,24 @@ const HolafIcons = (function () {
     // Style « feather » : 24×24, stroke currentColor, stroke-width 2, fill none.
     // Tracés : jeu Feather Icons (MIT).
     const ICONS = {
+        // Graphique / stats.
+        "bar-chart":
+            '<rect x="3" y="10" width="4" height="10" rx="1" ry="1"></rect>' +
+            '<rect x="10" y="6" width="4" height="14" rx="1" ry="1"></rect>' +
+            '<rect x="17" y="13" width="4" height="7" rx="1" ry="1"></rect>',
+
+        // Bouclier / protection.
+        shield:
+            '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>',
+
+        // Globe / monde.
+        globe:
+            '<circle cx="12" cy="12" r="10"></circle>' +
+            '<line x1="2" y1="12" x2="22" y2="12"></line>' +
+            '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>',
+
         // Frame / layout (widgets Homy).
+
         layout:
             '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>' +
             '<line x1="3" y1="9" x2="21" y2="9"></line>' +
