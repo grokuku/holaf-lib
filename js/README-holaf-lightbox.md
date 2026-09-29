@@ -1,4 +1,4 @@
-# HolafLightbox — doc d'usage (brique holaf-lib v0.1.0)
+# HolafLightbox — doc d'usage (brique holaf-lib v0.2.0)
 
 Visionneuse plein écran / inline **générique** et **instanciable** : un seul
 fichier (`holaf-lightbox.js`), zéro dépendance runtime, **zéro import croisé**.
@@ -7,6 +7,10 @@ Elle gère la **machine à états de vue** (idle ⇄ zoom ⇄ fullscreen), la
 la **délégation zoom/pan** à HolafViewport. Le **média** (img/vidéo/audio,
 éditeur…) est produit par un `renderMedia` **injecté** : la brique ne connaît
 aucun balisage métier.
+
+**0.2.0 — capacités OPT-IN** (sans les options, le comportement 0.1.0 est
+strictement inchangé) : **diaporama** (§5), **crossfade** (§6), **chrome
+discret** (§7).
 
 ---
 
@@ -119,6 +123,10 @@ const lb = HolafLightbox.create({
     beforeNavigate: async (dir, item, nextIndex) => "proceed", // 'cancel' annule
     labels: { prev: "‹", next: "›", close: "✖", region: "Visionneuse" },
     css: { injectStyles: true, nonce: null },
+    // ── Capacités OPT-IN (absentes = comportement 0.1.0) ──
+    slideshow: true,                    // ou { duration, transition, random, loop, keyboard }
+    transition: 400,                    // crossfade (ms) — 0 (défaut) = coupe franche
+    chrome: { icons: false, autoHide: false, idleDelay: 3000, fadeDuration: 300 },
     onOpen: (mode, item) => {},
     onClose: (mode) => {},
     onNavigate: (dir, item, index, grid) => {},
@@ -126,6 +134,11 @@ const lb = HolafLightbox.create({
     onReady: (mode, item, payload) => {},
     onError: (mode, item, error) => {},
     onViewport: (mode, instance, element) => {},
+    onSlideshowStart: (cfg) => {},              // { duration, transition, random, loop, index, item }
+    onSlideshowStop: (info) => {},              // { reason, index, item }
+    onSlideshowTick: (info) => {},              // { index, item, nextIndex, direction }
+    onSlideshowPause: (info) => {},
+    onSlideshowResume: (info) => {},
 });
 ```
 
@@ -172,18 +185,181 @@ maintient son propre index, mis à jour par `navigate`/`navigateGrid`.
 `zoomBy(factor)` / `setZoom(s,x,y)` / `resetZoom()` · `addView(mode, cfg)` ·
 `on(evt, cb)` / `off(evt, cb)` · `destroy()`.
 
-Événements : `open` `close` `navigate` `ready` `error` `resume` `viewport`.
+Diaporama (opt-in, §5) : `startSlideshow({duration, transition, random, loop})` ·
+`stopSlideshow(reason?)` · `toggleSlideshow()` · `pauseSlideshow()` ·
+`resumeSlideshow()` · `isSlideshow()` · `isSlideshowPaused()`.
+
+Événements : `open` `close` `navigate` `ready` `error` `resume` `viewport`
+(0.2.0) `slideshowstart` `slideshowstop` `slideshowtick` `slideshowpause`
+`slideshowresume`.
 
 Clavier géré (si `shouldHandleKey` l'autorise) : `‹`/`›` et `←`/`→` = ±1,
 `↑`/`↓` = ±colonnes (hors vue ouverte), `Entrée` = zoom, `Ctrl/⌘+Entrée` =
-fullscreen, `Échap` = `back()`, `+`/`-` = zoom, `0` = reset (le
-`preventDefault()` n'est posé que sur les touches consommées).
+fullscreen, `Échap` = `back()`, `+`/`-` = zoom, `0` = reset. **0.2.0, opt-in
+`slideshow` seulement** : `Espace` **en plein écran** démarre le diaporama puis
+fait play/pause (non consommé sans l'option ; `slideshow.keyboard:false`
+désactive). Le `preventDefault()` n'est posé que sur les touches consommées.
 
 ---
 
-## 5. Recettes
+## 5. Diaporama (OPT-IN) — `slideshow`
 
-### 5.1 Pack ComfyUI-AI-Helper (éditeur, garde dialogState)
+```js
+const lb = HolafLightbox.create({
+    slideshow: { duration: 4000, transition: 400, random: false, loop: false },
+    // ou slideshow: true → durée 4000 ms, pas de transition, séquentiel.
+});
+lb.startSlideshow();
+lb.stopSlideshow();               // reason 'manual'
+lb.toggleSlideshow();             // 1er appel = démarre, ensuite play/pause
+lb.pauseSlideshow(); lb.resumeSlideshow();
+lb.isSlideshow();                 // true si démarré (en cours OU en pause)
+lb.isSlideshowPaused();
+```
+
+### Réglages
+
+| Option | Défaut | Rôle |
+| --- | --- | --- |
+| `duration` | `4000` | ms entre deux images |
+| `transition` | `null` | ms de fondu de la session (null = hérite de `transition` d'instance, sinon 0) |
+| `random` | `false` | ordre aléatoire **sans répéter la même image deux fois de suite** |
+| `loop` | `false` | boucle en fin de liste ; sinon **arrêt en fin** (`slideshowstop` reason `'end'`) |
+| `keyboard` | `true` | barre d'espace en plein écran = démarrer/play-pause |
+
+`startSlideshow(opts)` écrase ces valeurs pour la session courante.
+
+### Comportement
+
+- avance automatique après `duration` ms (la 1re image reste affichée pendant
+  `duration`) ; sans `loop`, la fin de liste arrête le diaporama ;
+- **flèches en diaporama** : une flèche change l'image IMMÉDIATEMENT (dans les
+  deux sens) et **réarme** le minuteur — donc accélérer vers l'avant ou revenir
+  en arrière ralentit l'avance suivante ;
+- **espace en plein écran** : démarre si arrêté, sinon pause/reprise ;
+- fermer la vue (Échap, `back()`, `close()`) arrête le diaporama
+  (`reason: 'close'`) ; `destroy()` → `reason: 'destroy'` ;
+- le diaporama n'est actif que dans une vue ouverte (`startSlideshow()` renvoie
+  `false` sinon) ; il peut démarrer en `zoom` comme en `fullscreen`.
+
+### Événements
+
+| Événement | Payload |
+| --- | --- |
+| `slideshowstart` | `{ duration, transition, random, loop, index, item }` |
+| `slideshowstop` | `{ reason: 'manual'|'end'|'close'|'destroy', index, item }` |
+| `slideshowtick` | `{ index, item, nextIndex, direction }` (avant le changement) |
+| `slideshowpause` / `slideshowresume` | `{ index, item }` |
+
+Mêmes noms de handlers d'options : `onSlideshowStart` `onSlideshowStop`
+`onSlideshowTick` `onSlideshowPause` `onSlideshowResume`.
+
+### Bouton diaporama de l'hôte
+
+La brique n'ajoute AUCUN bouton : l'hôte crée son bouton (par exemple dans
+l'overlay, classe `.holaf-lightbox-nav` pour participer au chrome discret, §7)
+et branche `toggleSlideshow()` + `isSlideshow()`/`isSlideshowPaused()` (tenus à
+jour par `slideshowstart`/`stop`/`pause`/`resume`) pour basculer ▶/❚❚.
+
+---
+
+## 6. Crossfade (OPT-IN) — `transition`
+
+Vrai **fondu enchaîné** : la couche sortante et la couche entrante sont
+superposées pendant toute la transition (ce n'est PAS un fade-out suivi d'un
+fade-in). `transition: 0` (défaut) → coupe franche, aucune couche créée.
+
+```js
+HolafLightbox.create({
+    transition: 400,                       // ms — toutes les navigations
+    // views: { fullscreen: { transition: 0 } },  // override par vue
+    // slideshow: { duration: 4000, transition: 400 },  // override par session de diaporama
+});
+```
+
+Priorité : session de diaporama > config de vue > option d'instance.
+
+### Contrat renderMedia en crossfade
+
+Quand `transition > 0`, la brique passe à `renderMedia` une **couche fraîche**
+(`<div class="holaf-lightbox-layer">`) comme `container` ; le média doit être
+créé DANS cette couche (le `{ el }` retourné est le contenu du viewport).
+Conséquence : ne PAS réutiliser un élément média déjà présent dans un autre
+conteneur (`container.querySelector('img')` ne retrouvera pas l'image
+précédente — c'est voulu : les deux images doivent coexister). Les hôtes qui
+réutilisent leurs éléments dans le même conteneur ne doivent pas activer le
+crossfade.
+
+### Cycle de vie
+
+- le fondu démarre à `onReady` (média entrant prêt) avec un repli borné
+  (~1000 ms) si l'hôte ne signale jamais `onReady` ; le premier rendu d'une vue
+  est direct (rien à croiser) ;
+- l'abort/destroy du rendu SORTANT n'est déclenché qu'à la fin du fondu
+  (ou immédiatement si un nouveau rendu arrive / à la fermeture) ;
+- navigation rapide et fermeture coupent proprement timers + couches : aucune
+  couche orpheline.
+
+---
+
+## 7. Chrome discret (OPT-IN) — `chrome`
+
+| Option | Défaut | Rôle |
+| --- | --- | --- |
+| `icons` | `false` | `true` = ICÔNES SEULES (‹ › ✖) ; les libellés restent en `title`/`aria-label` |
+| `autoHide` | `false` | masque le chrome après inactivité de la souris, le réaffiche au mouvement |
+| `idleDelay` | `3000` | ms d'immobilité avant masquage (même curseur posé sur un icône) |
+| `fadeDuration` | `300` | ms de la transition d'opacité (variable `--hl-chrome-fade`) |
+
+```js
+HolafLightbox.create({
+    chrome: { icons: true, autoHide: true, idleDelay: 3000, fadeDuration: 300 },
+    // par vue : views: { fullscreen: { chrome: { autoHide: true } } }
+    // (chrome: false / true garde le sens 0.1.0 : construire ou non la barre)
+});
+```
+
+- le conteneur reçoit `.holaf-lightbox-chrome-auto`, et
+  `.holaf-lightbox-chrome-hidden` pendant le masquage : les transitions
+  d'opacité sont en CSS (pas d'apparition brutale),
+- **participation des contrôles hôtes** : tout bouton portant
+  `.holaf-lightbox-nav` dans le conteneur est masqué/révélé avec le chrome
+  (c'est le cas des boutons ⤓/★ du front et du futur bouton diaporama),
+- réapparition au moindre `mousemove`/`mouseenter` (et `touchstart`) ;
+  l'approche des bords est couverte par le simple mouvement de souris,
+- `prefers-reduced-motion: reduce` → transitions désactivées (les masquages
+  restent fonctionnels, sans animation).
+
+---
+
+## 8. Clic simple = plein écran
+
+La brique ne gère pas le clic sur les vignettes : c'est l'hôte qui décide.
+Pour « clic simple → plein écran » :
+
+```js
+// 1) Grille HolafGrid : activez activateOnClick et ouvrez en plein écran.
+HolafGrid.create(gridEl, {
+    activateOnClick: true,
+    onActivate: (item, index, kind) => {
+        if (kind === 'click') lightbox.openFullscreen(item);
+    },
+    // ...
+});
+
+// 2) Ou directement sur vos vignettes.
+thumbEl.addEventListener('click', () => lightbox.openFullscreen(item));
+```
+
+`openFullscreen(item)` depuis idle ouvre DIRECTEMENT le plein écran (pas besoin
+de passer par la vue zoom) ; depuis la vue zoom, il l'empile et `Échap`
+restaure le zoom. Côté brique, aucune option supplémentaire n'est requise.
+
+---
+
+## 9. Recettes
+
+### 9.1 Pack ComfyUI-AI-Helper (éditeur, garde dialogState)
 
 ```js
 const lb = HolafLightbox.create({
@@ -207,7 +383,7 @@ const lb = HolafLightbox.create({
 });
 ```
 
-### 5.2 Galerie web (sans édition)
+### 9.2 Galerie web (sans édition)
 
 ```js
 renderMedia: ({ container, item, onReady }) => {
@@ -224,7 +400,7 @@ renderMedia: ({ container, item, onReady }) => {
 
 ---
 
-## 6. Notes
+## 10. Notes
 
 - **Instanciable plusieurs fois** : aucun état de module hors le `<style>`
   partagé (retiré à la destruction de la dernière instance).
@@ -232,5 +408,14 @@ renderMedia: ({ container, item, onReady }) => {
   vue ; Échap/`back()` dépile et émet `resume` (la vue zoom, restée vivante,
   est simplement ré-affichée).
 - **Zéro import croisé** : la source, le média et le viewport sont injectés.
-- **Non couvert par les tests unitaires** (jsdom) : rendu réel, pinch/touch
-  (absent de HolafViewport 0.1.x), perf du préchargement réseau.
+- **0.2.0 — opt-in strict** : sans `slideshow`, sans `transition` et sans
+  `chrome`, le DOM, le clavier et les événements sont ceux de la 0.1.0.
+- **Limites connues** : pas de gestion tactile dédiée du diaporama/chrome
+  (le tactile passe par les événements souris émulés ou `touchstart`) ; le
+  crossfade suppose que le `container` reçu par `renderMedia` est bien la
+  surface de la vue (ou une couche fournie par la brique) et que le média y est
+  créé ; `prefers-reduced-motion` désactive les transitions CSS ;
+  `duration: 0` sur un diaporama = pas d'avance automatique.
+- **Non couvert par les tests unitaires** (jsdom) : rendu réel, rendu visuel du
+  fondu (jsdom ne peint pas), pinch/touch (absent de HolafViewport 0.1.x), perf
+  du préchargement réseau.

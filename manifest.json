@@ -69,10 +69,10 @@
       "description": "Grille virtualisée DOM GÉNÉRIQUE et instanciable : layout (colonnes/gap/aspect/buffer), pool de cellules recyclées + squelettes, resize avec ancrage de rangée, sélection mono/multi (shift/ctrl) avec délégation click/dblclick, navigation clavier de grille, scroll/alignement. Source de données, renderer de cellule (cell.create/update/release) et cache INJECTÉS ; CSS scopé --hl-*/holaf-grid-* avec getCss() + injectStyles + nonce."
     },
     "lightbox": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "file": "js/holaf-lightbox.js",
       "category": "component",
-      "description": "Visionneuse plein écran/inline GÉNÉRIQUE et instanciable : machine à états idle⇄zoom⇄fullscreen avec restauration de la vue source, navigation item→item (wrap-around) et grille (↑/↓ ±colonnes), préchargement des N suivants (annulation des jobs périmés) + garde de stale-load (serial), clavier avec shouldHandleKey injectable, délégation zoom/pan à HolafViewport (injecté). Média (img/vidéo/audio/éditeur) produit par un renderMedia injecté (el/destroy/AbortSignal) ; source d'items injectée ; overlay/nav/spinner par défaut ou conteneurs fournis par l'hôte ; CSS scopé --hl-*/holaf-lightbox-* avec getCss() + injectStyles + nonce."
+      "description": "Visionneuse plein écran/inline GÉNÉRIQUE et instanciable : machine à états idle⇄zoom⇄fullscreen avec restauration de la vue source, navigation item→item (wrap-around) et grille (↑/↓ ±colonnes), préchargement des N suivants (annulation des jobs périmés) + garde de stale-load (serial), clavier avec shouldHandleKey injectable, délégation zoom/pan à HolafViewport (injecté). Média (img/vidéo/audio/éditeur) produit par un renderMedia injecté (el/destroy/AbortSignal) ; source d'items injectée ; overlay/nav/spinner par défaut ou conteneurs fournis par l'hôte ; CSS scopé --hl-*/holaf-lightbox-* avec getCss() + injectStyles + nonce. 0.2.0 (OPT-IN, défaut 0.1.0 inchangé) : diaporama (duration/transition/random/loop + start/stop/toggle/pause/resume + événements slideshow*, espace en plein écran = démarrer/play-pause, flèches = changement immédiat + réarmement), crossfade en vraie superposition de deux couches (transition ms, 0 = coupe franche, annulation propre), chrome discret (icônes seules, auto-masquage après inactivité 3000 ms même au-dessus d'un icône, réapparition au mouvement, transitions d'opacité douces)."
     },
     "infopane": {
       "version": "0.1.0",

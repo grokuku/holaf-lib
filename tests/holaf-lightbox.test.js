@@ -76,6 +76,7 @@ function fakeImageClass() {
 }
 
 afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = "";
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -84,7 +85,7 @@ afterEach(() => {
 // ── CSS / options ────────────────────────────────────────────────────────────
 describe("CSS et options", () => {
     it("expose une version et un getCss() non vide", () => {
-        expect(HolafLightbox.version).toBe("0.1.0");
+        expect(HolafLightbox.version).toBe("0.2.0");
         expect(typeof HolafLightbox.getCss()).toBe("string");
         expect(HolafLightbox.getCss().length).toBeGreaterThan(50);
         expect(HolafLightbox.getCss()).toContain(".holaf-lightbox-overlay");
@@ -949,5 +950,575 @@ describe("cycle de vie", () => {
         lb.destroy();
         expect(await lb.openZoom(lb._items[0])).toBe(false);
         expect(await lb.navigate(1)).toBe(false);
+    });
+});
+
+// ── Diaporama (OPT-IN) ───────────────────────────────────────────────────────
+describe("diaporama (opt-in)", () => {
+    const keyEvent = (k) => {
+        let prevented = false;
+        return {
+            key: k,
+            preventDefault() { prevented = true; },
+            _prevented() { return prevented; },
+        };
+    };
+
+    it("sans option slideshow : start/toggle/stop inertes et espace non consommé (contrôle négatif)", async () => {
+        const lb = HolafLightbox.create({ css: { injectStyles: false } });
+        lb.setItems(items(3));
+        await lb.openFullscreen(lb._items[0]);
+        expect(lb.startSlideshow()).toBe(false);
+        expect(lb.toggleSlideshow()).toBe(false);
+        expect(lb.stopSlideshow()).toBe(false);
+        expect(lb.pauseSlideshow()).toBe(false);
+        expect(lb.resumeSlideshow()).toBe(false);
+        expect(lb.isSlideshow()).toBe(false);
+        expect(lb.isSlideshowPaused()).toBe(false);
+        expect(lb._slideshowCfg).toBe(null);
+        const e = keyEvent(" ");
+        expect(lb.handleKey(e)).toBe(false);
+        expect(e._prevented()).toBe(false);
+        lb.destroy();
+    });
+
+    it("startSlideshow démarre, avance après duration et s'arrête en fin sans loop", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 100 } });
+        lb.setItems(items(3));
+        const started = [];
+        const stops = [];
+        const ticks = [];
+        lb.on("slideshowstart", (p) => started.push(p));
+        lb.on("slideshowstop", (p) => stops.push(p.reason));
+        lb.on("slideshowtick", (p) => ticks.push(p));
+        await lb.openZoom(lb._items[0]);
+        expect(lb.startSlideshow()).toBe(true);
+        expect(lb.isSlideshow()).toBe(true);
+        expect(started).toHaveLength(1);
+        expect(started[0]).toMatchObject({ duration: 100, random: false, loop: false, transition: 0 });
+        // Pas d'avance avant duration.
+        await vi.advanceTimersByTimeAsync(99);
+        expect(lb.current().path_canon).toBe("i0");
+        await vi.advanceTimersByTimeAsync(1);
+        expect(lb.current().path_canon).toBe("i1");
+        await vi.advanceTimersByTimeAsync(100);
+        expect(lb.current().path_canon).toBe("i2");
+        await vi.advanceTimersByTimeAsync(100); // fin de liste → stop
+        expect(lb.current().path_canon).toBe("i2");
+        expect(lb.isSlideshow()).toBe(false);
+        expect(stops).toEqual(["end"]);
+        expect(ticks.map((t) => t.nextIndex)).toEqual([1, 2]);
+        lb.destroy();
+    });
+
+    it("loop: revient à la première en fin de liste sans s'arrêter", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 50, loop: true } });
+        lb.setItems(items(2));
+        await lb.openZoom(lb._items[1]);
+        lb.startSlideshow();
+        await vi.advanceTimersByTimeAsync(50);
+        expect(lb.current().path_canon).toBe("i0");
+        await vi.advanceTimersByTimeAsync(50);
+        expect(lb.current().path_canon).toBe("i1");
+        expect(lb.isSlideshow()).toBe(true);
+        lb.destroy();
+    });
+
+    it("random: ne répète jamais la même image deux fois de suite", async () => {
+        vi.useFakeTimers();
+        vi.spyOn(Math, "random").mockReturnValue(0);
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 30, random: true } });
+        lb.setItems(items(4));
+        await lb.openZoom(lb._items[0]);
+        const ticks = [];
+        lb.on("slideshowtick", (p) => ticks.push([p.index, p.nextIndex]));
+        lb.startSlideshow();
+        for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(30);
+        expect(ticks.length).toBeGreaterThanOrEqual(5);
+        for (const [cur, next] of ticks) expect(next).not.toBe(cur);
+        lb.destroy();
+    });
+
+    it("pause/reprise : aucun avance pendant la pause + événements", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 40 } });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const evts = [];
+        lb.on("slideshowpause", () => evts.push("pause"));
+        lb.on("slideshowresume", () => evts.push("resume"));
+        lb.startSlideshow();
+        expect(lb.pauseSlideshow()).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(true);
+        await vi.advanceTimersByTimeAsync(300);
+        expect(lb.current().path_canon).toBe("i0"); // pas d'avance en pause
+        expect(lb.resumeSlideshow()).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(false);
+        await vi.advanceTimersByTimeAsync(40);
+        expect(lb.current().path_canon).toBe("i1");
+        expect(evts).toEqual(["pause", "resume"]);
+        lb.destroy();
+    });
+
+    it("toggleSlideshow démarre puis bascule pause/reprise puis stop", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: true });
+        lb.setItems(items(2));
+        await lb.openFullscreen(lb._items[0]);
+        expect(lb.toggleSlideshow()).toBe(true);
+        expect(lb.isSlideshow()).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(false);
+        expect(lb._slideshow.cfg.duration).toBe(4000); // durée par défaut
+        expect(lb.toggleSlideshow()).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(true);
+        expect(lb.toggleSlideshow()).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(false);
+        expect(lb.stopSlideshow()).toBe(true);
+        expect(lb.isSlideshow()).toBe(false);
+        lb.destroy();
+    });
+
+    it("la fermeture de la vue arrête le diaporama (reason close)", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 50 } });
+        lb.setItems(items(3));
+        const stops = [];
+        lb.on("slideshowstop", (p) => stops.push(p.reason));
+        await lb.openFullscreen(lb._items[0]);
+        lb.startSlideshow();
+        expect(lb.isSlideshow()).toBe(true);
+        lb.back();
+        await flush();
+        expect(lb.isSlideshow()).toBe(false);
+        expect(stops).toEqual(["close"]);
+        lb.destroy();
+    });
+
+    it("flèches en diaporama : changement immédiat + minuteur réarmé dans les deux sens", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 1000 } });
+        lb.setItems(items(4));
+        await lb.openFullscreen(lb._items[0]);
+        lb.startSlideshow();
+        await vi.advanceTimersByTimeAsync(400); // minuteur initial partiellement écoulé
+        expect(lb.handleKey(keyEvent("ArrowRight"))).toBe(true);
+        await flush();
+        expect(lb.current().path_canon).toBe("i1"); // changement IMMÉDIAT
+        await vi.advanceTimersByTimeAsync(999);     // 999 ms après la flèche
+        expect(lb.current().path_canon).toBe("i1"); // réarmé (l'ancien serait tombé à 1000)
+        await vi.advanceTimersByTimeAsync(1);
+        expect(lb.current().path_canon).toBe("i2");
+        expect(lb.handleKey(keyEvent("ArrowLeft"))).toBe(true);
+        await flush();
+        expect(lb.current().path_canon).toBe("i1"); // retour arrière immédiat
+        await vi.advanceTimersByTimeAsync(999);
+        expect(lb.current().path_canon).toBe("i1"); // réarmé aussi dans l'autre sens
+        await vi.advanceTimersByTimeAsync(1);
+        expect(lb.current().path_canon).toBe("i2");
+        lb.destroy();
+    });
+
+    it("espace en plein écran : démarre puis play/pause (opt-in)", async () => {
+        vi.useFakeTimers();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 100 } });
+        lb.setItems(items(3));
+        await lb.openFullscreen(lb._items[0]);
+        const e1 = keyEvent(" ");
+        expect(lb.handleKey(e1)).toBe(true);
+        expect(e1._prevented()).toBe(true);
+        expect(lb.isSlideshow()).toBe(true); // démarre
+        const e2 = keyEvent(" ");
+        expect(lb.handleKey(e2)).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(true); // pause
+        await vi.advanceTimersByTimeAsync(500);
+        expect(lb.current().path_canon).toBe("i0"); // pas d'avance en pause
+        const e3 = keyEvent(" ");
+        expect(lb.handleKey(e3)).toBe(true);
+        expect(lb.isSlideshowPaused()).toBe(false); // reprise
+        await vi.advanceTimersByTimeAsync(100);
+        expect(lb.current().path_canon).toBe("i1");
+        lb.destroy();
+    });
+
+    it("espace hors plein écran (fermé ou zoom) n'est pas consommé", async () => {
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 100 } });
+        lb.setItems(items(3));
+        const e0 = keyEvent(" ");
+        expect(lb.handleKey(e0)).toBe(false); // fermé
+        expect(e0._prevented()).toBe(false);
+        await lb.openZoom(lb._items[0]);
+        const e1 = keyEvent(" ");
+        expect(lb.handleKey(e1)).toBe(false); // zoom ≠ plein écran
+        expect(e1._prevented()).toBe(false);
+        expect(lb.isSlideshow()).toBe(false);
+        lb.destroy();
+    });
+
+    it("slideshow.keyboard:false désactive la barre d'espace", async () => {
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, slideshow: { duration: 100, keyboard: false } });
+        lb.setItems(items(3));
+        await lb.openFullscreen(lb._items[0]);
+        const e = keyEvent(" ");
+        expect(lb.handleKey(e)).toBe(false);
+        expect(e._prevented()).toBe(false);
+        expect(lb.isSlideshow()).toBe(false);
+        lb.destroy();
+    });
+});
+
+// ── Crossfade (OPT-IN) ───────────────────────────────────────────────────────
+describe("crossfade (opt-in)", () => {
+    function layerSpy() {
+        const calls = [];
+        const fn = vi.fn((ctx) => {
+            calls.push(ctx);
+            const img = document.createElement("img");
+            ctx.container.appendChild(img);
+            return { el: img, destroy: vi.fn() };
+        });
+        return { fn, calls };
+    }
+
+    it("défaut (sans transition) : aucune couche, container = surface fournie (contrôle négatif)", async () => {
+        const el = makeContainer();
+        const { fn, calls } = layerSpy();
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            views: { zoom: { container: el } },
+            renderMedia: fn,
+        });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1);
+        expect(el.querySelectorAll(".holaf-lightbox-layer").length).toBe(0);
+        expect(calls.every((c) => c.container === el)).toBe(true);
+        expect(lb._transition).toBe(0);
+        lb.destroy();
+    });
+
+    it("transition:50 → 2 couches pendant le fondu, une seule après", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const { fn, calls } = layerSpy();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, transition: 50, renderMedia: fn });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        expect(overlay.querySelectorAll(".holaf-lightbox-layer").length).toBe(1); // 1er rendu direct
+        await lb.navigate(1);
+        expect(overlay.querySelectorAll(".holaf-lightbox-layer").length).toBe(2); // sortante + entrante
+        expect(calls[0].container).not.toBe(calls[1].container); // couches DISTINCTES
+        expect(calls[1].container.className).toContain("holaf-lightbox-layer");
+        calls[1].onReady({}); // fondu déclenché à la disponibilité média
+        await vi.advanceTimersByTimeAsync(50 + 60);
+        expect(overlay.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        lb.destroy();
+    });
+
+    it("erreur de renderMedia en crossfade : l'ancien rendu reste affiché (pas de fuite)", async () => {
+        const host = makeContainer();
+        let fail = false;
+        const destroys = [];
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            transition: 40,
+            renderMedia: (ctx) => {
+                if (fail) throw new Error("boom");
+                const img = document.createElement("img");
+                ctx.container.appendChild(img);
+                const d = vi.fn();
+                destroys.push(d);
+                return { el: img, destroy: d };
+            },
+        });
+        lb.setItems(items(3));
+        const errors = [];
+        lb.on("error", (e) => errors.push(e));
+        await lb.openZoom(lb._items[0]);
+        fail = true;
+        await lb.navigate(1);
+        expect(errors).toHaveLength(1);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        expect(destroys[0]).not.toHaveBeenCalled(); // l'ancien rendu est toujours affiché
+        fail = false;
+        await lb.navigate(1); // re-démarre normalement
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(2);
+        lb.destroy();
+        expect(destroys[0]).toHaveBeenCalled(); // détruit à la fermeture
+    });
+
+    it("onReady synchrone : le fondu démarre sans attendre le repli", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const calls = [];
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            transition: 40,
+            renderMedia: (ctx) => {
+                calls.push(ctx);
+                const img = document.createElement("img");
+                ctx.container.appendChild(img);
+                ctx.onReady({}); // hôte synchrone : disponible immédiatement
+                return { el: img, destroy: vi.fn() };
+            },
+        });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1);
+        expect(calls[1].container.style.transition).toContain("opacity 40ms");
+        await vi.advanceTimersByTimeAsync(40 + 60);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        lb.destroy();
+    });
+
+    it("duration 0 = coupe franche (pas de couche)", async () => {
+        const host = makeContainer();
+        const { fn } = layerSpy();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, transition: 0, renderMedia: fn });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(0);
+        lb.destroy();
+    });
+
+    it("changement rapide : couche intermédiaire détruite, aucune couche orpheline", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const destroys = [];
+        const calls = [];
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            transition: 100,
+            renderMedia: (ctx) => {
+                calls.push(ctx);
+                const img = document.createElement("img");
+                ctx.container.appendChild(img);
+                const d = vi.fn();
+                destroys.push(d);
+                return { el: img, destroy: d };
+            },
+        });
+        lb.setItems(items(4));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1); // fondu en attente (pas de onReady)
+        await lb.navigate(2); // changement rapide → flush de la couche 0
+        expect(destroys[0]).toHaveBeenCalled();
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(2);
+        calls[calls.length - 1].onReady({});
+        await vi.advanceTimersByTimeAsync(160);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        expect(destroys[1]).toHaveBeenCalled();
+        lb.destroy();
+    });
+
+    it("fermeture pendant le fondu : tout est nettoyé (0 couche, destructions)", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const destroys = [];
+        const calls = [];
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            transition: 100,
+            renderMedia: (ctx) => {
+                calls.push(ctx);
+                const img = document.createElement("img");
+                ctx.container.appendChild(img);
+                const d = vi.fn();
+                destroys.push(d);
+                return { el: img, destroy: d };
+            },
+        });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(2);
+        calls[1].onReady({}); // fondu réellement démarré
+        lb.close();
+        await flush();
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(0);
+        expect(destroys[0]).toHaveBeenCalled();
+        expect(destroys[1]).toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(500);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(0);
+        lb.destroy();
+    });
+
+    it("repli borné si l'hôte ne signale jamais onReady (le fondu se fait quand même)", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const { fn } = layerSpy();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, transition: 50, renderMedia: fn });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        await lb.navigate(1);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(2);
+        await vi.advanceTimersByTimeAsync(1000); // repli sans onReady
+        await vi.advanceTimersByTimeAsync(160);  // fin du fondu
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        lb.destroy();
+    });
+
+    it("le diaporama peut surcharger la transition (transition de session)", async () => {
+        vi.useFakeTimers();
+        const host = makeContainer();
+        const { fn, calls } = layerSpy();
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            slideshow: { duration: 100, transition: 40 },
+            renderMedia: fn,
+        });
+        lb.setItems(items(3));
+        await lb.openFullscreen(lb._items[0]);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(0); // hors diaporama : coupe franche
+        lb.startSlideshow();
+        await vi.advanceTimersByTimeAsync(100); // tick → navigation avec fondu de session
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(2);
+        lb.stopSlideshow(); // le fondu en cours continue puis se termine
+        calls[calls.length - 1].onReady({});
+        await vi.advanceTimersByTimeAsync(100);
+        expect(host.querySelectorAll(".holaf-lightbox-layer").length).toBe(1);
+        lb.destroy();
+    });
+});
+
+// ── Chrome discret (OPT-IN) ──────────────────────────────────────────────────
+describe("chrome discret (opt-in)", () => {
+    it("défaut : aucune classe auto, libellés texte (contrôle négatif)", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(false);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+        expect(overlay.querySelector(".holaf-lightbox-nav--prev").textContent).toBe("Précédent");
+        expect(overlay.querySelector(".holaf-lightbox-nav--next").textContent).toBe("Suivant");
+        expect(overlay.querySelector(".holaf-lightbox-nav--close").textContent).toBe("Fermer");
+        lb.destroy();
+    });
+
+    it("chrome.icons:true → icônes seules ; libellés conservés en title/aria-label", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, chrome: { icons: true } });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        const prev = overlay.querySelector(".holaf-lightbox-nav--prev");
+        const next = overlay.querySelector(".holaf-lightbox-nav--next");
+        const close = overlay.querySelector(".holaf-lightbox-nav--close");
+        expect(prev.textContent).toBe("‹");
+        expect(next.textContent).toBe("›");
+        expect(close.textContent).toBe("✖");
+        expect(prev.textContent).not.toBe("Précédent");
+        expect(prev.title).toBe("Précédent");
+        expect(prev.getAttribute("aria-label")).toBe("Précédent");
+        expect(close.getAttribute("aria-label")).toBe("Fermer");
+        lb.destroy();
+    });
+
+    it("autoHide : masque après idleDelay même au-dessus d'un icône, réaffiche au mouvement", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({
+            css: { injectStyles: false },
+            host,
+            chrome: { autoHide: true, idleDelay: 30, fadeDuration: 10 },
+        });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        const next = overlay.querySelector(".holaf-lightbox-nav--next");
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(true);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+        expect(overlay.style.getPropertyValue("--hl-chrome-fade")).toBe("10ms");
+        await sleep(60);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(true);
+        // Mouvement AU-DESSUS d'un icône (le curseur y reste posé) → réapparition.
+        next.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+        // Puis re-masquage après inactivité, curseur toujours au-dessus.
+        await sleep(60);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(true);
+        // Moindre mouvement → réapparition.
+        overlay.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+        lb.destroy();
+    });
+
+    it("autoHide désactivé par défaut : rien ne se masque après inactivité", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, chrome: { idleDelay: 10 } });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        await sleep(40);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(false);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+        lb.destroy();
+    });
+
+    it("destroy retire les classes auto du conteneur", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host, chrome: { autoHide: true, idleDelay: 5000 } });
+        lb.setItems(items(3));
+        await lb.openZoom(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(true);
+        lb.destroy();
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(false);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-hidden")).toBe(false);
+    });
+
+    it("getCss() expose les règles de transition douce (chrome + couches)", () => {
+        const css = HolafLightbox.getCss();
+        expect(css).toContain(".holaf-lightbox-chrome-auto .holaf-lightbox-nav");
+        expect(css).toContain(".holaf-lightbox-chrome-auto.holaf-lightbox-chrome-hidden .holaf-lightbox-nav");
+        expect(css).toMatch(/transition:\s*opacity var\(--hl-chrome-fade/);
+        expect(css).toContain("pointer-events: none");
+        expect(css).toContain(".holaf-lightbox-layer");
+        expect(css).toContain("prefers-reduced-motion");
+    });
+});
+
+// ── Clic simple = plein écran (API hôte) ─────────────────────────────────────
+describe("clic simple = plein écran", () => {
+    it("openFullscreen(item) depuis idle ouvre directement le plein écran", async () => {
+        const lb = HolafLightbox.create({ css: { injectStyles: false } });
+        lb.setItems(items(3));
+        const opened = [];
+        lb.on("open", (p) => opened.push(p.mode));
+        await lb.openFullscreen(lb._items[2]);
+        expect(lb.mode()).toBe("fullscreen");
+        expect(lb.isOpen()).toBe(true);
+        expect(lb.current().path_canon).toBe("i2");
+        expect(opened).toEqual(["fullscreen"]);
+        lb.destroy();
+    });
+});
+
+// ── OPT-IN : défaut strictement inchangé ─────────────────────────────────────
+describe("opt-in : défaut strictement inchangé", () => {
+    it("sans aucune nouvelle option : pas de couche, pas de classe chrome, pas de diaporama", async () => {
+        const host = makeContainer();
+        const lb = HolafLightbox.create({ css: { injectStyles: false }, host });
+        lb.setItems(items(3));
+        await lb.openFullscreen(lb._items[0]);
+        const overlay = host.querySelector(".holaf-lightbox-overlay");
+        expect(overlay.querySelectorAll(".holaf-lightbox-layer").length).toBe(0);
+        expect(overlay.classList.contains("holaf-lightbox-chrome-auto")).toBe(false);
+        expect(overlay.querySelector(".holaf-lightbox-nav--close").textContent).toBe("Fermer");
+        expect(lb._slideshowCfg).toBe(null);
+        expect(lb.isSlideshow()).toBe(false);
+        const e = { key: " ", preventDefault: vi.fn() };
+        expect(lb.handleKey(e)).toBe(false);
+        expect(e.preventDefault).not.toHaveBeenCalled();
+        lb.destroy();
     });
 });
