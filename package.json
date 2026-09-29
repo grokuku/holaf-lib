@@ -18,6 +18,8 @@
   "author": "Holaf",
   "devDependencies": {
     "jsdom": "^30.0.1",
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "^2.0.4",
     "vitest": "^5.0.0"
   }
 }

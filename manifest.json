@@ -79,6 +79,12 @@
       "file": "js/holaf-infopane.js",
       "category": "component",
       "description": "Panneau d'informations média GÉNÉRIQUE et instanciable : états vide/chargement/erreur/prêt, champs label/valeur (empilables, valeurs absentes omises), blocs de texte copiables (textarea auto-redimensionnée bornée, libellé de confirmation puis retour, placement avant/après), actions par bloc (confirmation injectable, disabled/isEnabled) et actions globales du panneau, preview synchrone optionnelle puis remplacement par resolve(item,{signal}) — annulation (AbortSignal) à chaque changement d'item/clear/refresh/destroy. Texte échappé par défaut (html:false), rien d'injecté sans opt-in ; CSS scopé --hl-*/holaf-infopane-* avec getCss() + injectStyles + nonce."
+    },
+    "qrcode": {
+      "version": "0.1.0",
+      "file": "js/holaf-qrcode.js",
+      "category": "component",
+      "description": "Générateur de QR codes AUTO-HÉBERGÉ (zéro dépendance runtime, aucun service tiers) : encodage ISO/IEC 18004 mode byte UTF-8, versions 1-40, correction L/M/Q/H, Reed-Solomon + entrelacement, masque par pénalités (4 règles) ou forcé ; rendu SVG (1 path), canvas et dataURL ; API encode/getMatrix/capacity/minimalVersion/render/renderCanvas/toDataURL + getCss/configure/nonce. Validation de test par décodage aller-retour (jsqr) et oracle matriciel (qrcode-generator), devDependencies de TEST uniquement."
     }
   }
 }
