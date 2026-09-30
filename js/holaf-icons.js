@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.1
+ * Holaf UI — Brique HolafIcons · version 0.1.3
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
@@ -11,6 +11,12 @@
  * `README-holaf-icons.md` pour le crédit complet) ; certaines icônes ajoutées
  * ensuite (ex. `bar-chart`) reprennent ce style mais ne sont PAS des tracés
  * Feather littéraux.
+ *
+ * AJOUT D'ICÔNE : cherche d'abord l'icône sur icons0.dev — API JSON publique
+ * sans clé : GET https://icons0.dev/api/icons?q=<prefix>:<nom> (le champ
+ * `body` est déjà le SVG 24×24 en `currentColor`) ; vérifie la licence de la
+ * COLLECTION D'ORIGINE avant de copier. Procédure complète : §6 de
+ * `README-holaf-icons.md`.
  *
  * API :
  *   HolafIcons.get(name)                          → string SVG (complet, 24px)
@@ -25,7 +31,7 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.1";
+    const VERSION = "0.1.3";
 
     const NS = "http://www.w3.org/2000/svg";
 
@@ -122,6 +128,10 @@ const HolafIcons = (function () {
         pause:
             '<rect x="6" y="4" width="4" height="16"></rect>' +
             '<rect x="14" y="4" width="4" height="16"></rect>',
+
+        // Arrêt / stop (carré).
+        stop:
+            '<rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>',
 
         // Flèche droite.
         "arrow-right":

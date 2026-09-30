@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.1)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.3)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -34,7 +34,7 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `bar-chart` · `shield` · `globe` · `layout` · `link` · `clock` · `image` ·
 `bookmark` · `search` · `edit` ·
 `cloud` · `x` · `plus` · `trash` · `pencil` · `gear` · `play` · `pause` ·
-`arrow-right` · `eye` · `eye-off` · `chevron-down` · `chevron-up` ·
+`stop` · `arrow-right` · `eye` · `eye-off` · `chevron-down` · `chevron-up` ·
 `chevron-left` · `chevron-right` · `check` · `alert-triangle` · `info` ·
 `download` · `upload` · `copy` · `refresh` · `maximize` · `minimize` ·
 `folder` · `terminal` · `git-branch` · `sun` · `moon`
@@ -97,8 +97,19 @@ document.querySelector(".widget-clock-icon").innerHTML =
 
 ## 5. Crédit & licence
 
-Les tracés sont repris du jeu d'icônes **[Feather Icons](https://feathericons.com/)**
-de Cole Bemis, distribué sous **licence MIT** :
+Les tracés ne proviennent pas uniquement de Feather : ils peuvent être repris
+de **n'importe quelle collection** disponible via
+**[icons0.dev](https://icons0.dev/)** (voir §6, étape 0).
+
+**La licence d'un tracé est celle de sa COLLECTION D'ORIGINE** — pas de
+Feather systématique. **Vérifie la licence de la collection avant de copier un
+tracé** : les collections disponibles mélangent des licences permissives
+(MIT, ISC, Apache-2.0, CC0, Unlicense) et des licences copyleft/restrictives
+(GPL, CC BY-NC 4.0, CC BY-NC-SA, CC BY-SA).
+
+La plupart des tracés du set actuel viennent du jeu
+**[Feather Icons](https://feathericons.com/)** de Cole Bemis, distribué sous
+**licence MIT** :
 
 ```
 MIT License
@@ -128,6 +139,17 @@ SOFTWARE.
 
 ## 6. Comment ajouter une icône
 
+0. **Cherche l'icône sur [icons0.dev](https://icons0.dev/) avant tout.**
+   L'API JSON publique (sans clé) renvoie directement le tracé :
+   ```
+   GET https://icons0.dev/api/icons?q=<prefix>:<nom>
+   # ex. : https://icons0.dev/api/icons?q=lucide:bot
+   ```
+   La réponse contient un tableau `results` ; chaque entrée porte `fullName`,
+   `name`, `prefix`, `collection` et **`body`** — le SVG 24×24 (déjà en
+   `currentColor`), au format attendu par la table `ICONS`.
+   **Vérifie la licence de la collection d'origine (§5) avant de copier le
+   tracé.**
 1. Dans `js/holaf-icons.js`, ajoute une entrée à la table `ICONS` :
    ```js
    "bell":  '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>' +
@@ -137,15 +159,24 @@ SOFTWARE.
    `list()` (et proposé dans l'erreur « Proches » pour les fautes de frappe).
 3. Rien d'autre à faire : chaque corps SVG est un trait 24×24, `fill="none"`,
    `stroke="currentColor"`, `stroke-width="2"` — appliqués par le wrapper.
-4. (Optionnel) documente l'icône dans la liste de la « §2 », et **incrémente la
-   version PATCH** : en-tête + `const VERSION` du fichier.
+4. (Optionnel) documente l'icône dans la liste de la « §2 ».
+5. **Incrémente la version PATCH** : en-tête + `const VERSION` +
+   `manifest.json` — les trois synchronisés.
 
 ---
 
 ## 7. Version
 
+- **0.1.3** — convention de recherche d'icônes : les tracés peuvent être
+  repris de n'importe quelle collection via [icons0.dev](https://icons0.dev/)
+  (nouvelle étape 0 au §6 ; licence = collection d'origine rappelée au §5) ;
+  en-tête + `const VERSION` + `manifest.json` synchronisés (règle du §6,
+  étape 5).
+- **0.1.2** — ajout de `stop` (carré centré, coins arrondis) pour distinguer
+  l'arrêt de la pause ; en-tête + `const VERSION` + `manifest.json`
+  synchronisés (règle du §6, étape 5).
 - **0.1.1** — ajout de `bar-chart`, `shield` et `globe` ; clarification du
   crédit : `bar-chart` est un tracé propre au set (style Feather, mais **pas**
   un tracé Feather littéral). En-tête + `const VERSION` + `manifest.json`
-  synchronisés (règle du §6, étape 4).
+  synchronisés (règle du §6, étape 5).
 - **0.1.0** — première version (36 icônes en trait, zéro CSS).
