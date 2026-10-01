@@ -26,6 +26,17 @@ describe("liste des icônes", () => {
             expect(names).toContain(n);
         }
     });
+
+    it("list() contient les 11 icônes ajoutées en v0.1.4 (migration Pi-Web)", () => {
+        const names = HolafIcons.list();
+        for (const n of [
+            "file-text", "external-link", "arrow-up-circle", "arrow-up",
+            "arrow-down", "user", "key", "power", "star", "folder-open",
+            "brain",
+        ]) {
+            expect(names).toContain(n);
+        }
+    });
 });
 
 describe("get() — tous les noms connus", () => {

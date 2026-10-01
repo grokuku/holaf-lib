@@ -45,10 +45,10 @@
       "description": "Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; density = intensité, blur global, elementCount exposé, animation dt ; options perf scale (résolution du buffer + upscale CSS) et fps (plafond de framerate)."
     },
     "icons": {
-      "version": "0.1.3",
+      "version": "0.1.4",
       "file": "js/holaf-icons.js",
       "category": "component",
-      "description": "40 icônes SVG en trait (style Feather, MIT), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine)."
+      "description": "51 icônes SVG en trait (style Feather, MIT ; 2 tracés Tabler MIT), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine). 0.1.4 : + file-text, external-link, arrow-up-circle, arrow-up, arrow-down, user, key, power, star (Feather MIT), folder-open, brain (Tabler MIT)."
     },
     "collection": {
       "version": "0.1.0",

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.3
+ * Holaf UI — Brique HolafIcons · version 0.1.4
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
@@ -31,7 +31,7 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.3";
+    const VERSION = "0.1.4";
 
     const NS = "http://www.w3.org/2000/svg";
 
@@ -230,6 +230,57 @@ const HolafIcons = (function () {
 
         // Lune (mode sombre).
         moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>',
+
+        // ── v0.1.4 : ajouts pour la migration d'icônes de Pi-Web ──────────────
+        // Les 9 premières sont des tracés Feather littéraux (MIT, Cole Bemis).
+
+        // Document / fichier texte.
+        "file-text":
+            '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>' +
+            '<path d="M14 2v6h6m-4 5H8m8 4H8m2-8H8"></path>',
+
+        // Lien externe (ouvrir ailleurs).
+        "external-link":
+            '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3"></path>',
+
+        // Flèche haut dans un cercle (mise à jour / upload).
+        "arrow-up-circle":
+            '<circle cx="12" cy="12" r="10"></circle>' +
+            '<path d="m16 12l-4-4l-4 4m4 4V8"></path>',
+
+        // Flèche haut (ex. git push).
+        "arrow-up": '<path d="M12 19V5m-7 7l7-7l7 7"></path>',
+
+        // Flèche bas (ex. git pull).
+        "arrow-down": '<path d="M12 5v14m7-7l-7 7l-7-7"></path>',
+
+        // Utilisateur (identité, compte).
+        user:
+            '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>' +
+            '<circle cx="12" cy="7" r="4"></circle>',
+
+        // Clé (clés API, secrets).
+        key:
+            '<path d="m21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778a5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>',
+
+        // Alimentation / activer (bouton power).
+        power: '<path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"></path>',
+
+        // Étoile (favori / défaut).
+        star: '<path d="m12 2l3.09 6.26L22 9.27l-5 4.87l1.18 6.88L12 17.77l-6.18 3.25L7 14.14L2 9.27l6.91-1.01z"></path>',
+
+        // ── Tracés Tabler Icons (MIT) — Feather ne les fournit pas ────────────
+
+        // Dossier ouvert.
+        "folder-open":
+            '<path d="m5 19l2.757-7.351A1 1 0 0 1 8.693 11H21a1 1 0 0 1 .986 1.164l-.996 5.211A2 2 0 0 1 19.026 19za2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v2"></path>',
+
+        // Cerveau (mémoire / analyse).
+        brain:
+            '<path d="M15.5 13a3.5 3.5 0 0 0-3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1-7 0v-1.8"></path>' +
+            '<path d="M17.5 16a3.5 3.5 0 0 0 0-7H17"></path>' +
+            '<path d="M19 9.3V6.5a3.5 3.5 0 0 0-7 0M6.5 16a3.5 3.5 0 0 1 0-7H7"></path>' +
+            '<path d="M5 9.3V6.5a3.5 3.5 0 0 1 7 0v10"></path>',
     };
 
     // ── Helpers ─────────────────────────────────────────────────────────────

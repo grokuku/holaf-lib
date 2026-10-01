@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.3)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.4)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -37,7 +37,9 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `stop` · `arrow-right` · `eye` · `eye-off` · `chevron-down` · `chevron-up` ·
 `chevron-left` · `chevron-right` · `check` · `alert-triangle` · `info` ·
 `download` · `upload` · `copy` · `refresh` · `maximize` · `minimize` ·
-`folder` · `terminal` · `git-branch` · `sun` · `moon`
+`folder` · `terminal` · `git-branch` · `sun` · `moon` ·
+`file-text` · `external-link` · `arrow-up-circle` · `arrow-up` · `arrow-down` ·
+`user` · `key` · `power` · `star` · `folder-open` · `brain`
 
 > `HolafIcons.list()` retourne ce tableau (dans l'ordre de définition).
 
@@ -167,6 +169,12 @@ SOFTWARE.
 
 ## 7. Version
 
+- **0.1.4** — +11 icônes pour la migration d'icônes de Pi-Web : `file-text`,
+  `external-link`, `arrow-up-circle`, `arrow-up`, `arrow-down`, `user`, `key`,
+  `power`, `star` (tracés **Feather littéraux**, MIT — Cole Bemis) et
+  `folder-open`, `brain` (tracés **Tabler Icons**, MIT — absents de Feather :
+  Feather ne fournit pas de dossier-ouvert ni de cerveau). En-tête +
+  `const VERSION` + `manifest.json` synchronisés (règle du §6, étape 5).
 - **0.1.3** — convention de recherche d'icônes : les tracés peuvent être
   repris de n'importe quelle collection via [icons0.dev](https://icons0.dev/)
   (nouvelle étape 0 au §6 ; licence = collection d'origine rappelée au §5) ;
