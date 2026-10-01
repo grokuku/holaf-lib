@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.4
+ * Holaf UI — Brique HolafIcons · version 0.1.5
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
@@ -31,7 +31,7 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.4";
+    const VERSION = "0.1.5";
 
     const NS = "http://www.w3.org/2000/svg";
 
@@ -281,6 +281,28 @@ const HolafIcons = (function () {
             '<path d="M17.5 16a3.5 3.5 0 0 0 0-7H17"></path>' +
             '<path d="M19 9.3V6.5a3.5 3.5 0 0 0-7 0M6.5 16a3.5 3.5 0 0 1 0-7H7"></path>' +
             '<path d="M5 9.3V6.5a3.5 3.5 0 0 1 7 0v10"></path>',
+
+        // ── v0.1.5 : ajouts pour la migration d'icônes de Yuki ───────────────
+        // Tracés Feather littéraux (MIT, Cole Bemis), sourcés via icons0.dev
+        // (GET /api/icons?q=feather:<nom>) — voir README-holaf-icons.md §6.
+
+        // Flèche gauche (retour / navigation arrière) — miroir de `arrow-right`.
+        "arrow-left":
+            '<line x1="19" y1="12" x2="5" y2="12"></line>' +
+            '<polyline points="12 19 5 12 12 5"></polyline>',
+
+        // Volume actif (haut-parleur + ondes). Tracé Feather `volume-2` fourni
+        // sous le nom court `volume` (la brique ne porte pas les variantes -1/-2).
+        volume:
+            '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>' +
+            '<path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>',
+
+        // Volume coupé (haut-parleur barré). Tracé Feather `volume-x`, nommé
+        // `volume-off` (nom sémantique demandé par Yuki ; Feather dit `volume-x`).
+        "volume-off":
+            '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>' +
+            '<line x1="23" y1="9" x2="17" y2="15"></line>' +
+            '<line x1="17" y1="9" x2="23" y2="15"></line>',
     };
 
     // ── Helpers ─────────────────────────────────────────────────────────────

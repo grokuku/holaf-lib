@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.4)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.5)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -39,7 +39,8 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `download` · `upload` · `copy` · `refresh` · `maximize` · `minimize` ·
 `folder` · `terminal` · `git-branch` · `sun` · `moon` ·
 `file-text` · `external-link` · `arrow-up-circle` · `arrow-up` · `arrow-down` ·
-`user` · `key` · `power` · `star` · `folder-open` · `brain`
+`user` · `key` · `power` · `star` · `folder-open` · `brain` ·
+`arrow-left` · `volume` · `volume-off`
 
 > `HolafIcons.list()` retourne ce tableau (dans l'ordre de définition).
 
@@ -169,6 +170,13 @@ SOFTWARE.
 
 ## 7. Version
 
+- **0.1.5** — +3 icônes pour la migration d'icônes de Yuki : `arrow-left`,
+  `volume`, `volume-off` (tracés **Feather littéraux**, MIT — Cole Bemis).
+  `arrow-left` est le miroir exact de `arrow-right` ; `volume` reprend le tracé
+  Feather `volume-2` (haut-parleur + ondes) sous le nom court, et `volume-off`
+  le tracé Feather `volume-x` (haut-parleur barré) sous le nom sémantique
+  `volume-off` (Feather nomme cette icône `volume-x`). En-tête + `const VERSION`
+  + `manifest.json` synchronisés (règle du §6, étape 5).
 - **0.1.4** — +11 icônes pour la migration d'icônes de Pi-Web : `file-text`,
   `external-link`, `arrow-up-circle`, `arrow-up`, `arrow-down`, `user`, `key`,
   `power`, `star` (tracés **Feather littéraux**, MIT — Cole Bemis) et

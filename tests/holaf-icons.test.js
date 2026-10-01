@@ -37,6 +37,54 @@ describe("liste des icônes", () => {
             expect(names).toContain(n);
         }
     });
+
+    it("list() contient les 3 icônes ajoutées en v0.1.5 (migration Yuki)", () => {
+        const names = HolafIcons.list();
+        for (const n of ["arrow-left", "volume", "volume-off"]) {
+            expect(names).toContain(n);
+        }
+    });
+});
+
+describe("icônes v0.1.5 — arrow-left / volume / volume-off", () => {
+    it("get() renvoie un SVG trait valide (currentColor, stroke-width 2, 24×24)", () => {
+        for (const n of ["arrow-left", "volume", "volume-off"]) {
+            const svg = HolafIcons.get(n);
+            expect(svg).toMatch(/^<svg/);
+            expect(svg).toContain("stroke=\"currentColor\"");
+            expect(svg).toContain("stroke-width=\"2\"");
+            expect(svg).toContain("fill=\"none\"");
+            expect(svg).toContain("viewBox=\"0 0 24 24\"");
+            // corps d'icône présent (au moins un tracé interne)
+            expect(svg).toMatch(/<(path|polygon|line|polyline|circle|rect) /);
+        }
+    });
+
+    it("render() applique size/class et renvoie un <svg> valide", () => {
+        for (const n of ["arrow-left", "volume", "volume-off"]) {
+            const svg = HolafIcons.render(n, { size: 20, class: "tts-icon" });
+            expect(svg.startsWith("<svg")).toBe(true);
+            expect(svg).toContain('width="20"');
+            expect(svg).toContain('height="20"');
+            expect(svg).toContain('class="tts-icon"');
+        }
+    });
+
+    it("arrow-left est le miroir horizontal d'arrow-right (mêmes coordonnées miroir)", () => {
+        const left = HolafIcons.get("arrow-left");
+        const right = HolafIcons.get("arrow-right");
+        // la flèche gauche contient bien le retour de la ligne 19→5
+        expect(left).toContain('x1="19" y1="12" x2="5" y2="12"');
+        expect(right).toContain('x1="5" y1="12" x2="19" y2="12"');
+    });
+
+    it("non-régression : sun/moon inchangés (tracés Feather encore présents)", () => {
+        const sun = HolafIcons.get("sun");
+        expect(sun).toContain('<circle cx="12" cy="12" r="5"></circle>');
+        expect(sun).toContain('<line x1="12" y1="1" x2="12" y2="3"></line>');
+        const moon = HolafIcons.get("moon");
+        expect(moon).toContain('d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"');
+    });
 });
 
 describe("get() — tous les noms connus", () => {
