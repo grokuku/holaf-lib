@@ -1,3 +1,5 @@
+# AGENTS.md
+
 ## Conventions partagées (écosystème holaf)
 
 Ce dépôt **héberge** l'espace de conventions partagées de l'écosystème :
