@@ -212,7 +212,7 @@ describe("HolafToast — accessibilité et CSS", () => {
     });
 
     it("expose la version et window.HolafToast", () => {
-        expect(HolafToast.version).toBe("0.6.0");
+        expect(HolafToast.version).toBe("0.7.0");
         expect(window.HolafToast).toBe(HolafToast);
     });
 });
@@ -244,61 +244,67 @@ describe("HolafToast — positions alternatives", () => {
 });
 
 describe("HolafToast — thèmes", () => {
-    // 10 combinaisons famille × mode (v0.6.0) + 4 noms historiques.
-    const COMBOS_10 = [
-        "indigo-light", "indigo-dark",
-        "midnight-light", "midnight-dark",
-        "slate-light", "slate-dark",
-        "emerald-light", "emerald-dark",
-        "amber-light", "amber-dark",
+    // 12 combinaisons famille × mode (v0.7.0, catalogue V2) + 4 noms historiques.
+    const COMBOS_12 = [
+        "corail-light", "corail-dark",
+        "ambre-light", "ambre-dark",
+        "emeraude-light", "emeraude-dark",
+        "turquoise-light", "turquoise-dark",
+        "amethyste-light", "amethyste-dark",
+        "neutre-light", "neutre-dark",
     ];
 
-    it("enregistre les 10 combinaisons famille×mode + les 4 noms historiques", () => {
+    it("enregistre les 12 combinaisons famille×mode + les 4 noms historiques", () => {
         expect(HolafToast.themes.list().sort()).toEqual(
-            [...COMBOS_10, "dark", "light", "midnight", "slate"].sort()
+            [...COMBOS_12, "dark", "light", "midnight", "slate"].sort()
         );
-        expect(HolafToast.themes.list().length).toBe(14);
+        expect(HolafToast.themes.list().length).toBe(16);
     });
 
-    it("les 3 noms historiques light/midnight/slate sont des alias EXACTS", () => {
-        expect(HolafToast.themes.get("light")).toEqual(HolafToast.themes.get("indigo-light"));
-        expect(HolafToast.themes.get("midnight")).toEqual(HolafToast.themes.get("midnight-dark"));
-        expect(HolafToast.themes.get("slate")).toEqual(HolafToast.themes.get("slate-dark"));
+    it("les 4 noms historiques sont des alias EXACTS remappés V2", () => {
+        expect(HolafToast.themes.get("dark")).toEqual(HolafToast.themes.get("amethyste-dark"));
+        expect(HolafToast.themes.get("light")).toEqual(HolafToast.themes.get("amethyste-light"));
+        expect(HolafToast.themes.get("midnight")).toEqual(HolafToast.themes.get("amethyste-dark"));
+        expect(HolafToast.themes.get("slate")).toEqual(HolafToast.themes.get("neutre-dark"));
     });
 
-    it("identité des 4 noms historiques (valeurs figées en dur)", () => {
+    it("identité des 4 noms historiques (valeurs figées en dur) — dark désormais aligné V2", () => {
         const FROZEN = {
+            // dark ≡ amethyste-dark (v0.7.0 : ancien gel #2b2b2b levé, aligné V2)
             dark: {
-                "--ht-bg": "#2b2b2b", "--ht-bg-success": "#303f35",
-                "--ht-bg-warning": "#463d2c", "--ht-bg-error": "#463131",
-                "--ht-fg": "#f0f0f0", "--ht-border": "#4a4a4a",
-                "--ht-accent-info": "#4aa3ff", "--ht-accent-success": "#4caf6d",
-                "--ht-accent-warning": "#e0a030", "--ht-accent-error": "#e05555",
-                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.35)", "--ht-radius": "10px",
+                "--ht-bg": "#1e1f2e", "--ht-bg-success": "#213a3e",
+                "--ht-bg-warning": "#3f372d", "--ht-bg-error": "#3f2b38",
+                "--ht-fg": "#eff0f4", "--ht-border": "#52536b",
+                "--ht-accent-info": "#a1a3ff", "--ht-accent-success": "#34d399",
+                "--ht-accent-warning": "#fbbf24", "--ht-accent-error": "#f87171",
+                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)", "--ht-radius": "10px",
             },
+            // light ≡ amethyste-light
             light: {
-                "--ht-bg": "#ffffff", "--ht-bg-success": "#dcece2",
-                "--ht-bg-warning": "#f4e5da", "--ht-bg-error": "#fadede",
-                "--ht-fg": "#18181b", "--ht-border": "#d4d4d8",
-                "--ht-accent-info": "#2563eb", "--ht-accent-success": "#15803d",
-                "--ht-accent-warning": "#b45309", "--ht-accent-error": "#dc2626",
+                "--ht-bg": "#dfe1fa", "--ht-bg-success": "#c1d2de",
+                "--ht-bg-warning": "#d9ccd6", "--ht-bg-error": "#dac4d9",
+                "--ht-fg": "#252530", "--ht-border": "#b6b9d5",
+                "--ht-accent-info": "#4d41b0", "--ht-accent-success": "#15803d",
+                "--ht-accent-warning": "#b45309", "--ht-accent-error": "#bb2020",
                 "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)", "--ht-radius": "10px",
             },
+            // midnight ≡ amethyste-dark
             midnight: {
-                "--ht-bg": "#10111d", "--ht-bg-success": "#152e30",
-                "--ht-bg-warning": "#332b1e", "--ht-bg-error": "#331f2a",
-                "--ht-fg": "#e2e4f0", "--ht-border": "#272a44",
-                "--ht-accent-info": "#60a5fa", "--ht-accent-success": "#34d399",
+                "--ht-bg": "#1e1f2e", "--ht-bg-success": "#213a3e",
+                "--ht-bg-warning": "#3f372d", "--ht-bg-error": "#3f2b38",
+                "--ht-fg": "#eff0f4", "--ht-border": "#52536b",
+                "--ht-accent-info": "#a1a3ff", "--ht-accent-success": "#34d399",
                 "--ht-accent-warning": "#fbbf24", "--ht-accent-error": "#f87171",
-                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.6)", "--ht-radius": "10px",
+                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)", "--ht-radius": "10px",
             },
+            // slate ≡ neutre-dark
             slate: {
-                "--ht-bg": "#1f232b", "--ht-bg-success": "#2b4040",
-                "--ht-bg-warning": "#403d30", "--ht-bg-error": "#40373d",
-                "--ht-fg": "#e6e9ee", "--ht-border": "#3a4150",
-                "--ht-accent-info": "#93c5fd", "--ht-accent-success": "#6ee7b7",
-                "--ht-accent-warning": "#fcd34d", "--ht-accent-error": "#fca5a5",
-                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.5)", "--ht-radius": "10px",
+                "--ht-bg": "#343537", "--ht-bg-success": "#344d46",
+                "--ht-bg-warning": "#524a34", "--ht-bg-error": "#513f41",
+                "--ht-fg": "#edf0f4", "--ht-border": "#686e75",
+                "--ht-accent-info": "#aeb1b5", "--ht-accent-success": "#34d399",
+                "--ht-accent-warning": "#fbbf24", "--ht-accent-error": "#f87878",
+                "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)", "--ht-radius": "10px",
             },
         };
         for (const [name, frozen] of Object.entries(FROZEN)) {
@@ -308,7 +314,7 @@ describe("HolafToast — thèmes", () => {
 
     it("cohérence inter-briques : surfaces/texte/bordure reflètent HolafTokens", () => {
         const HOMOLOG = { "--ht-bg": "surface", "--ht-fg": "text", "--ht-border": "border" };
-        for (const name of COMBOS_10) {
+        for (const name of COMBOS_12) {
             const brick = HolafToast.themes.get(name);
             const tokens = HolafTokens.PRESETS[name];
             expect(tokens, name).toBeTruthy();
@@ -332,9 +338,9 @@ describe("HolafToast — thèmes", () => {
 
     it("themes.get renvoie une copie protégée, null si inconnu", () => {
         const t = HolafToast.themes.get("dark");
-        expect(t["--ht-bg"]).toBe("#2b2b2b");
+        expect(t["--ht-bg"]).toBe("#1e1f2e");
         t["--ht-bg"] = "#000";
-        expect(HolafToast.themes.get("dark")["--ht-bg"]).toBe("#2b2b2b");
+        expect(HolafToast.themes.get("dark")["--ht-bg"]).toBe("#1e1f2e");
         expect(HolafToast.themes.get("nul")).toBeNull();
     });
 
@@ -350,14 +356,14 @@ describe("HolafToast — thèmes", () => {
     it("applique un thème par instance via l'option theme", () => {
         HolafToast.show({ message: "x", theme: "light", duration: 0 });
         const t = document.querySelector(".holaf-toast");
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");
-        expect(t.style.getPropertyValue("--ht-fg")).toBe("#18181b");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#dfe1fa");
+        expect(t.style.getPropertyValue("--ht-fg")).toBe("#252530");
     });
 
     it("applique un preset + surcharges (vars gagnent)", () => {
         HolafToast.show({ message: "x", theme: { preset: "light", vars: { "--ht-radius": "16px" } }, duration: 0 });
         const t = document.querySelector(".holaf-toast");
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#dfe1fa");
         expect(t.style.getPropertyValue("--ht-radius")).toBe("16px");
     });
 
@@ -365,7 +371,7 @@ describe("HolafToast — thèmes", () => {
         HolafToast.setTheme("midnight");
         HolafToast.show({ message: "x", duration: 0 });
         const t = document.querySelector(".holaf-toast");
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#10111d");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#1e1f2e");
         HolafToast.clearTheme();
     });
 
@@ -377,10 +383,10 @@ describe("HolafToast — thèmes", () => {
         HolafToast.clearTheme();
     });
 
-    it("dark ≡ aucun thème (défauts CSS inchangés)", () => {
+    it("dark ≡ aucun thème (défauts CSS alignés sur amethyste-dark)", () => {
         HolafToast.show({ message: "x", theme: "dark", duration: 0 });
         const t = document.querySelector(".holaf-toast");
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#2b2b2b");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#1e1f2e");
     });
 
     it("warning unique : un thème inconnu ne warn qu'UNE fois, reset par clearTheme", () => {
@@ -407,11 +413,11 @@ describe("HolafToast — thèmes", () => {
     it("fusion des clés --ht-* racines d'un { preset, … } dans les surcharges (après le preset), vars gagne", () => {
         const a = HolafToast.show({ message: "Racine", theme: { preset: "dark", "--ht-accent": "#123456" }, duration: 0 });
         expect(a.el.style.getPropertyValue("--ht-accent")).toBe("#123456"); // clé racine appliquée
-        expect(a.el.style.getPropertyValue("--ht-bg")).toBe("#2b2b2b");     // reste du preset
+        expect(a.el.style.getPropertyValue("--ht-bg")).toBe("#1e1f2e");     // reste du preset
         // En cas de doublon entre clé racine et vars, vars (champ officiel) gagne.
         const b = HolafToast.show({ message: "Doublon", theme: { preset: "light", "--ht-accent": "#racine", vars: { "--ht-accent": "#123abc" } }, duration: 0 });
         expect(b.el.style.getPropertyValue("--ht-accent")).toBe("#123abc"); // vars > racine
-        expect(b.el.style.getPropertyValue("--ht-bg")).toBe("#ffffff");     // preset intact
+        expect(b.el.style.getPropertyValue("--ht-bg")).toBe("#dfe1fa");     // preset intact
     });
 });
 
@@ -430,7 +436,7 @@ describe("HolafToast — configure()", () => {
         HolafToast.configure({ theme: "slate" });
         HolafToast.show({ message: "x", duration: 0 });
         const t = document.querySelector(".holaf-toast");
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#1f232b");
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#343537");
         HolafToast.clearTheme();
     });
 
@@ -619,7 +625,7 @@ describe("HolafToast — fonds teintés par type (v0.4.0)", () => {
         HolafToast.show({ message: "y", type: "info", theme: "midnight", duration: 0 });
         const info = document.querySelector(".holaf-toast--info");
         expect(info.style.getPropertyValue("--ht-bg-info")).toBe(""); // pas de var info dans les presets
-        expect(info.style.getPropertyValue("--ht-bg")).toBe("#10111d"); // fond global du preset
+        expect(info.style.getPropertyValue("--ht-bg")).toBe("#1e1f2e"); // fond global du preset
     });
 
     it("theme: { \"--ht-bg-success\" } est appliqué en inline sur l'élément (gagne sur le fallback)", () => {
@@ -635,12 +641,12 @@ describe("HolafToast — fonds teintés par type (v0.4.0)", () => {
         });
         const t = document.querySelector(".holaf-toast--success");
         expect(t.style.getPropertyValue("--ht-bg-success")).toBe("#eaf6ee"); // vars > preset
-        expect(t.style.getPropertyValue("--ht-bg")).toBe("#ffffff");         // fond global du preset intact
+        expect(t.style.getPropertyValue("--ht-bg")).toBe("#dfe1fa");         // fond global du preset intact
     });
 
     it("les presets définissent les teintes success/warning/error mais PAS --ht-bg-info", () => {
         const expected = {
-            dark: "#303f35", light: "#dcece2", midnight: "#152e30", slate: "#2b4040",
+            dark: "#213a3e", light: "#c1d2de", midnight: "#213a3e", slate: "#344d46",
         };
         for (const name of Object.keys(expected)) {
             const t = HolafToast.themes.get(name);

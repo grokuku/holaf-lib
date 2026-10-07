@@ -3,12 +3,18 @@
  * Couverture : preset initial par défaut (prefers-color-scheme), setTheme /
  * getTheme / listPresets, setTokens (--holaf-* sur :root), reset (retrait),
  * événement "holaf-tokens-changed" à chaque changement, applyPalette
- * (calculs internes mix/contrast, cohérence contraste).
+ * (calculs internes mix/contrast, cohérence contraste), catalogue V2 (6 familles
+ * × 2 modes + 4 alias remappés), GARDE V2 (fonds/accents distincts, profondeur),
+ * table MIGRATIONS, registre de packs, dérivations.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import "../js/holaf-tokens.js";
 import { HolafColor } from "../js/holaf-color.js";
+import {
+    checkCatalogGuard, selftestBadCatalog, deltaEok,
+    AA_TEXT, AA_NONTEXT, ACCENT_SEP, SURFACE_SEP, DEPTH_SEP,
+} from "./helpers/theme-guard.js";
 
 // 0.3.0 : la brique n'expose plus d'export ESM nommé (correctif « fichier
 // classic-compatible »). On l'importe par effet de bord, puis on lit la globale.
@@ -17,6 +23,23 @@ const { HolafTokens } = window;
 // Garde-fou statique : source du fichier (test « pas d'export top-level »).
 // Chemin relatif à la racine du projet (cwd du runner vitest).
 const TOKENS_SRC = readFileSync("js/holaf-tokens.js", "utf8");
+
+// Liste canonique des 12 presets V2 (ordre des familles × modes).
+const CANON = [
+    "corail-light", "corail-dark",
+    "ambre-light", "ambre-dark",
+    "emeraude-light", "emeraude-dark",
+    "turquoise-light", "turquoise-dark",
+    "amethyste-light", "amethyste-dark",
+    "neutre-light", "neutre-dark",
+];
+const ALIAS_NAMES = ["dark", "light", "midnight", "slate"];
+// 15 clés standard + surface-hover (4ᵉ palier de profondeur).
+const KEYS16 = [
+    "surface", "surface-elev", "surface-raised", "surface-hover", "border", "text",
+    "text-muted", "accent", "accent-hover", "accent-text", "danger", "danger-hover",
+    "danger-text", "radius", "shadow", "font-size",
+];
 
 function hexToRgb(h) {
     const s = h.replace("#", "");
@@ -27,10 +50,6 @@ function mix(a, b, r) {
     return "#" + ca.map((v, i) => Math.round(v + (cb[i] - v) * r)
         .toString(16).toUpperCase().padStart(2, "0")).join("");
 }
-function rgba(h, a) {
-    const c = hexToRgb(h);
-    return "rgba(" + c[0] + ", " + c[1] + ", " + c[2] + ", " + a + ")";
-}
 
 function getVar(name) {
     return document.documentElement.style.getPropertyValue(name);
@@ -39,6 +58,23 @@ function collectEvents() {
     const events = [];
     document.addEventListener("holaf-tokens-changed", (e) => events.push(e.detail));
     return events;
+}
+// Range les 12 presets intégrés en lignes pour la garde V2.
+function guardRows() {
+    const rows = [];
+    for (const fam of HolafTokens.listFamilies()) {
+        for (const mode of ["dark", "light"]) {
+            const p = HolafTokens.PRESETS[fam + "-" + mode];
+            rows.push({
+                family: fam, mode,
+                accent: p.accent, onAccent: p["accent-text"],
+                surface: p.surface, surfaceElev: p["surface-elev"],
+                surfaceRaised: p["surface-raised"], surfaceHover: p["surface-hover"],
+                textMuted: p["text-muted"],
+            });
+        }
+    }
+    return rows;
 }
 
 beforeEach(() => {
@@ -50,25 +86,22 @@ beforeEach(() => {
 afterEach(() => {
     // Le registre de packs est global au module (volatile) : on retire les
     // packs enregistrés par un test pour ne pas polluer les suivants.
-    HolafTokens.listPresets().slice(14).forEach((n) => HolafTokens.unregisterPreset(n));
+    HolafTokens.listPresets().slice(16).forEach((n) => HolafTokens.unregisterPreset(n));
 });
 
 describe("HolafTokens — presets", () => {
-    it("expose les 4 alias historiques + les 10 presets <famille>-<mode>", () => {
+    it("expose les 4 alias historiques + les 12 presets <famille>-<mode>", () => {
         const names = HolafTokens.listPresets();
-        ["dark", "light", "midnight", "slate"].forEach((alias) => expect(names).toContain(alias));
-        ["indigo", "midnight", "slate", "emerald", "amber"].forEach((fam) => {
-            expect(names).toContain(fam + "-light");
-            expect(names).toContain(fam + "-dark");
-        });
-        expect(names).toHaveLength(14);
+        ALIAS_NAMES.forEach((alias) => expect(names).toContain(alias));
+        CANON.forEach((name) => expect(names).toContain(name));
+        expect(names).toHaveLength(16);
     });
 
     it("setTheme : pose les variables --holaf-* sur :root", () => {
-        HolafTokens.setTheme("dark");
-        expect(getVar("--holaf-surface")).toBe("#1e1e1e");
-        expect(getVar("--holaf-text")).toBe("#e4e4e7");
-        expect(getVar("--holaf-accent")).toBe("#6366f1");
+        HolafTokens.setTheme("dark"); // alias → amethyste-dark
+        expect(getVar("--holaf-surface")).toBe("#1e1f2e");
+        expect(getVar("--holaf-text")).toBe("#eff0f4");
+        expect(getVar("--holaf-accent")).toBe("#a1a3ff");
         expect(getVar("--holaf-radius")).toBe("12px");
     });
 
@@ -77,11 +110,11 @@ describe("HolafTokens — presets", () => {
     });
 
     it("getTheme : retourne { name, vars } du preset appliqué", () => {
-        HolafTokens.setTheme("midnight");
+        HolafTokens.setTheme("midnight"); // alias → amethyste-dark
         const t = HolafTokens.getTheme();
         expect(t.name).toBe("midnight");
-        expect(t.vars["--holaf-surface"]).toBe("#10111d");
-        expect(t.vars["--holaf-accent-text"]).toBe("#10111d");
+        expect(t.vars["--holaf-surface"]).toBe("#1e1f2e");
+        expect(t.vars["--holaf-accent-text"]).toBe("#0b0b12");
     });
 
     it("getTheme : renvoie null après reset", () => {
@@ -93,21 +126,48 @@ describe("HolafTokens — presets", () => {
     });
 
     it("contraste : le texte ≥ 4.5:1 sur la surface pour chaque preset", () => {
-        const lum = (hex) => {
-            const c = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
-            const [r, g, b] = [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map((v) => parseInt(v, 16));
-            return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
-        };
-        const ratio = (a, b) => {
-            const la = lum(a), lb = lum(b);
-            const hi = Math.max(la, lb), lo = Math.min(la, lb);
-            return (hi + 0.05) / (lo + 0.05);
-        };
         HolafTokens.listPresets().forEach((name) => {
-            HolafTokens.setTheme(name);
-            const t = HolafTokens.getTheme().vars;
-            expect(ratio(t["--holaf-surface"], t["--holaf-text"])).toBeGreaterThanOrEqual(4.5);
+            const p = HolafTokens.PRESETS[name];
+            const r = HolafColor.contrastRatio(p.text, p.surface);
+            expect(r, name + " ratio=" + r).toBeGreaterThanOrEqual(4.5);
         });
+    });
+});
+
+describe("HolafTokens — GARDE V2 (catalogue)", () => {
+    it("fonds/accents distincts par mode, texte/accent, non-textuel, profondeur", () => {
+        const violations = checkCatalogGuard(guardRows());
+        expect(violations).toEqual([]);
+    });
+
+    it("profondeur : les 4 paliers sont distincts (ΔEok ≥ seuil) pour les 12 presets", () => {
+        for (const fam of HolafTokens.listFamilies()) {
+            for (const mode of ["dark", "light"]) {
+                const p = HolafTokens.PRESETS[fam + "-" + mode];
+                const steps = [
+                    [p.surface, p["surface-elev"]],
+                    [p["surface-elev"], p["surface-raised"]],
+                    [p["surface-raised"], p["surface-hover"]],
+                ];
+                for (const [a, b] of steps) {
+                    expect(deltaEok(a, b), fam + "-" + mode).toBeGreaterThanOrEqual(DEPTH_SEP);
+                }
+            }
+        }
+    });
+
+    it("NON VACUE : la garde ÉCHOUE sur un catalogue volontairement redondant", () => {
+        const bad = selftestBadCatalog(guardRows());
+        const violations = checkCatalogGuard(bad);
+        expect(violations.length).toBeGreaterThan(0);
+        expect(violations.some((v) => v.kind === "accent-proches")).toBe(true);
+        expect(violations.some((v) => v.kind === "texte-sur-accent")).toBe(true);
+        // PATCH 0.4.1 : le contrôle du TEXTE ATTÉNUÉ n'est pas vacant non plus.
+        expect(violations.some((v) => v.kind === "texte-attenue")).toBe(true);
+    });
+
+    it("seuils exposés conformes à la maquette V2", () => {
+        expect([AA_TEXT, AA_NONTEXT, ACCENT_SEP, SURFACE_SEP, DEPTH_SEP]).toEqual([4.5, 3.0, 0.04, 0.04, 0.02]);
     });
 });
 
@@ -168,7 +228,9 @@ describe("HolafTokens — applyPalette", () => {
         HolafTokens.setTheme("dark");
         HolafTokens.applyPalette("#ff0000", { surface: "#1e1e1e" });
         const t = HolafTokens.getTheme().vars;
-        const ca = [255, 0, 0], cb = [0x1e, 0x1e, 0x1e];
+        // accent-hover = mix(accent, surface DU PRESET DE BASE, 15 %) ; la base
+        // de setTheme("dark") est amethyste-dark (surface #1e1f2e).
+        const ca = [255, 0, 0], cb = hexToRgb(HolafTokens.PRESETS.dark.surface);
         const exp = ca.map((v, i) => Math.round(v + (cb[i] - v) * 0.15));
         const hex = "#" + exp.map((n) => n.toString(16).toUpperCase().padStart(2, "0")).join("");
         expect(t["--holaf-accent-hover"]).toBe(hex);
@@ -183,7 +245,6 @@ describe("HolafTokens — applyPalette", () => {
         HolafTokens.setTheme("dark");
         HolafTokens.applyPalette("#6366f1");
         const t = HolafTokens.getTheme().vars;
-        // contraste de #6366f1 sur blanc vs noir
         const lum = (hex) => {
             const c = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
             const [r, g, b] = [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map((v) => parseInt(v, 16));
@@ -206,24 +267,20 @@ describe("HolafTokens — applyPalette", () => {
 });
 
 describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
-    const CANON = ["indigo-light", "indigo-dark", "midnight-light", "midnight-dark",
-        "slate-light", "slate-dark", "emerald-light", "emerald-dark", "amber-light", "amber-dark"];
-    const KEYS14 = ["surface", "surface-elev", "surface-raised", "border", "text", "text-muted",
-        "accent", "accent-hover", "accent-text", "danger", "danger-text", "radius", "shadow", "font-size"];
-
-    it("expose les 5 familles", () => {
-        expect(HolafTokens.listFamilies()).toEqual(["indigo", "midnight", "slate", "emerald", "amber"]);
+    it("expose les 6 familles (ordre des teintes)", () => {
+        expect(HolafTokens.listFamilies()).toEqual(["corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"]);
     });
 
-    it("les 10 presets <famille>-<mode> existent et couvrent les 14 clés", () => {
+    it("les 12 presets <famille>-<mode> existent et couvrent les 16 clés", () => {
         CANON.forEach((name) => {
             const p = HolafTokens.PRESETS[name];
             expect(p, name).toBeTruthy();
-            KEYS14.forEach((k) => expect(p[k], name + "." + k).toBeTruthy());
+            KEYS16.forEach((k) => expect(p[k], name + "." + k).toBeTruthy());
+            expect(Object.keys(p).sort()).toEqual(KEYS16.slice().sort());
         });
     });
 
-    it("CONTRASTE : text ≥ 4.5:1 sur surface pour les 10 presets", () => {
+    it("CONTRASTE : text ≥ 4.5:1 sur surface pour les 12 presets", () => {
         CANON.forEach((name) => {
             const p = HolafTokens.PRESETS[name];
             const r = HolafColor.contrastRatio(p.text, p.surface);
@@ -232,230 +289,118 @@ describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
     });
 
     it("setTheme accepte les noms <famille>-<mode>", () => {
-        HolafTokens.setTheme("slate-light");
-        expect(getVar("--holaf-surface")).toBe("#F4F6F8");
-        expect(HolafTokens.getTheme().name).toBe("slate-light");
+        HolafTokens.setTheme("turquoise-light");
+        expect(getVar("--holaf-surface")).toBe("#c3e2e8");
+        expect(HolafTokens.getTheme().name).toBe("turquoise-light");
     });
 
     it("setFamily(famille, mode) applique le bon preset", () => {
-        HolafTokens.setFamily("emerald", "dark");
-        expect(HolafTokens.getTheme().name).toBe("emerald-dark");
-        expect(getVar("--holaf-accent")).toBe("#34D399");
+        HolafTokens.setFamily("emeraude", "dark");
+        expect(HolafTokens.getTheme().name).toBe("emeraude-dark");
+        expect(getVar("--holaf-accent")).toBe("#7fc765");
     });
 
     it("setFamily sans mode : garde le mode courant, sinon light", () => {
-        HolafTokens.setFamily("amber", "dark");
-        HolafTokens.setFamily("amber");
-        expect(HolafTokens.getTheme().name).toBe("amber-dark");
-        HolafTokens.setFamily("slate");
-        expect(HolafTokens.getTheme().name).toBe("slate-light");
+        HolafTokens.setFamily("ambre", "dark");
+        HolafTokens.setFamily("ambre");
+        expect(HolafTokens.getTheme().name).toBe("ambre-dark");
+        HolafTokens.setFamily("neutre");
+        expect(HolafTokens.getTheme().name).toBe("neutre-light");
     });
 
     it("getFamily / getMode décrivent le thème courant (alias résolus)", () => {
         HolafTokens.setTheme("dark");
-        expect(HolafTokens.getFamily()).toBe("indigo");
+        expect(HolafTokens.getFamily()).toBe("amethyste");
         expect(HolafTokens.getMode()).toBe("dark");
         HolafTokens.setTheme("midnight");
-        expect(HolafTokens.getFamily()).toBe("midnight");
+        expect(HolafTokens.getFamily()).toBe("amethyste");
         expect(HolafTokens.getMode()).toBe("dark");
-        HolafTokens.setTheme("slate-light");
-        expect(HolafTokens.getFamily()).toBe("slate");
+        HolafTokens.setTheme("turquoise-light");
+        expect(HolafTokens.getFamily()).toBe("turquoise");
         expect(HolafTokens.getMode()).toBe("light");
     });
 
     it("setFamily / setTheme : familles et modes inconnus → throw clair", () => {
         expect(() => HolafTokens.setFamily("lime")).toThrow(/famille inconnue/i);
-        expect(() => HolafTokens.setFamily("slate", "sepia")).toThrow(/mode inconnu/i);
-        expect(() => HolafTokens.setTheme("slate-sepia")).toThrow(/preset inconnu/i);
+        expect(() => HolafTokens.setFamily("neutre", "sepia")).toThrow(/mode inconnu/i);
+        expect(() => HolafTokens.setTheme("neutre-sepia")).toThrow(/preset inconnu/i);
     });
 
-    it("expose FAMILIES (graines + descripteurs de modes) et ALIASES", () => {
-        expect(Object.keys(HolafTokens.FAMILIES).sort()).toEqual(["amber", "emerald", "indigo", "midnight", "slate"]);
-        expect(HolafTokens.FAMILIES.slate.accent).toBe("#94a3b8");
+    it("expose FAMILIES (libellé + teinte + descripteurs de modes) et ALIASES", () => {
+        expect(Object.keys(HolafTokens.FAMILIES).sort()).toEqual(["ambre", "amethyste", "corail", "emeraude", "neutre", "turquoise"]);
+        expect(HolafTokens.FAMILIES.neutre.hue).toBe(250);
+        expect(HolafTokens.FAMILIES.neutre.light.accent).toBe("#515457");
         expect(HolafTokens.ALIASES).toEqual({
-            dark: "indigo-dark", light: "indigo-light", midnight: "midnight-dark", slate: "slate-dark",
+            dark: "amethyste-dark", light: "amethyste-light", midnight: "amethyste-dark", slate: "neutre-dark",
         });
     });
 });
 
-describe("HolafTokens — non-régression des alias historiques", () => {
-    // Valeurs FIGÉES des 4 presets tels qu'ils existaient en 0.1.0.
-    const FROZEN = {
-        dark: {
-            surface: "#1e1e1e", "surface-elev": "#27272a", "surface-raised": "#1a1a1a",
-            border: "#3f3f46", text: "#e4e4e7", "text-muted": "#a1a1aa",
-            accent: "#6366f1", "accent-hover": "#818cf8", "accent-text": "#ffffff",
-            danger: "#ef4444", "danger-text": "#ffffff",
-            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px",
-        },
-        light: {
-            surface: "#ffffff", "surface-elev": "#f4f4f5", "surface-raised": "#fafafa",
-            border: "#d4d4d8", text: "#18181b", "text-muted": "#52525b",
-            accent: "#4f46e5", "accent-hover": "#6366f1", "accent-text": "#ffffff",
-            danger: "#dc2626", "danger-text": "#ffffff",
-            radius: "12px", shadow: "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px",
-        },
-        midnight: {
-            surface: "#10111d", "surface-elev": "#181a2c", "surface-raised": "#0c0d17",
-            border: "#272a44", text: "#e2e4f0", "text-muted": "#9aa0c3",
-            accent: "#818cf8", "accent-hover": "#a5b4fc", "accent-text": "#10111d",
-            danger: "#ef4444", "danger-text": "#ffffff",
-            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.6)", "font-size": "14px",
-        },
-        slate: {
-            surface: "#1f232b", "surface-elev": "#292e38", "surface-raised": "#191d24",
-            border: "#3a4150", text: "#e6e9ee", "text-muted": "#9aa3b2",
-            accent: "#94a3b8", "accent-hover": "#b6c2d4", "accent-text": "#1f232b",
-            danger: "#ef4444", "danger-text": "#ffffff",
-            radius: "12px", shadow: "0 18px 50px rgba(0, 0, 0, 0.5)", "font-size": "14px",
-        },
+describe("HolafTokens 0.4.0 — alias remappés & table MIGRATIONS", () => {
+    it("les alias sont égaux à leurs nouveaux jumeaux <famille>-<mode>", () => {
+        expect(HolafTokens.PRESETS.dark).toEqual(HolafTokens.PRESETS["amethyste-dark"]);
+        expect(HolafTokens.PRESETS.light).toEqual(HolafTokens.PRESETS["amethyste-light"]);
+        expect(HolafTokens.PRESETS.midnight).toEqual(HolafTokens.PRESETS["amethyste-dark"]);
+        expect(HolafTokens.PRESETS.slate).toEqual(HolafTokens.PRESETS["neutre-dark"]);
+    });
+
+    it("MIGRATIONS : les 10 anciennes familles + 4 alias pointent vers un preset VALIDE", () => {
+        const M = HolafTokens.MIGRATIONS;
+        const OLD = [
+            "indigo-light", "indigo-dark", "midnight-light", "midnight-dark",
+            "slate-light", "slate-dark", "emerald-light", "emerald-dark",
+            "amber-light", "amber-dark", "dark", "light", "midnight", "slate",
+        ];
+        expect(Object.keys(M).sort()).toEqual(OLD.slice().sort());
+        for (const [oldName, newName] of Object.entries(M)) {
+            expect(HolafTokens.PRESETS[newName], oldName + " → " + newName).toBeTruthy();
+        }
+    });
+});
+
+describe("HolafTokens 0.4.0 — snapshot des 12 presets V2 + 4 alias", () => {
+    // Snapshot FIGÉ des 16 presets (12 V2 + 4 alias) — garde-fou contre toute
+    // retouche accidentelle des valeurs calculées depuis la maquette V2.
+    const FROZEN_12 = {
+        "corail-light": { "surface": "#ffe3ed", "surface-elev": "#fefefe", "surface-raised": "#f5d9e3", "surface-hover": "#ebcfd9", "border": "#d9b9c4", "text": "#2f2227", "text-muted": "#665159", "accent": "#9c045e", "accent-hover": "#ab2573", "accent-text": "#ffffff", "danger": "#c62222", "danger-hover": "#cf3f40", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "corail-dark": { "surface": "#36252c", "surface-elev": "#433037", "surface-raised": "#503b43", "surface-hover": "#5d464f", "border": "#735963", "text": "#f4eef0", "text-muted": "#ccb7bf", "accent": "#fa7fb5", "accent-hover": "#dd72a0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#db6667", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "ambre-light": { "surface": "#dcc8b5", "surface-elev": "#fefefe", "surface-raised": "#d2bfac", "surface-hover": "#c9b5a3", "border": "#b6a08b", "text": "#2d251c", "text-muted": "#54473b", "accent": "#7a4800", "accent-hover": "#895b1b", "accent-text": "#ffffff", "danger": "#a51d1d", "danger-hover": "#ad3734", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "ambre-dark": { "surface": "#0c0400", "surface-elev": "#170b02", "surface-raised": "#221508", "surface-hover": "#2e1f10", "border": "#42301f", "text": "#f3efec", "text-muted": "#b9a593", "accent": "#f29a2d", "accent-hover": "#d08426", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d56160", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "emeraude-light": { "surface": "#c9dac4", "surface-elev": "#fdfffc", "surface-raised": "#c0d0bb", "surface-hover": "#b6c6b1", "border": "#a0b29a", "text": "#22291f", "text-muted": "#465143", "accent": "#276701", "accent-hover": "#3f781e", "accent-text": "#ffffff", "danger": "#b01e1e", "danger-hover": "#b43a37", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "emeraude-dark": { "surface": "#081005", "surface-elev": "#111b0d", "surface-raised": "#1a2617", "surface-hover": "#253120", "border": "#354430", "text": "#eef1ed", "text-muted": "#9faf9a", "accent": "#7fc765", "accent-hover": "#6dac57", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d46261", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "turquoise-light": { "surface": "#c3e2e8", "surface-elev": "#fdffff", "surface-raised": "#b9d9de", "surface-hover": "#b0cfd5", "border": "#97bbc2", "text": "#1b292c", "text-muted": "#42585c", "accent": "#07606c", "accent-hover": "#23747f", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#bc3d3e", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "turquoise-dark": { "surface": "#051a1e", "surface-elev": "#0e2529", "surface-raised": "#183135", "surface-hover": "#223d41", "border": "#315056", "text": "#ecf1f2", "text-muted": "#91b0b5", "accent": "#0ec7de", "accent-hover": "#0dadc1", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d46465", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "amethyste-light": { "surface": "#dfe1fa", "surface-elev": "#fefefe", "surface-raised": "#d6d8f0", "surface-hover": "#cccee6", "border": "#b6b9d5", "text": "#252530", "text-muted": "#555669", "accent": "#4d41b0", "accent-hover": "#6359bb", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#c03d41", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "amethyste-dark": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "neutre-light": { "surface": "#f2f4f5", "surface-elev": "#fefeff", "surface-raised": "#e8eaeb", "surface-hover": "#dee0e1", "border": "#c6cbd0", "text": "#1f2730", "text-muted": "#4c5a69", "accent": "#515457", "accent-hover": "#696c6f", "accent-text": "#ffffff", "danger": "#d12424", "danger-hover": "#d64343", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "neutre-dark": { "surface": "#343537", "surface-elev": "#3f4144", "surface-raised": "#4a4d51", "surface-hover": "#565a5e", "border": "#686e75", "text": "#edf0f4", "text-muted": "#ced1d4", "accent": "#aeb1b5", "accent-hover": "#9c9ea2", "accent-text": "#0b0b12", "danger": "#f87878", "danger-hover": "#db6e6e", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "dark": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "light": { "surface": "#dfe1fa", "surface-elev": "#fefefe", "surface-raised": "#d6d8f0", "surface-hover": "#cccee6", "border": "#b6b9d5", "text": "#252530", "text-muted": "#555669", "accent": "#4d41b0", "accent-hover": "#6359bb", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#c03d41", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "midnight": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "slate": { "surface": "#343537", "surface-elev": "#3f4144", "surface-raised": "#4a4d51", "surface-hover": "#565a5e", "border": "#686e75", "text": "#edf0f4", "text-muted": "#ced1d4", "accent": "#aeb1b5", "accent-hover": "#9c9ea2", "accent-text": "#0b0b12", "danger": "#f87878", "danger-hover": "#db6e6e", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
     };
 
-    it("dark / light / midnight / slate ont EXACTEMENT les valeurs historiques", () => {
-        Object.keys(FROZEN).forEach((name) => {
-            Object.keys(FROZEN[name]).forEach((k) => {
-                expect(HolafTokens.PRESETS[name][k], name + "." + k).toBe(FROZEN[name][k]);
-            });
-        });
-    });
-
-    it("les alias sont égaux à leurs jumeaux <famille>-<mode>", () => {
-        expect(HolafTokens.PRESETS.dark).toEqual(HolafTokens.PRESETS["indigo-dark"]);
-        expect(HolafTokens.PRESETS.light).toEqual(HolafTokens.PRESETS["indigo-light"]);
-        expect(HolafTokens.PRESETS.midnight).toEqual(HolafTokens.PRESETS["midnight-dark"]);
-        expect(HolafTokens.PRESETS.slate).toEqual(HolafTokens.PRESETS["slate-dark"]);
-    });
-
-    it("les alias ne portent QUE les 14 clés historiques", () => {
-        Object.keys(FROZEN).forEach((name) => {
-            expect(Object.keys(HolafTokens.PRESETS[name]).sort()).toEqual(Object.keys(FROZEN[name]).sort());
+    it("les 16 presets intégrés sont identiques au snapshot V2 (clé par clé)", () => {
+        expect(Object.keys(HolafTokens.PRESETS).sort()).toEqual(Object.keys(FROZEN_12).sort());
+        Object.keys(FROZEN_12).forEach((name) => {
+            expect(HolafTokens.PRESETS[name], name).toEqual(FROZEN_12[name]);
         });
     });
 });
 
-describe("HolafTokens 0.3.0 — non-régression (snapshot des 14 presets)", () => {
-    // Snapshot FIGÉ des 14 presets tels que produits par la 0.2.0 d'origine
-    // (généré puis collé — garde-fou contre toute retouche accidentelle).
-    const FROZEN_14 = {
-        "indigo-light": {
-            "surface": "#ffffff", "surface-elev": "#f4f4f5", "surface-raised": "#fafafa",
-            "border": "#d4d4d8", "text": "#18181b", "text-muted": "#52525b",
-            "accent": "#4f46e5", "accent-hover": "#6366f1", "accent-text": "#ffffff",
-            "danger": "#dc2626", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px",
-        },
-        "indigo-dark": {
-            "surface": "#1e1e1e", "surface-elev": "#27272a", "surface-raised": "#1a1a1a",
-            "border": "#3f3f46", "text": "#e4e4e7", "text-muted": "#a1a1aa",
-            "accent": "#6366f1", "accent-hover": "#818cf8", "accent-text": "#ffffff",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px",
-        },
-        "midnight-light": {
-            "surface": "#F6F7FC", "surface-elev": "#FFFFFF", "surface-raised": "#E6E8F8",
-            "border": "#D4D6F3", "text": "#18181B", "text-muted": "#75767A",
-            "accent": "#5B63D3", "accent-hover": "#747ADA", "accent-text": "#ffffff",
-            "danger": "#DC2626", "danger-hover": "#E14747", "danger-text": "#ffffff",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "midnight-dark": {
-            "surface": "#10111d", "surface-elev": "#181a2c", "surface-raised": "#0c0d17",
-            "border": "#272a44", "text": "#e2e4f0", "text-muted": "#9aa0c3",
-            "accent": "#818cf8", "accent-hover": "#a5b4fc", "accent-text": "#10111d",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.6)", "font-size": "14px",
-        },
-        "slate-light": {
-            "surface": "#F4F6F8", "surface-elev": "#FFFFFF", "surface-raised": "#E3E6E9",
-            "border": "#CED3D9", "text": "#18181B", "text-muted": "#747578",
-            "accent": "#475569", "accent-hover": "#636F80", "accent-text": "#ffffff",
-            "danger": "#DC2626", "danger-hover": "#E14747", "danger-text": "#ffffff",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "slate-dark": {
-            "surface": "#1f232b", "surface-elev": "#292e38", "surface-raised": "#191d24",
-            "border": "#3a4150", "text": "#e6e9ee", "text-muted": "#9aa3b2",
-            "accent": "#94a3b8", "accent-hover": "#b6c2d4", "accent-text": "#1f232b",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.5)", "font-size": "14px",
-        },
-        "emerald-light": {
-            "surface": "#FFFFFF", "surface-elev": "#F0FDF4", "surface-raised": "#CDE9DC",
-            "border": "#C8E1DA", "text": "#18181B", "text-muted": "#79797B",
-            "accent": "#047857", "accent-hover": "#278C6F", "accent-text": "#ffffff",
-            "danger": "#DC2626", "danger-hover": "#DF4645", "danger-text": "#ffffff",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "emerald-dark": {
-            "surface": "#0B1512", "surface-elev": "#12201A", "surface-raised": "#173B2D",
-            "border": "#143F30", "text": "#F4F4F5", "text-muted": "#929696",
-            "accent": "#34D399", "accent-hover": "#2FB886", "accent-text": "#000000",
-            "danger": "#EF4444", "danger-hover": "#CE3F3E", "danger-text": "#000000",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "amber-light": {
-            "surface": "#FFFFFF", "surface-elev": "#FFFBEB", "surface-raised": "#F4E2C9",
-            "border": "#EFD9C9", "text": "#18181B", "text-muted": "#79797B",
-            "accent": "#B45309", "accent-hover": "#BF6C2B", "accent-text": "#ffffff",
-            "danger": "#DC2626", "danger-hover": "#E14644", "danger-text": "#ffffff",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "amber-dark": {
-            "surface": "#1A1408", "surface-elev": "#241C0D", "surface-raised": "#443410",
-            "border": "#4C3A0E", "text": "#F4F4F5", "text-muted": "#989691",
-            "accent": "#FBBF24", "accent-hover": "#DBA721", "accent-text": "#000000",
-            "danger": "#EF4444", "danger-hover": "#D13E3C", "danger-text": "#000000",
-            "radius": "12px", "shadow": "0 4px 16px rgba(0, 0, 0, 0.12)", "font-size": "14px",
-        },
-        "dark": {
-            "surface": "#1e1e1e", "surface-elev": "#27272a", "surface-raised": "#1a1a1a",
-            "border": "#3f3f46", "text": "#e4e4e7", "text-muted": "#a1a1aa",
-            "accent": "#6366f1", "accent-hover": "#818cf8", "accent-text": "#ffffff",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px",
-        },
-        "light": {
-            "surface": "#ffffff", "surface-elev": "#f4f4f5", "surface-raised": "#fafafa",
-            "border": "#d4d4d8", "text": "#18181b", "text-muted": "#52525b",
-            "accent": "#4f46e5", "accent-hover": "#6366f1", "accent-text": "#ffffff",
-            "danger": "#dc2626", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px",
-        },
-        "midnight": {
-            "surface": "#10111d", "surface-elev": "#181a2c", "surface-raised": "#0c0d17",
-            "border": "#272a44", "text": "#e2e4f0", "text-muted": "#9aa0c3",
-            "accent": "#818cf8", "accent-hover": "#a5b4fc", "accent-text": "#10111d",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.6)", "font-size": "14px",
-        },
-        "slate": {
-            "surface": "#1f232b", "surface-elev": "#292e38", "surface-raised": "#191d24",
-            "border": "#3a4150", "text": "#e6e9ee", "text-muted": "#9aa3b2",
-            "accent": "#94a3b8", "accent-hover": "#b6c2d4", "accent-text": "#1f232b",
-            "danger": "#ef4444", "danger-text": "#ffffff", "radius": "12px",
-            "shadow": "0 18px 50px rgba(0, 0, 0, 0.5)", "font-size": "14px",
-        },
-    };
-
-    it("les 14 presets intégrés sont identiques au snapshot 0.2.0 (clé par clé)", () => {
-        expect(Object.keys(HolafTokens.PRESETS).sort()).toEqual(Object.keys(FROZEN_14).sort());
-        Object.keys(FROZEN_14).forEach((name) => {
-            expect(HolafTokens.PRESETS[name], name).toEqual(FROZEN_14[name]);
-        });
-    });
-});
-
-describe("HolafTokens 0.3.0 — purge par possession d'ensemble", () => {
-    it("emerald-dark → dark : danger-hover (clé générée) est retirée", () => {
-        HolafTokens.setTheme("emerald-dark");
+describe("HolafTokens 0.4.0 — purge par possession d'ensemble", () => {
+    it("un lot minimal purge les clés possédées absentes du nouveau lot", () => {
+        HolafTokens.setTheme("corail-dark");
         expect(getVar("--holaf-danger-hover")).not.toBe("");
-        HolafTokens.setTheme("dark");
+        expect(getVar("--holaf-surface-hover")).not.toBe("");
+        HolafTokens.setTokens({ values: { surface: "#111111", text: "#eeeeee" } });
         expect(getVar("--holaf-danger-hover")).toBe("");
-        expect(getVar("--holaf-surface")).toBe("#1e1e1e");
+        expect(getVar("--holaf-surface-hover")).toBe("");
+        expect(getVar("--holaf-surface")).toBe("#111111");
     });
 
     it("reset() retire TOUT le set possédé (clés d'applications antérieures incluses)", () => {
-        HolafTokens.setTheme("emerald-dark");
+        HolafTokens.setTheme("corail-dark");
         expect(getVar("--holaf-danger-hover")).not.toBe("");
         HolafTokens.setTokens({ values: { ok: "#26e6a5", "accent-soft": "#123456" } });
         // la purge a déjà retiré danger-hover (posée puis absente du nouveau lot)
@@ -469,14 +414,14 @@ describe("HolafTokens 0.3.0 — purge par possession d'ensemble", () => {
 
     it("les variables posées HORS brique ne sont jamais touchées", () => {
         document.documentElement.style.setProperty("--ma-var", "#abcdef");
-        HolafTokens.setTheme("slate-light");
+        HolafTokens.setTheme("neutre-light");
         HolafTokens.reset();
         expect(getVar("--ma-var")).toBe("#abcdef");
         document.documentElement.style.removeProperty("--ma-var");
     });
 });
 
-describe("HolafTokens 0.3.0 — registre de packs", () => {
+describe("HolafTokens 0.4.0 — registre de packs", () => {
     it("registerPreset : retourne { name, vars } et n'émet PAS d'événement", () => {
         const events = collectEvents();
         const r = HolafTokens.registerPreset("test-a", { accent: "#e94560" });
@@ -496,8 +441,8 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
 
     it("noms réservés (preset / alias / famille) → throw", () => {
         expect(() => HolafTokens.registerPreset("dark", {})).toThrow(/réservé/i);
-        expect(() => HolafTokens.registerPreset("emerald-dark", {})).toThrow(/réservé/i);
-        expect(() => HolafTokens.registerPreset("emerald", {})).toThrow(/réservé/i);
+        expect(() => HolafTokens.registerPreset("corail-dark", {})).toThrow(/réservé/i);
+        expect(() => HolafTokens.registerPreset("corail", {})).toThrow(/réservé/i);
     });
 
     it("nom vide → throw", () => {
@@ -511,11 +456,11 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
     });
 
     it("extends intégré : hérite + dérive depuis la spec", () => {
-        const r = HolafTokens.registerPreset("test-ext", { accent: "#e94560" }, { extends: "indigo-dark" });
-        expect(r.vars.surface).toBe("#1e1e1e");
+        const r = HolafTokens.registerPreset("test-ext", { accent: "#e94560" }, { extends: "corail-dark" });
+        expect(r.vars.surface).toBe("#36252c");
         expect(r.vars.accent).toBe("#e94560");
         expect(r.vars["accent-soft"]).toBe("rgba(233, 69, 96, 0.16)");
-        expect(r.vars["accent-gradient"]).toBe("linear-gradient(135deg, #E94560, #818CF8)");
+        expect(r.vars["accent-gradient"]).toBe("linear-gradient(135deg, #E94560, #DD72A0)");
     });
 
     it("extends alias et extends pack (dérivées héritées telles quelles)", () => {
@@ -526,7 +471,7 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
         const grand = HolafTokens.registerPreset("test-grand", {}, { extends: "test-child" });
         expect(grand.vars["accent-soft"]).toBe("rgba(16, 185, 129, 0.16)");
         const alias = HolafTokens.registerPreset("test-alias", { accent: "#abcdef" }, { extends: "dark" });
-        expect(alias.vars.surface).toBe("#1e1e1e");
+        expect(alias.vars.surface).toBe("#1e1f2e");
     });
 
     it("spec explicite jamais écrasée par une dérivation", () => {
@@ -538,8 +483,8 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
         const off = HolafTokens.registerPreset("test-noderive", { accent: "#e94560" }, { derive: false });
         expect(off.vars["accent-soft"]).toBeUndefined();
         const optin = HolafTokens.registerPreset("test-optin", { accent: "#e94560" },
-            { extends: "emerald-dark", derive: ["danger-gradient", "radius-sm"] });
-        expect(optin.vars["danger-gradient"]).toMatch(/^linear-gradient\(135deg, #EF4444, #CE3F3E\)$/);
+            { extends: "turquoise-dark", derive: ["danger-gradient", "radius-sm"] });
+        expect(optin.vars["danger-gradient"]).toMatch(/^linear-gradient\(135deg, #F87171, #D46465\)$/);
         expect(optin.vars["radius-sm"]).toBe("calc(12px - 2px)");
         expect(optin.vars["accent-soft"]).toBeUndefined(); // hors liste demandée
     });
@@ -554,15 +499,15 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
         expect(HolafTokens.unregisterPreset("dark")).toBe(false); // intégré jamais dans PACKS
     });
 
-    it("listPresets = les 14 intégrés PUIS les packs dans l'ordre d'enregistrement", () => {
-        expect(HolafTokens.listPresets()).toHaveLength(14);
+    it("listPresets = les 16 intégrés PUIS les packs dans l'ordre d'enregistrement", () => {
+        expect(HolafTokens.listPresets()).toHaveLength(16);
         HolafTokens.registerPreset("test-p1", {});
         HolafTokens.registerPreset("test-p2", {});
         const list = HolafTokens.listPresets();
-        expect(list[0]).toBe("indigo-light");
-        expect(list[13]).toBe("slate");
-        expect(list.slice(14)).toEqual(["test-p1", "test-p2"]);
-        expect(list.slice(0, 14)).not.toContain("test-p1");
+        expect(list[0]).toBe("corail-light");
+        expect(list[15]).toBe("slate");
+        expect(list.slice(16)).toEqual(["test-p1", "test-p2"]);
+        expect(list.slice(0, 16)).not.toContain("test-p1");
     });
 
     it("setTheme(pack) émet l'événement ; getFamily/getMode → null", () => {
@@ -577,7 +522,7 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
     });
 
     it("updatePreset : fusion + re-dérivation ; spec re-fournie respectée ; throws", () => {
-        HolafTokens.registerPreset("test-up", { accent: "#e94560" }, { extends: "indigo-dark" });
+        HolafTokens.registerPreset("test-up", { accent: "#e94560" }, { extends: "corail-dark" });
         const r = HolafTokens.updatePreset("test-up", { accent: "#10b981" });
         expect(r.vars.accent).toBe("#10b981");
         expect(r.vars["accent-soft"]).toBe("rgba(16, 185, 129, 0.16)");
@@ -597,31 +542,33 @@ describe("HolafTokens 0.3.0 — registre de packs", () => {
 
     it("getPreset : copie d'un intégré/alias, null si inconnu, copie protégée", () => {
         const p = HolafTokens.getPreset("dark");
-        expect(p.surface).toBe("#1e1e1e");
+        expect(p.surface).toBe("#1e1f2e");
         p.surface = "#000000";
-        expect(HolafTokens.getPreset("dark").surface).toBe("#1e1e1e");
-        expect(HolafTokens.getPreset("slate-light").surface).toBe("#F4F6F8");
+        expect(HolafTokens.getPreset("dark").surface).toBe("#1e1f2e");
+        expect(HolafTokens.getPreset("turquoise-light").surface).toBe("#c3e2e8");
         expect(HolafTokens.getPreset("nope")).toBeNull();
     });
 });
 
-describe("HolafTokens 0.3.0 — dérivations", () => {
-    it("formules exactes depuis indigo-dark (groupe A + skip des états absents)", () => {
-        const v = HolafTokens.registerPreset("test-der", {}, { extends: "indigo-dark" }).vars;
-        expect(v["accent-soft"]).toBe("rgba(99, 102, 241, 0.16)");
-        expect(v["accent-glow"]).toBe("rgba(99, 102, 241, 0.5)");
-        expect(v["accent-gradient"]).toBe("linear-gradient(135deg, #6366F1, #818CF8)");
+describe("HolafTokens 0.4.0 — dérivations", () => {
+    it("formules exactes depuis corail-dark (groupe A + skip des états absents)", () => {
+        const v = HolafTokens.registerPreset("test-der", {}, { extends: "corail-dark" }).vars;
+        expect(v["accent-soft"]).toBe("rgba(250, 127, 181, 0.16)");
+        expect(v["accent-glow"]).toBe("rgba(250, 127, 181, 0.5)");
+        expect(v["accent-gradient"]).toBe("linear-gradient(135deg, #FA7FB5, #DD72A0)");
         expect(v["accent-gradient-hover"]).toBe(
-            "linear-gradient(135deg, " + mix("#6366f1", "#ffffff", 0.12) + ", " + mix("#818cf8", "#ffffff", 0.12) + ")"
+            "linear-gradient(135deg, " + mix("#fa7fb5", "#ffffff", 0.12) + ", " + mix("#dd72a0", "#ffffff", 0.12) + ")"
         );
         expect(v["accent-shadow"]).toBe("0 0 18px var(--holaf-accent-soft)");
-        expect(v["danger-soft"]).toBe("rgba(239, 68, 68, 0.12)");
+        expect(v["danger-soft"]).toBe("rgba(248, 113, 113, 0.12)");
         expect(v["danger-shadow"]).toBe("0 0 16px var(--holaf-danger-soft)");
-        expect(v["border-muted"]).toBe("rgba(63, 63, 70, 0.45)");
-        expect(v["text-faint"]).toBe(mix("#a1a1aa", "#1e1e1e", 0.42));
-        expect(v["surface-hover"]).toBe("rgba(26, 26, 26, 0.7)");
-        expect(v["chrome-header"]).toBe("linear-gradient(180deg, rgba(30, 30, 30, 0.92), rgba(30, 30, 30, 0.66))");
-        expect(v["chrome-footer"]).toBe("linear-gradient(0deg, rgba(30, 30, 30, 0.95), rgba(30, 30, 30, 0.66))");
+        expect(v["border-muted"]).toBe("rgba(115, 89, 99, 0.45)");
+        expect(v["text-faint"]).toBe(mix("#ccb7bf", "#36252c", 0.42));
+        // les intégrés V2 PORTENT surface-hover (4ᵉ palier) : hérité tel quel,
+        // la règle de dérivation ne s'applique donc PAS ici.
+        expect(v["surface-hover"]).toBe("#5d464f");
+        expect(v["chrome-header"]).toBe("linear-gradient(180deg, rgba(54, 37, 44, 0.92), rgba(54, 37, 44, 0.66))");
+        expect(v["chrome-footer"]).toBe("linear-gradient(0deg, rgba(54, 37, 44, 0.95), rgba(54, 37, 44, 0.66))");
         // opt-ins HORS défaut
         expect(v["danger-gradient"]).toBeUndefined();
         expect(v["radius-sm"]).toBeUndefined();
@@ -630,6 +577,11 @@ describe("HolafTokens 0.3.0 — dérivations", () => {
         expect(v["ok-text"]).toBeUndefined();
         expect(v["ok-soft"]).toBeUndefined();
         expect(v["warn-text"]).toBeUndefined();
+    });
+
+    it("surface-hover : dérivation rgba(surface-raised, .70) quand la clé est absente", () => {
+        const v = HolafTokens.registerPreset("test-sh", { surface: "#1e1e1e", "surface-raised": "#1a1a1a" }).vars;
+        expect(v["surface-hover"]).toBe("rgba(26, 26, 26, 0.7)");
     });
 
     it("source non-hex → dérivation sautée silencieusement (aucune erreur)", () => {
@@ -651,7 +603,7 @@ describe("HolafTokens 0.3.0 — dérivations", () => {
     });
 });
 
-describe("HolafTokens 0.3.0 — alpha()", () => {
+describe("HolafTokens 0.4.0 — alpha()", () => {
     it("hex → rgba, alpha borné à [0, 1], défaut 1", () => {
         expect(HolafTokens.alpha("#6366f1", 0.16)).toBe("rgba(99, 102, 241, 0.16)");
         expect(HolafTokens.alpha("#fff", 1.5)).toBe("rgba(255, 255, 255, 1)");
@@ -665,10 +617,10 @@ describe("HolafTokens 0.3.0 — alpha()", () => {
     });
 });
 
-describe("HolafTokens 0.3.0 — chargement (sans export nommé)", () => {
-    it("la globale est posée par effet de bord et VERSION = 0.3.0", () => {
+describe("HolafTokens 0.4.0 — chargement (sans export nommé)", () => {
+    it("la globale est posée par effet de bord et VERSION = 0.4.1", () => {
         expect(window.HolafTokens).toBe(HolafTokens);
-        expect(HolafTokens.VERSION).toBe("0.3.0");
+        expect(HolafTokens.VERSION).toBe("0.4.1");
     });
 
     it("garde-fou statique : AUCUN export top-level dans le fichier", () => {

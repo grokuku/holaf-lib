@@ -409,7 +409,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.5.0");
+        expect(HolafModal.version).toBe("0.6.1");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -418,48 +418,49 @@ describe("overlay, boutons & CSS", () => {
 describe("thèmes", () => {
     // Valeurs exactes du CSS injecté (défauts historiques de la brique).
     const DARK_DEFAULTS = {
-        "--hm-bg": "#1e1e1e",
-        "--hm-bg-secondary": "#27272a",
-        "--hm-bg-input": "#1a1a1a",
-        "--hm-text": "#e4e4e7",
-        "--hm-text-secondary": "#a1a1aa",
-        "--hm-border": "#3f3f46",
-        "--hm-accent": "#6366f1",
-        "--hm-accent-hover": "#818cf8",
-        "--hm-accent-text": "#ffffff",
-        "--hm-danger": "#ef4444",
-        "--hm-danger-hover": "#dc2626",
-        "--hm-danger-text": "#ffffff",
+        "--hm-bg": "#1e1f2e",
+        "--hm-bg-secondary": "#292a3a",
+        "--hm-bg-input": "#343547",
+        "--hm-text": "#eff0f4",
+        "--hm-text-secondary": "#abadc4",
+        "--hm-border": "#52536b",
+        "--hm-accent": "#a1a3ff",
+        "--hm-accent-hover": "#8d8fe0",
+        "--hm-accent-text": "#0b0b12",
+        "--hm-danger": "#f87171",
+        "--hm-danger-hover": "#d76567",
+        "--hm-danger-text": "#000000",
         "--hm-radius": "12px",
-        "--hm-overlay-bg": "rgba(0, 0, 0, 0.55)",
+        "--hm-overlay-bg": "rgba(30, 31, 46, 0.55)",
         "--hm-font-size": "14px",
         "--hm-shadow": "0 18px 50px rgba(0, 0, 0, 0.55)",
-        "--hm-busy-bg": "rgba(30, 30, 30, 0.82)",
+        "--hm-busy-bg": "rgba(30, 31, 46, 0.85)",
     };
 
-    // 10 combinaisons famille × mode (v0.5.0) + 4 noms historiques.
-    const COMBOS_10 = [
-        "indigo-light", "indigo-dark",
-        "midnight-light", "midnight-dark",
-        "slate-light", "slate-dark",
-        "emerald-light", "emerald-dark",
-        "amber-light", "amber-dark",
+    // 12 combinaisons famille × mode (v0.6.0, catalogue V2) + 4 noms historiques.
+    const COMBOS_12 = [
+        "corail-light", "corail-dark",
+        "ambre-light", "ambre-dark",
+        "emeraude-light", "emeraude-dark",
+        "turquoise-light", "turquoise-dark",
+        "amethyste-light", "amethyste-dark",
+        "neutre-light", "neutre-dark",
     ];
 
-    it("enregistre les 10 combinaisons famille×mode + les 4 noms historiques", () => {
+    it("enregistre les 12 combinaisons famille×mode + les 4 noms historiques", () => {
         const names = HolafModal.themes.list();
-        for (const n of [...COMBOS_10, "dark", "light", "midnight", "slate"]) {
+        for (const n of [...COMBOS_12, "dark", "light", "midnight", "slate"]) {
             expect(names).toContain(n);
             expect(HolafModal.themes.get(n)).not.toBeNull();
         }
-        expect(names.length).toBe(14); // 10 combos + 4 historiques
+        expect(names.length).toBe(16); // 12 combos + 4 historiques
     });
 
-    it("les 4 noms historiques sont des alias EXACTS de leur palette de famille", () => {
-        expect(HolafModal.themes.get("dark")).toEqual(HolafModal.themes.get("indigo-dark"));
-        expect(HolafModal.themes.get("light")).toEqual(HolafModal.themes.get("indigo-light"));
-        expect(HolafModal.themes.get("midnight")).toEqual(HolafModal.themes.get("midnight-dark"));
-        expect(HolafModal.themes.get("slate")).toEqual(HolafModal.themes.get("slate-dark"));
+    it("les 4 noms historiques sont des alias EXACTS de leur palette de famille (remappés V2)", () => {
+        expect(HolafModal.themes.get("dark")).toEqual(HolafModal.themes.get("amethyste-dark"));
+        expect(HolafModal.themes.get("light")).toEqual(HolafModal.themes.get("amethyste-light"));
+        expect(HolafModal.themes.get("midnight")).toEqual(HolafModal.themes.get("amethyste-dark"));
+        expect(HolafModal.themes.get("slate")).toEqual(HolafModal.themes.get("neutre-dark"));
     });
 
     it("cohérence inter-briques : chaque preset <famille>-<mode> reflète HolafTokens", () => {
@@ -476,7 +477,7 @@ describe("thèmes", () => {
             "--hm-danger": "danger",
             "--hm-danger-text": "danger-text",
         };
-        for (const name of COMBOS_10) {
+        for (const name of COMBOS_12) {
             const brick = HolafModal.themes.get(name);
             const tokens = HolafTokens.PRESETS[name];
             expect(tokens, name).toBeTruthy();
@@ -530,8 +531,8 @@ describe("thèmes", () => {
 
     it("theme:'light' applique ses variables", () => {
         const ctrl = HolafModal.open({ title: "L", theme: "light" });
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");
-        expect(ctrl.el.style.getPropertyValue("--hm-text")).toBe("#18181b");
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
+        expect(ctrl.el.style.getPropertyValue("--hm-text")).toBe("#252530");
         expect(ctrl.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("rgba(24, 24, 27, 0.35)");
     });
 
@@ -541,7 +542,7 @@ describe("thèmes", () => {
             theme: { preset: "light", vars: { "--hm-accent": "#123456", "non-css": 42 } },
         });
         expect(ctrl.el.style.getPropertyValue("--hm-accent")).toBe("#123456"); // override
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");      // reste du preset
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");      // reste du preset
         expect(ctrl.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("rgba(24, 24, 27, 0.35)");
     });
 
@@ -594,10 +595,10 @@ describe("thèmes", () => {
     it("setTheme (string) : s'applique aux modales sans theme ; open.theme gagne ; clearTheme revient aux défauts", () => {
         HolafModal.setTheme("light");
         const a = HolafModal.open({ title: "A" });
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff"); // global
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa"); // global
 
         const b = HolafModal.open({ title: "B", theme: "dark" }); // open.theme gagne
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#1e1e1e");
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");
 
         const c = HolafModal.open({ title: "C", theme: null }); // null = opt-out explicite
         expect(c.el.style.getPropertyValue("--hm-bg")).toBe("");
@@ -610,7 +611,7 @@ describe("thèmes", () => {
     it("setTheme accepte un objet brut et { preset, vars } ; setTheme(null) efface", () => {
         HolafModal.setTheme({ preset: "slate", vars: { "--hm-radius": "4px" } });
         const a = HolafModal.open({ title: "A" });
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#1f232b"); // preset slate
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#343537"); // preset slate (neutre-dark)
         expect(a.el.style.getPropertyValue("--hm-radius")).toBe("4px"); // override
 
         const spec = { "--hm-accent": "#0ea5e9" };
@@ -635,7 +636,7 @@ describe("thèmes", () => {
     it("les helpers transmettent theme à open()", async () => {
         const p = HolafModal.alert("T", "M", { theme: "light" });
         const root = document.querySelector(".holaf-modal-root");
-        expect(root.style.getPropertyValue("--hm-bg")).toBe("#ffffff");
+        expect(root.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
         document.querySelector(".holaf-modal-btn-primary").click();
         await expect(p).resolves.toBeUndefined();
     });
@@ -649,7 +650,7 @@ describe("thèmes", () => {
         expect(a.el.style.getPropertyValue("--hm-bg")).toBe(""); // ni global ni preset
         expect(a.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("");
         const b = HolafModal.open({ title: "B" }); // sans theme → le global s'applique bien
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
         expect(warn).not.toHaveBeenCalled(); // "" est un opt-out explicite, pas un nom inconnu
     });
 
@@ -686,7 +687,7 @@ describe("thèmes", () => {
             theme: { preset: "dark", "--hm-accent": "#123456" },
         });
         expect(a.el.style.getPropertyValue("--hm-accent")).toBe("#123456"); // clé racine appliquée
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#1e1e1e");     // reste du preset
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");     // reste du preset
 
         // En cas de doublon entre clé racine et vars, vars (champ officiel) gagne.
         const b = HolafModal.open({
@@ -694,7 +695,7 @@ describe("thèmes", () => {
             theme: { preset: "light", "--hm-accent": "#racine", vars: { "--hm-accent": "#123abc" } },
         });
         expect(b.el.style.getPropertyValue("--hm-accent")).toBe("#123abc"); // vars > racine
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#ffffff");     // preset intact
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");     // preset intact
     });
 });
 
@@ -834,9 +835,9 @@ describe("modale à contenu libre (v0.4.0 actions)", () => {
         const ctrl = HolafModal.open({ title: "T", content, theme: "dark" });
         // Le thème est posé sur la racine de la modale ; le contenu en hérite
         // (variables CSS héritées dans l'arbre de la modale).
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#1e1e1e");
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");
         expect(ctrl.body.style.getPropertyValue("--hm-accent")).toBe(""); // porté par la racine
-        expect(getComputedStyle(ctrl.el).getPropertyValue("--hm-bg")).toBe("#1e1e1e");
+        expect(getComputedStyle(ctrl.el).getPropertyValue("--hm-bg")).toBe("#1e1f2e");
     });
 
     it("actions n'interfère pas avec buttons (deux footer possibles) — compat additive", () => {

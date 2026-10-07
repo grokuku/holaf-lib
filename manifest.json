@@ -3,16 +3,16 @@
   "description": "Briques maison (JS et Python), versionnées par brique. Chaque brique est un fichier autonome, copié (pinné) dans les projets qui en ont besoin.",
   "bricks": {
     "modal": {
-      "version": "0.5.0",
+      "version": "0.6.1",
       "file": "js/holaf-modal.js",
       "category": "component",
-      "description": "Modale autonome (overlay, pile, helpers Promise, thèmes). Catalogue à 2 axes : 10 presets <famille>-<mode> (indigo/midnight/slate/emerald/amber × light/dark) miroirs de HolafTokens + 4 alias historiques (dark/light/midnight/slate)."
+      "description": "Modale autonome (overlay, pile, helpers Promise, thèmes). Catalogue V2 : 12 presets <famille>-<mode> (corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) miroirs de HolafTokens 0.4.1 + 4 alias remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark). 0.6.1 : miroir du PATCH HolafTokens 0.4.1 (6 --hm-text-secondary corrigés pour le contraste AA du texte atténué)."
     },
     "toast": {
-      "version": "0.6.0",
+      "version": "0.7.0",
       "file": "js/holaf-toast.js",
       "category": "component",
-      "description": "Notifications flottantes autonomes (types, pause, positions, fonds teintés). Catalogue à 2 axes : 10 presets <famille>-<mode> (cohérence surface/texte/bordure avec HolafTokens) ; light/midnight/slate alias exacts, dark gelé (défaut CSS)."
+      "description": "Notifications flottantes autonomes (types, pause, positions, fonds teintés). Catalogue V2 : 12 presets <famille>-<mode> (cohérence surface/texte/bordure avec HolafTokens 0.4.1) ; 4 alias remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark) ; l'ancien gel de dark (#2b2b2b) est levé, dark ≡ amethyste-dark et ≡ défauts CSS."
     },
     "fetch": {
       "version": "0.2.0",
@@ -33,10 +33,10 @@
       "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG, generateTheme, generateFamily)."
     },
     "tokens": {
-      "version": "0.3.0",
+      "version": "0.4.1",
       "file": "js/holaf-tokens.js",
       "category": "foundation",
-      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). Catalogue à 2 axes : 5 familles × clair/sombre (10 presets <famille>-<mode>) + 4 alias historiques. 0.3.0 : 23 clés optionnelles (dérivables accent-soft/glow/gradient(-hover)/shadow, danger-soft/shadow/gradient*, border-muted, text-faint, surface-hover, chrome-header/footer, états ok/ok-text/ok-soft/warn/warn-text, identité bg-image/txt-glow*/radius-sm/font-sans/font-mono ; * = opt-in), registre de packs hôte (registerPreset/updatePreset/unregisterPreset/getPreset/alpha), purge par possession d'ensemble, fichier chargeable en <script> classique (file:// ET HTTP) sans export top-level."
+      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). 0.4.1 : PATCH de VALEUR (aucun changement d'API) — 6 `text-muted` du catalogue V2 corrigés pour tenir le seuil AA 4,5:1 sur les 4 paliers de profondeur (`ambre-light` sur `surface` passait à 4,42:1, `neutre-dark` sur `surface-hover` à 2,97:1), à luminosité ajustée et teinte préservée ; la garde V2 contrôle désormais AUSSI `text-muted` (lacune comblée). 0.4.0 : catalogue V2 REMPLACÉ (RUPTURE) — 6 familles × clair/sombre (12 presets corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) aux valeurs figées en hex + 4 alias historiques remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark) ; table MIGRATIONS exportée pour les hôtes ; garde V2 rejouée en test (fonds/accents distincts, texte et texte atténué/fond ≥4,5:1, profondeur ≥ seuil). Conserve de la 0.3.0 : 23 clés optionnelles (dérivables accent-soft/glow/gradient(-hover)/shadow, danger-soft/shadow/gradient*, border-muted, text-faint, surface-hover, chrome-header/footer, états ok/ok-text/ok-soft/warn/warn-text, identité bg-image/txt-glow*/radius-sm/font-sans/font-mono ; * = opt-in), registre de packs hôte (registerPreset/updatePreset/unregisterPreset/getPreset/alpha), purge par possession d'ensemble, fichier chargeable en <script> classique (file:// ET HTTP) sans export top-level."
     },
     "ambient": {
       "version": "0.3.0",

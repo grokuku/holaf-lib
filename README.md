@@ -31,11 +31,11 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.5.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
-    "toast":   { "version": "0.6.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
+    "modal":   { "version": "0.6.1", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "toast":   { "version": "0.7.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
-    "tokens":  { "version": "0.3.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
+    "tokens":  { "version": "0.4.1", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
   }
 }
 ```
@@ -54,13 +54,13 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.5.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), **10 thèmes `<famille>-<mode>`** (miroirs de `HolafTokens`) + 4 alias historiques, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
-| toast      | `js/holaf-toast.js` | 0.6.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, **10 thèmes `<famille>-<mode>`** cohérents avec `HolafTokens`, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| modal      | `js/holaf-modal.js` | 0.6.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), **12 thèmes `<famille>-<mode>` V2** (miroirs de `HolafTokens` 0.4.1) + 4 alias remappés, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| toast      | `js/holaf-toast.js` | 0.7.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, **12 thèmes `<famille>-<mode>` V2** cohérents avec `HolafTokens` 0.4.1, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
-| tokens     | `js/holaf-tokens.js` | 0.3.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 5 familles × clair/sombre (10 presets `<famille>-<mode>`) + 4 alias historiques. **0.3.0** : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** (plus de résidu `--holaf-*`) et **fichier classic-compatible** (chargeable en `<script>` classique `file://`/HTTP, sans export nommé) — voir section dédiée |
+| tokens     | `js/holaf-tokens.js` | 0.4.1 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes V2 (RUPTURE)** : 6 familles × clair/sombre (12 presets `corail`/`ambre`/`emeraude`/`turquoise`/`amethyste`/`neutre`) aux valeurs **figées en hex** + 4 alias **remappés** (`dark`/`light`→amethyste, `midnight`→amethyste-dark, `slate`→neutre-dark) ; **table `MIGRATIONS`** exportée pour les hôtes. **Garde V2 rejouée en test** (fonds/accents distincts, texte **et texte atténué**/fond ≥ 4,5:1, profondeur ≥ seuil). **0.4.1 (PATCH de valeur)** : 6 `text-muted` corrigés pour l'AA 4,5:1 sur les 4 paliers. Conserve de la 0.3.0 : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** et **fichier classic-compatible** — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.5 | ✅ prête | 54 icônes SVG en trait (style Feather, MIT ; 2 tracés Tabler MIT), zéro CSS, `stroke=currentColor` ; tracés cherchables via [icons0.dev](https://icons0.dev/) (licence selon la collection d'origine) |
 
@@ -177,6 +177,71 @@ Les deux briques CSS-injectantes — **modal** et **toast** — exposent :
 > Les helpers (`HolafModal.alert/confirm/prompt/busy`,
 > `HolafToast.success/error/…`) acceptent aussi `injectStyles` dans leurs
 > options et le transmettent à l'ouverture.
+
+## Nouveautés v0.8
+
+### HolafTokens 0.4.0 → 0.4.1 & HolafModal 0.6.0 → 0.6.1 — correctif du contraste du texte atténué
+
+Lacune de la **garde V2** : elle contrôlait le texte principal (`text`) et
+l'accent, mais **pas** le **texte atténué** (`text-muted`). Résultat : dans le
+catalogue `tokens 0.4.0`, **6 `text-muted`** passaient sous le seuil **AA
+4,5:1** sur au moins un palier de profondeur — le pire étant `ambre-light`
+(`text-muted` sur `surface` = **4,42:1**) et `neutre-dark` (sur `surface-hover`
+= **2,97:1**).
+
+- **Correction a minima** (PATCH, aucun changement d'API ni de clé) : les 6
+  `text-muted` fautifs sont retouchés en **luminosité** (teinte/saturation de la
+  famille **préservées**) jusqu'à ≥ 4,5:1 sur **les 4 paliers** (`surface` →
+  `surface-elev` → `surface-raised` → `surface-hover`). Aucune autre valeur ne
+  bouge. Voir [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md) §10.
+- **Garde élargie** (`tests/helpers/theme-guard.js`) : nouveau contrôle
+  `text-muted` ≥ 4,5:1 sur les 4 paliers, avec violation explicite (mode +
+  famille + palier + valeur + seuil) et **preuve de non-vacuité** (le self-test
+  pose le texte atténué à la couleur du fond).
+- **Miroir `modal`** : `--hm-text-secondary` recopie `text-muted` → les 6
+  valeurs concernées sont mises à jour à l'identique (`modal 0.6.1`). Le miroir
+  `toast` ne porte pas `text-muted` (seulement `--ht-bg`/`--ht-fg`/`--ht-border`)
+  et n'est **pas** concerné (`toast` reste `0.7.0`).
+
+> ⚠️ Les hôtes qui **vendorisent** `tokens` (ou `modal`) doivent rafraîchir leur
+> copie pinnée (`./scripts/holaf upgrade tokens <DEST>`) pour bénéficier du
+> `text-muted` corrigé.
+
+## Nouveautés v0.7
+
+### HolafModal 0.5.0 → 0.6.0 & HolafToast 0.6.0 → 0.7.0 — catalogue V2 (suite de la rupture `HolafTokens` 0.4.0)
+
+Les deux briques de **feedback** réalignent leurs miroirs sur le nouveau
+catalogue `HolafTokens` 0.4.0 : **12 combinaisons `<famille>-<mode>`** (6 familles
+`corail`, `ambre`, `emeraude`, `turquoise`, `amethyste`, `neutre` × 2 modes) —
+les presets sont recopiés **à l'identique** (mêmes hex, mêmes noms) et restent
+**vérifiés** par les tests de cohérence inter-briques.
+
+- **4 alias remappés** (mêmes règles que `HolafTokens.MIGRATIONS`) : `dark` ≡
+  `amethyste-dark`, `light` ≡ `amethyste-light`, `midnight` ≡ `amethyste-dark`,
+  `slate` ≡ `neutre-dark`.
+- **`HolafToast.dark`** : l'ancien **gel** (`#2b2b2b`, distinct de l'ancien
+  `indigo-dark`) est **levé** et aligné sur `amethyste-dark` — la rupture de
+  catalogue rendait cet ancien gel orphelin (aucune famille V2 ne correspond à
+  `#2b2b2b`). Le défaut CSS injecté (sans thème) est aligné à l'identique, donc
+  `theme: "dark"` reste ≡ aucune option `theme`.
+- **Bump MINOR** des deux briques (0.x : une rupture de valeurs de palette est un
+  changement de mineure, comme `tokens` 0.3.0 → 0.4.0). Seules les **valeurs**
+  changent : les API (`themes.register/get/list`, `setTheme`, option `theme`)
+  sont strictement inchangées.
+
+```js
+HolafModal.setTheme("amethyste-dark");   // ou "corail-light", "turquoise-dark", …
+HolafToast.setTheme("ambre-light");
+```
+
+> ⚠️ Les projets hôtes qui **vendorisent** `modal`/`toast` (Pi-Web, AiKore,
+> Homy, …) conservent leur copie pinnée : la mettre à jour est une décision de
+> l'hôte (les anciens noms de presets `indigo-*`/`midnight-*`/`slate-*`/
+> `emerald-*`/`amber-*` n'existent plus).
+
+Voir [`js/README-holaf-modal.md`](js/README-holaf-modal.md) et
+[`js/README-holaf-toast.md`](js/README-holaf-toast.md).
 
 ## Nouveautés v0.6
 
@@ -553,6 +618,26 @@ mieux comprendre avant de s'en servir.
   [`js/README-holaf-tokens.md`](js/README-holaf-tokens.md)) et la brique peut
   retirer ce qu'elle a posé. Installer `tokens`, c'est savoir (opt-in) qu'on
   installe un thème global : elle prend le contrôle de la palette de la page.
+
+### Rupture 0.4.0 — catalogue V2
+
+- **Le catalogue à 2 axes est REMPLACÉ** : 6 familles × clair/sombre = **12
+  presets** `corail` / `ambre` / `emeraude` / `turquoise` / `amethyste` /
+  `neutre`, aux **valeurs figées en hex** (calculées une fois depuis la maquette
+  V2 validée ; aucun moteur OKLCH embarqué). Chaque preset porte **16 clés** :
+  les 15 clés standard + `surface-hover` (4ᵉ palier de profondeur).
+- **Les 10 anciens presets disparaissent** (`indigo` / `midnight` / `slate` /
+  `emerald` / `amber`). Les **4 alias** (`dark` / `light` / `midnight` /
+  `slate`) sont **conservés mais remappés** vers les nouvelles familles (voir la
+  [note de migration](js/README-holaf-tokens-migration.md)).
+- **`HolafTokens.MIGRATIONS`** : table `ancien → nouveau` exportée ; **les hôtes
+  l'appliquent eux-mêmes** à leur préférence stockée.
+- **Garde V2 rejouée en test** (`tests/holaf-tokens.test.js`) : fonds et accents
+  distincts par mode, texte (et texte atténué)/fond ≥ 4,5:1, non-textuel ≥ 3:1,
+  profondeur ≥ seuil — **preuve de non-vacuité** incluse (self-test).
+
+> ⚠️ **Rupture de données** : un thème mémorisé (ex. `"indigo-dark"`) n'est plus
+> un preset valide → `setTheme` **throw**. Migrez avec `MIGRATIONS`.
 
 ### Nouveautés 0.3.0
 

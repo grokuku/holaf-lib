@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.5.0)
+# HolafModal — doc d'usage (brique holaf-lib v0.6.1)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -338,23 +338,25 @@ tous vos outils) et la possibilité de déclarer vos propres thèmes.
 - l'option `theme` reste acceptée sous sa forme historique (objet de
   variables) — comportement strictement inchangé.
 
-### Catalogue de thèmes : 5 familles × 2 modes (v0.5.0)
+### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.6.0 ; valeurs v0.6.1)
 
-Enregistrés au chargement de la brique : **10 combinaisons `<famille>-<mode>`**
-plus les **4 noms historiques** en alias. Palettes neutres, contraste des
-textes ≥ 4.5:1, radius 12px et font-size 14px partout :
+Enregistrés au chargement de la brique : **12 combinaisons `<famille>-<mode>`**
+(catalogue V2 aligné sur `HolafTokens` 0.4.1) plus les **4 noms historiques**
+remappés en alias. Contraste des textes ≥ 4.5:1, radius 12px et font-size 14px
+partout :
 
-| Famille    | `<famille>-light`                | `<famille>-dark`                 |
-|------------|----------------------------------|----------------------------------|
-| `indigo`   | fond #ffffff · accent #4f46e5    | fond #1e1e1e · accent #6366f1    |
-| `midnight` | fond #F6F7FC · accent #5B63D3    | fond #10111d · accent #818cf8    |
-| `slate`    | fond #F4F6F8 · accent #475569    | fond #1f232b · accent #94a3b8    |
-| `emerald`  | fond #FFFFFF · accent #047857    | fond #0B1512 · accent #34D399    |
-| `amber`    | fond #FFFFFF · accent #B45309    | fond #1A1408 · accent #FBBF24    |
+| Famille    | `<famille>-light`              | `<famille>-dark`              |
+|------------|--------------------------------|-------------------------------|
+| `corail`   | fond #ffe3ed · accent #9c045e  | fond #36252c · accent #fa7fb5 |
+| `ambre`    | fond #dcc8b5 · accent #7a4800  | fond #0c0400 · accent #f29a2d |
+| `emeraude` | fond #c9dac4 · accent #276701  | fond #081005 · accent #7fc765 |
+| `turquoise`| fond #c3e2e8 · accent #07606c  | fond #051a1e · accent #0ec7de |
+| `amethyste`| fond #dfe1fa · accent #4d41b0  | fond #1e1f2e · accent #a1a3ff |
+| `neutre`   | fond #f2f4f5 · accent #515457  | fond #343537 · accent #aeb1b5 |
 
-Les 10 presets sont les **miroirs** des presets homonymes de `HolafTokens` 0.2.0
-(mêmes surfaces, même texte, même accent) — pour que page, modale et toast
-restent alignés quelle que soit la famille/mode choisie. Correspondance :
+Les 12 presets sont les **miroirs** des presets homonymes de `HolafTokens` 0.4.1
+(catalogue V2 — mêmes surfaces, même texte, même accent) — pour que page, modale
+et toast restent alignés quelle que soit la famille/mode choisie. Correspondance :
 
 | Variable modale       | Clé HolafTokens | Variable modale         | Clé HolafTokens   |
 |-----------------------|-----------------|-------------------------|-------------------|
@@ -363,31 +365,37 @@ restent alignés quelle que soit la famille/mode choisie. Correspondance :
 | `--hm-bg-input`       | `surface-raised`| `--hm-accent-text`      | `accent-text`     |
 | `--hm-text`           | `text`          | `--hm-danger`           | `danger`          |
 | `--hm-text-secondary` | `text-muted`    | `--hm-danger-text`      | `danger-text`     |
-| `--hm-border`         | `border`        | `--hm-danger-hover`     | `danger-hover` ⁽¹⁾ |
+| `--hm-border`         | `border`        | `--hm-danger-hover`     | `danger-hover`    |
 
-⁽¹⁾ présents uniquement dans les presets **générés** de `HolafTokens` ; pour les
-palettes historiques figées, la valeur historique de la modale est conservée.
+`--hm-radius` / `--hm-font-size` / `--hm-shadow` reprennent les valeurs de PAGE
+de `HolafTokens` (radius 12px, font-size 14px, ombre `0 18px 50px` par mode),
+tandis que `--hm-overlay-bg` / `--hm-busy-bg` sont dérivés du mode (clair :
+scrim zinc + busy 0.82 ; sombre : scrim teinté du fond à 0.55 + busy 0.85).
 
-`--hm-radius` / `--hm-font-size` / `--hm-shadow` restent propres à la modale
-(ombres `0 18px 50px`), tandis que `--hm-overlay-bg` / `--hm-busy-bg` sont
-dérivés du mode (clair / sombre).
+**Alias historiques (remappés V2)** — valeurs rigoureusement identiques :
 
-**Alias historiques** — valeurs rigoureusement identiques :
+| Nom historique | Alias de (V2)     |
+|----------------|-------------------|
+| `dark`         | `amethyste-dark`  |
+| `light`        | `amethyste-light` |
+| `midnight`     | `amethyste-dark`  |
+| `slate`        | `neutre-dark`     |
 
-| Nom historique | Alias de        |
-|----------------|-----------------|
-| `dark`         | `indigo-dark`   |
-| `light`        | `indigo-light`  |
-| `midnight`     | `midnight-dark` |
-| `slate`        | `slate-dark`    |
+Ces remaps suivent la table `HolafTokens.MIGRATIONS` (0.4.0).
+
+> **v0.6.1 (PATCH)** : miroir du correctif de contraste `HolafTokens` 0.4.1 — les
+> 6 `--hm-text-secondary` mirorant un `text-muted` corrigé (`ambre-light`,
+> `emeraude-light`, `turquoise-light`, `corail-dark`, `amethyste-dark`,
+> `neutre-dark`) sont mis à jour à l'identique ; le défaut du CSS injecté
+> (`amethyste-dark`) suit. Aucune API ne change.
 
 `dark` reproduit **strictement** les défauts de la brique :
 `theme: "dark"` ≡ aucune option `theme` (zéro surprise visuelle).
 
 ```js
-HolafModal.open({ title: "Réglages", content: "…", theme: "light" });        // clair historique
-HolafModal.open({ title: "Analyse",  content: "…", theme: "emerald-dark" }); // famille émeraude sombre
-HolafModal.open({ title: "Détail",   content: "…", theme: "amber-light" });  // famille ambre claire
+HolafModal.open({ title: "Réglages", content: "…", theme: "light" });          // amethyste-light
+HolafModal.open({ title: "Analyse",  content: "…", theme: "emeraude-dark" }); // famille émeraude sombre
+HolafModal.open({ title: "Détail",   content: "…", theme: "turquoise-dark" }); // famille turquoise sombre
 ```
 
 > Les presets ne figent **pas** `--hm-width` : la largeur reste gouvernée par
@@ -433,7 +441,7 @@ HolafModal.themes.register("foret", {
 
 HolafModal.open({ title: "Atelier", theme: "foret" }); // utilisable comme un preset
 
-HolafModal.themes.list();        // → ["indigo-light", …, "amber-dark", "dark", "light", "midnight", "slate", "foret"]
+HolafModal.themes.list();        // → ["corail-light", …, "neutre-dark", "dark", "light", "midnight", "slate", "foret"]
 HolafModal.themes.get("foret");  // → copie des variables (le registre est protégé)
 HolafModal.themes.get("nul");    // → null
 ```
@@ -639,7 +647,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.5.0).
+`HolafModal.version` (v0.6.1).
 
 ---
 

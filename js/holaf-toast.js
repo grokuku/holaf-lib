@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafToast · version 0.6.0
+ * Holaf UI — Brique HolafToast · version 0.7.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Notifications flottantes (toasts) autonomes, zéro dépendance runtime :
  * 4 types (info/success/warning/error) avec icône, empilement par position
@@ -51,6 +51,17 @@
  * EXACTS de indigo-light / midnight-dark / slate-dark. `dark` reste un preset
  * GELÉ (défaut CSS #2b2b2b) volontairement distinct de indigo-dark (#1e1e1e),
  * pour zéro rupture — voir commentaire du registre. Aucune API ne change.
+ * v0.7.0 — CATALOGUE V2 (RUPTURE alignée sur HolafTokens 0.4.0) : le registre
+ * passe aux 12 combinaisons `<famille>-<mode>` du catalogue V2 (corail, ambre,
+ * emeraude, turquoise, amethyste, neutre × light, dark). Les 4 noms historiques
+ * (dark / light / midnight / slate) RESTENT disponibles et sont REMAPPÉS en
+ * alias exacts (dark ≡ amethyste-dark, light ≡ amethyste-light, midnight ≡
+ * amethyste-dark, slate ≡ neutre-dark ; mêmes règles que HolafTokens.MIGRATIONS).
+ * `dark`, anciennement GELÉ (#2b2b2b), est désormais ALIGNÉ : la rupture de
+ * catalogue rendait l'ancien gel orphelin (aucune famille V2 ne correspond à
+ * #2b2b2b). Le défaut CSS injecté (sans thème) est aligné à l'identique, donc
+ * `theme:"dark"` ≡ aucune option `theme`. Seules les valeurs des presets
+ * changent — d'où le bump MINOR (0.x : rupture de valeurs de palette).
  *
  * v0.4.0 — fond teinté PAR TYPE (info/success/warning/error) avec fallback :
  * nouvelles variables de thème OPTIONNELLES --ht-bg-info, --ht-bg-success,
@@ -86,7 +97,7 @@
 const HolafToast = (function () {
     "use strict";
 
-    const VERSION = "0.6.0";
+    const VERSION = "0.7.0";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const CSS_ID = "holaf-toast-style";
@@ -248,24 +259,21 @@ const HolafToast = (function () {
     }
 
     // ─── Préréglages génériques (enregistrés au chargement de la brique) ────
-    // CATALOGUE À 2 AXES (v0.6.0) : 5 familles (indigo, midnight, slate,
-    // emerald, amber) × 2 modes (light, dark) = 10 presets `<famille>-<mode>`,
-    // puis les 4 NOMS HISTORIQUES (dark / light / midnight / slate). Contraste
-    // des textes ≥ 4.5:1. PAS de --ht-width dans un preset : la largeur reste
-    // gouvernée par la brique (responsive mobile).
+    // CATALOGUE À 2 AXES (v0.7.0) : 6 familles (corail, ambre, emeraude,
+    // turquoise, amethyste, neutre) × 2 modes (light, dark) = 12 presets
+    // `<famille>-<mode>`, puis les 4 NOMS HISTORIQUES (dark / light / midnight /
+    // slate) REMAPPÉS. Contraste des textes ≥ 4.5:1. PAS de --ht-width dans un
+    // preset : la largeur reste gouvernée par la brique (responsive mobile).
     //
     // PROVENANCE DES VALEURS (DONNÉES LITTÉRALES, aucun calcul runtime) : les
-    // 10 presets sont les MIROIRS des presets homonymes de HolafTokens 0.2.0
-    // (js/holaf-tokens.js), figés ici pour que la brique reste AUTONOME (zéro
-    // dépendance runtime). Cohérence STRICTE page↔toast sur les surfaces, le
-    // texte et la bordure :
+    // 12 presets sont les MIROIRS des presets homonymes de HolafTokens 0.4.0
+    // (js/holaf-tokens.js — catalogue V2), figés ici pour que la brique reste
+    // AUTONOME (zéro dépendance runtime). Cohérence STRICTE page↔toast sur les
+    // surfaces, le texte et la bordure :
     //     --ht-bg ← surface · --ht-fg ← text · --ht-border ← border
     // Les accents de TYPE (--ht-accent-*) sont propres au toast (HolafTokens
     // n'a pas de notion de « type ») :
-    //     --ht-accent-info    = accent de la FAMILLE (HolafTokens `accent`) sur
-    //                           les presets non historiques ; pour indigo-light
-    //                           / midnight-dark / slate-dark on CONSERVE les
-    //                           accents de type HISTORIQUES (identité alias).
+    //     --ht-accent-info    = accent de la FAMILLE (HolafTokens `accent`)
     //     --ht-accent-success = vert sémantique par mode (light #15803d /
     //                           dark #34d399)
     //     --ht-accent-warning = ambre sémantique par mode (light #b45309 /
@@ -276,148 +284,176 @@ const HolafToast = (function () {
     // MÊME formule que les teintes historiques, pas de color-mix()). PAS de
     // --ht-bg-info : le type info reste neutre (fond --ht-bg via le fallback
     // du CSS). SANS thème, les défauts CSS restent sans teinte.
-    // --ht-radius (10px) et --ht-shadow (0 6px 24px …) restent propres au toast,
-    // alignés sur les presets historiques (pas les valeurs de page).
-    // Les hex GÉNÉRÉS sont repris À L'IDENTIQUE (casse comprise) de
-    // HolafTokens.PRESETS pour que le test de cohérence inter-briques passe.
+    // --ht-radius (10px) et --ht-shadow (0 6px 24px …) restent propres au toast
+    // (alignés sur les presets historiques, pas les valeurs de page).
+    // Les hex de surface/texte/bordure sont repris À L'IDENTIQUE (casse comprise)
+    // de HolafTokens.PRESETS pour que le test de cohérence inter-briques passe.
     const THEME_PRESETS = {
-        "indigo-light": {
-            "--ht-bg": "#ffffff",
-            "--ht-bg-success": "#dcece2",
-            "--ht-bg-warning": "#f4e5da",
-            "--ht-bg-error": "#fadede",
-            "--ht-fg": "#18181b",
-            "--ht-border": "#d4d4d8",
-            "--ht-accent-info": "#2563eb",
+        "corail-light": {
+            "--ht-bg": "#ffe3ed",
+            "--ht-bg-success": "#dcd4d3",
+            "--ht-bg-warning": "#f4cdcb",
+            "--ht-bg-error": "#f6c6cf",
+            "--ht-fg": "#2f2227",
+            "--ht-border": "#d9b9c4",
+            "--ht-accent-info": "#9c045e",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#dc2626",
+            "--ht-accent-error": "#c62222",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
-        "indigo-dark": {
-            "--ht-bg": "#1e1e1e",
-            "--ht-bg-success": "#213930",
-            "--ht-bg-warning": "#3F361F",
-            "--ht-bg-error": "#3D2424",
-            "--ht-fg": "#e4e4e7",
-            "--ht-border": "#3f3f46",
-            "--ht-accent-info": "#6366f1",
-            "--ht-accent-success": "#34d399",
-            "--ht-accent-warning": "#fbbf24",
-            "--ht-accent-error": "#ef4444",
-            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
-            "--ht-radius": "10px",
-        },
-        "midnight-light": {
-            "--ht-bg": "#F6F7FC",
-            "--ht-bg-success": "#D4E5DF",
-            "--ht-bg-warning": "#ECDED8",
-            "--ht-bg-error": "#F2D8DC",
-            "--ht-fg": "#18181B",
-            "--ht-border": "#D4D6F3",
-            "--ht-accent-info": "#5B63D3",
-            "--ht-accent-success": "#15803d",
-            "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#DC2626",
-            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
-            "--ht-radius": "10px",
-        },
-        "midnight-dark": {
-            "--ht-bg": "#10111d",
-            "--ht-bg-success": "#152e30",
-            "--ht-bg-warning": "#332b1e",
-            "--ht-bg-error": "#331f2a",
-            "--ht-fg": "#e2e4f0",
-            "--ht-border": "#272a44",
-            "--ht-accent-info": "#60a5fa",
+        "corail-dark": {
+            "--ht-bg": "#36252c",
+            "--ht-bg-success": "#363f3c",
+            "--ht-bg-warning": "#543c2b",
+            "--ht-bg-error": "#533036",
+            "--ht-fg": "#f4eef0",
+            "--ht-border": "#735963",
+            "--ht-accent-info": "#fa7fb5",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
             "--ht-accent-error": "#f87171",
-            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.6)",
-            "--ht-radius": "10px",
-        },
-        "slate-light": {
-            "--ht-bg": "#F4F6F8",
-            "--ht-bg-success": "#D3E4DC",
-            "--ht-bg-warning": "#EADED4",
-            "--ht-bg-error": "#F0D7D9",
-            "--ht-fg": "#18181B",
-            "--ht-border": "#CED3D9",
-            "--ht-accent-info": "#475569",
-            "--ht-accent-success": "#15803d",
-            "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#DC2626",
-            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
-            "--ht-radius": "10px",
-        },
-        "slate-dark": {
-            "--ht-bg": "#1f232b",
-            "--ht-bg-success": "#2b4040",
-            "--ht-bg-warning": "#403d30",
-            "--ht-bg-error": "#40373d",
-            "--ht-fg": "#e6e9ee",
-            "--ht-border": "#3a4150",
-            "--ht-accent-info": "#93c5fd",
-            "--ht-accent-success": "#6ee7b7",
-            "--ht-accent-warning": "#fcd34d",
-            "--ht-accent-error": "#fca5a5",
-            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.5)",
-            "--ht-radius": "10px",
-        },
-        "emerald-light": {
-            "--ht-bg": "#FFFFFF",
-            "--ht-bg-success": "#DCECE2",
-            "--ht-bg-warning": "#F4E5DA",
-            "--ht-bg-error": "#FADEDE",
-            "--ht-fg": "#18181B",
-            "--ht-border": "#C8E1DA",
-            "--ht-accent-info": "#047857",
-            "--ht-accent-success": "#15803d",
-            "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#DC2626",
-            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
-            "--ht-radius": "10px",
-        },
-        "emerald-dark": {
-            "--ht-bg": "#0B1512",
-            "--ht-bg-success": "#113226",
-            "--ht-bg-warning": "#2F2F15",
-            "--ht-bg-error": "#2D1C1A",
-            "--ht-fg": "#F4F4F5",
-            "--ht-border": "#143F30",
-            "--ht-accent-info": "#34D399",
-            "--ht-accent-success": "#34d399",
-            "--ht-accent-warning": "#fbbf24",
-            "--ht-accent-error": "#EF4444",
             "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
             "--ht-radius": "10px",
         },
-        "amber-light": {
-            "--ht-bg": "#FFFFFF",
-            "--ht-bg-success": "#DCECE2",
-            "--ht-bg-warning": "#F4E5DA",
-            "--ht-bg-error": "#FADEDE",
-            "--ht-fg": "#18181B",
-            "--ht-border": "#EFD9C9",
-            "--ht-accent-info": "#B45309",
+        "ambre-light": {
+            "--ht-bg": "#dcc8b5",
+            "--ht-bg-success": "#bebda3",
+            "--ht-bg-warning": "#d6b69b",
+            "--ht-bg-error": "#d4ae9e",
+            "--ht-fg": "#2d251c",
+            "--ht-border": "#b6a08b",
+            "--ht-accent-info": "#7a4800",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#DC2626",
+            "--ht-accent-error": "#a51d1d",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
-        "amber-dark": {
-            "--ht-bg": "#1A1408",
-            "--ht-bg-success": "#1E311E",
-            "--ht-bg-warning": "#3C2E0C",
-            "--ht-bg-error": "#3A1B11",
-            "--ht-fg": "#F4F4F5",
-            "--ht-border": "#4C3A0E",
-            "--ht-accent-info": "#FBBF24",
+        "ambre-dark": {
+            "--ht-bg": "#0c0400",
+            "--ht-bg-success": "#122317",
+            "--ht-bg-warning": "#302005",
+            "--ht-bg-error": "#2f1411",
+            "--ht-fg": "#f3efec",
+            "--ht-border": "#42301f",
+            "--ht-accent-info": "#f29a2d",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
-            "--ht-accent-error": "#EF4444",
+            "--ht-accent-error": "#f87171",
+            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
+            "--ht-radius": "10px",
+        },
+        "emeraude-light": {
+            "--ht-bg": "#c9dac4",
+            "--ht-bg-success": "#aecdb0",
+            "--ht-bg-warning": "#c6c6a8",
+            "--ht-bg-error": "#c5beab",
+            "--ht-fg": "#22291f",
+            "--ht-border": "#a0b29a",
+            "--ht-accent-info": "#276701",
+            "--ht-accent-success": "#15803d",
+            "--ht-accent-warning": "#b45309",
+            "--ht-accent-error": "#b01e1e",
+            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
+            "--ht-radius": "10px",
+        },
+        "emeraude-dark": {
+            "--ht-bg": "#081005",
+            "--ht-bg-success": "#0f2d1b",
+            "--ht-bg-warning": "#2c2a0a",
+            "--ht-bg-error": "#2c1f15",
+            "--ht-fg": "#eef1ed",
+            "--ht-border": "#354430",
+            "--ht-accent-info": "#7fc765",
+            "--ht-accent-success": "#34d399",
+            "--ht-accent-warning": "#fbbf24",
+            "--ht-accent-error": "#f87171",
+            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
+            "--ht-radius": "10px",
+        },
+        "turquoise-light": {
+            "--ht-bg": "#c3e2e8",
+            "--ht-bg-success": "#a9d3ce",
+            "--ht-bg-warning": "#c1cdc7",
+            "--ht-bg-error": "#c2c5ca",
+            "--ht-fg": "#1b292c",
+            "--ht-border": "#97bbc2",
+            "--ht-accent-info": "#07606c",
+            "--ht-accent-success": "#15803d",
+            "--ht-accent-warning": "#b45309",
+            "--ht-accent-error": "#bb2020",
+            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
+            "--ht-radius": "10px",
+        },
+        "turquoise-dark": {
+            "--ht-bg": "#051a1e",
+            "--ht-bg-success": "#0c3630",
+            "--ht-bg-warning": "#2a331f",
+            "--ht-bg-error": "#29272a",
+            "--ht-fg": "#ecf1f2",
+            "--ht-border": "#315056",
+            "--ht-accent-info": "#0ec7de",
+            "--ht-accent-success": "#34d399",
+            "--ht-accent-warning": "#fbbf24",
+            "--ht-accent-error": "#f87171",
+            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
+            "--ht-radius": "10px",
+        },
+        "amethyste-light": {
+            "--ht-bg": "#dfe1fa",
+            "--ht-bg-success": "#c1d2de",
+            "--ht-bg-warning": "#d9ccd6",
+            "--ht-bg-error": "#dac4d9",
+            "--ht-fg": "#252530",
+            "--ht-border": "#b6b9d5",
+            "--ht-accent-info": "#4d41b0",
+            "--ht-accent-success": "#15803d",
+            "--ht-accent-warning": "#b45309",
+            "--ht-accent-error": "#bb2020",
+            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
+            "--ht-radius": "10px",
+        },
+        "amethyste-dark": {
+            "--ht-bg": "#1e1f2e",
+            "--ht-bg-success": "#213a3e",
+            "--ht-bg-warning": "#3f372d",
+            "--ht-bg-error": "#3f2b38",
+            "--ht-fg": "#eff0f4",
+            "--ht-border": "#52536b",
+            "--ht-accent-info": "#a1a3ff",
+            "--ht-accent-success": "#34d399",
+            "--ht-accent-warning": "#fbbf24",
+            "--ht-accent-error": "#f87171",
+            "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
+            "--ht-radius": "10px",
+        },
+        "neutre-light": {
+            "--ht-bg": "#f2f4f5",
+            "--ht-bg-success": "#d1e3d9",
+            "--ht-bg-warning": "#e9dcd2",
+            "--ht-bg-error": "#edd5d6",
+            "--ht-fg": "#1f2730",
+            "--ht-border": "#c6cbd0",
+            "--ht-accent-info": "#515457",
+            "--ht-accent-success": "#15803d",
+            "--ht-accent-warning": "#b45309",
+            "--ht-accent-error": "#d12424",
+            "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
+            "--ht-radius": "10px",
+        },
+        "neutre-dark": {
+            "--ht-bg": "#343537",
+            "--ht-bg-success": "#344d46",
+            "--ht-bg-warning": "#524a34",
+            "--ht-bg-error": "#513f41",
+            "--ht-fg": "#edf0f4",
+            "--ht-border": "#686e75",
+            "--ht-accent-info": "#aeb1b5",
+            "--ht-accent-success": "#34d399",
+            "--ht-accent-warning": "#fbbf24",
+            "--ht-accent-error": "#f87878",
             "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
             "--ht-radius": "10px",
         },
@@ -425,33 +461,20 @@ const HolafToast = (function () {
     Object.keys(THEME_PRESETS).forEach((name) => themesRegister(name, THEME_PRESETS[name]));
 
     // ─── Noms historiques (valeurs RIGOUREUSEMENT identiques) ───────────────
-    // light / midnight / slate deviennent des ALIAS EXACTS de indigo-light /
-    // midnight-dark / slate-dark : les surfaces/texte/bordure de ces familles
-    // sont déjà les palettes historiques, et leurs accents de type historiques
-    // sont conservés à l'intérieur des presets ci-dessus.
-    themesRegister("light", THEME_PRESETS["indigo-light"]);
-    themesRegister("midnight", THEME_PRESETS["midnight-dark"]);
-    themesRegister("slate", THEME_PRESETS["slate-dark"]);
-    // `dark` : ÉCART DOCUMENTÉ — le preset historique de la brique
-    // (#2b2b2b / #f0f0f0 / #4a4a4a, défaut du CSS injecté) est DISTINCT du preset
-    // indigo-dark de HolafTokens (#1e1e1e / #e4e4e7 / #3f3f46). Conformément à
-    // la règle « zéro rupture », on NE corrige PAS : `dark` reste un preset
-    // GELÉ et n'est donc PAS un alias de indigo-dark. Qui veut la cohérence
-    // page↔toast utilise `indigo-dark` (ou la famille choisie).
-    themesRegister("dark", {
-        "--ht-bg": "#2b2b2b",
-        "--ht-bg-success": "#303f35",
-        "--ht-bg-warning": "#463d2c",
-        "--ht-bg-error": "#463131",
-        "--ht-fg": "#f0f0f0",
-        "--ht-border": "#4a4a4a",
-        "--ht-accent-info": "#4aa3ff",
-        "--ht-accent-success": "#4caf6d",
-        "--ht-accent-warning": "#e0a030",
-        "--ht-accent-error": "#e05555",
-        "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.35)",
-        "--ht-radius": "10px",
-    });
+    // Les 4 noms historiques sont REMAPPÉS sur les nouvelles familles (mêmes
+    // règles que la table HolafTokens.MIGRATIONS 0.4.0) :
+    //   dark ≡ amethyste-dark · light ≡ amethyste-light ·
+    //   midnight ≡ amethyste-dark · slate ≡ neutre-dark.
+    // v0.7.0 : `dark`, anciennement GELÉ (#2b2b2b, défaut CSS distinct de
+    // l'ancien indigo-dark #1e1e1e), est désormais ALIGNÉ sur amethyste-dark.
+    // La rupture de catalogue 0.4.0 rendait l'ancien gel orphelin (aucune
+    // famille V2 ne correspond à #2b2b2b) ; l'aligner rétablit la cohérence
+    // tokens ↔ toast sur les 4 alias. Le défaut CSS injecté (sans thème) est
+    // aligné à l'identique, donc `theme:"dark"` ≡ aucune option `theme`.
+    themesRegister("dark", THEME_PRESETS["amethyste-dark"]);
+    themesRegister("light", THEME_PRESETS["amethyste-light"]);
+    themesRegister("midnight", THEME_PRESETS["amethyste-dark"]);
+    themesRegister("slate", THEME_PRESETS["neutre-dark"]);
 
     // ─── Thème global par défaut (VOLATIL — aucune persistance) ─────────────
     // HolafToast.setTheme(...) s'applique à tous les toasts qui ne passent PAS
@@ -567,14 +590,14 @@ const HolafToast = (function () {
     gap: 10px;
     pointer-events: none;
     max-width: calc(100vw - 24px);
-    --ht-bg: #2b2b2b;
-    --ht-fg: #f0f0f0;
-    --ht-border: #4a4a4a;
-    --ht-accent-info: #4aa3ff;
-    --ht-accent-success: #4caf6d;
-    --ht-accent-warning: #e0a030;
-    --ht-accent-error: #e05555;
-    --ht-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    --ht-bg: #1e1f2e;
+    --ht-fg: #eff0f4;
+    --ht-border: #52536b;
+    --ht-accent-info: #a1a3ff;
+    --ht-accent-success: #34d399;
+    --ht-accent-warning: #fbbf24;
+    --ht-accent-error: #f87171;
+    --ht-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
     --ht-radius: 10px;
     --ht-width: 340px;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;

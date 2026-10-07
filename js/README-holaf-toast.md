@@ -6,7 +6,7 @@ empilées, avec auto-dismiss, pause au survol, actions cliquables, **fonds
 teintés par type** (avec fallback), **thèmes** (registre + presets) et
 **6 positions**.
 
-**Version : 0.6.0**
+**Version : 0.7.0**
 
 ---
 
@@ -316,47 +316,50 @@ vos propres thèmes. Miroir de la philosophie de `HolafModal`.
 - l'option `theme` reste acceptée sous sa forme historique (objet de
   variables) — comportement strictement inchangé.
 
-### Catalogue de thèmes : 5 familles × 2 modes (v0.6.0)
+### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.7.0)
 
-Enregistrés au chargement de la brique : **10 combinaisons `<famille>-<mode>`**
-plus les **4 noms historiques** en alias. Palettes neutres, contraste des
-textes ≥ 4.5:1, radius 10px partout :
+Enregistrés au chargement de la brique : **12 combinaisons `<famille>-<mode>`**
+(catalogue V2 aligné sur `HolafTokens` 0.4.1) plus les **4 noms historiques**
+remappés en alias. Contraste des textes ≥ 4.5:1, radius 10px partout :
 
-| Famille    | `<famille>-light`             | `<famille>-dark`              |
-|------------|-------------------------------|-------------------------------|
-| `indigo`   | fond #ffffff · accent #4f46e5 | fond #1e1e1e · accent #6366f1 |
-| `midnight` | fond #F6F7FC · accent #5B63D3 | fond #10111d · accent #818cf8 |
-| `slate`    | fond #F4F6F8 · accent #475569 | fond #1f232b · accent #94a3b8 |
-| `emerald`  | fond #FFFFFF · accent #047857 | fond #0B1512 · accent #34D399 |
-| `amber`    | fond #FFFFFF · accent #B45309 | fond #1A1408 · accent #FBBF24 |
+| Famille    | `<famille>-light`                | `<famille>-dark`              |
+|------------|----------------------------------|-------------------------------|
+| `corail`   | fond #ffe3ed · accent #9c045e    | fond #36252c · accent #fa7fb5 |
+| `ambre`    | fond #dcc8b5 · accent #7a4800    | fond #0c0400 · accent #f29a2d |
+| `emeraude` | fond #c9dac4 · accent #276701    | fond #081005 · accent #7fc765 |
+| `turquoise`| fond #c3e2e8 · accent #07606c    | fond #051a1e · accent #0ec7de |
+| `amethyste`| fond #dfe1fa · accent #4d41b0    | fond #1e1f2e · accent #a1a3ff |
+| `neutre`   | fond #f2f4f5 · accent #515457    | fond #343537 · accent #aeb1b5 |
 
-Cohérence **stricte** page ↔ toast sur les surfaces/texte/bordure : les 10
-presets sont les miroirs des presets homonymes de `HolafTokens` 0.2.0
+Cohérence **stricte** page ↔ toast sur les surfaces/texte/bordure : les 12
+presets sont les miroirs des presets homonymes de `HolafTokens` 0.4.1
 (`--ht-bg` ← `surface`, `--ht-fg` ← `text`, `--ht-border` ← `border`). Les
 accents de **type** (`--ht-accent-info/success/warning/error`) sont propres au
-toast : `--ht-accent-info` reprend l'accent de la famille sur les presets non
-historiques et `--ht-accent-error` reprend le `danger` de la famille.
+toast : `--ht-accent-info` reprend l'accent de la famille et `--ht-accent-error`
+reprend le `danger` de la famille.
 
-**Noms historiques** : `light` / `midnight` / `slate` sont des alias exacts de
-`indigo-light` / `midnight-dark` / `slate-dark`.
+**Noms historiques (remappés V2)** — alias exacts (règles `HolafTokens.MIGRATIONS`) :
 
-| Nom historique | Statut                                             |
-|----------------|----------------------------------------------------|
-| `light`        | alias exact de `indigo-light`                      |
-| `midnight`     | alias exact de `midnight-dark`                     |
-| `slate`        | alias exact de `slate-dark`                        |
-| `dark`         | **gelé** — historique #2b2b2b / #f0f0f0 / #4a4a4a |
+| Nom historique | Alias de (V2)     |
+|----------------|-------------------|
+| `dark`         | `amethyste-dark`  |
+| `light`        | `amethyste-light` |
+| `midnight`     | `amethyste-dark`  |
+| `slate`        | `neutre-dark`     |
 
-> `dark` est le défaut CSS historique du toast (fond #2b2b2b) : il diffère
-> volontairement du preset `indigo-dark` de `HolafTokens` (fond #1e1e1e) et
-> n'est donc **pas** un alias, pour garantir zéro rupture visuelle. Pour
-> aligner un toast sur une page sombre, utilisez `indigo-dark` (ou la famille
-> choisie).
+> **v0.7.0 — fin du gel de `dark`.** Historiquement, `dark` était **gelé**
+> (fond #2b2b2b / texte #f0f0f0 / bordure #4a4a4a, distinct de l'ancien
+> `indigo-dark` #1e1e1e) pour préserver le défaut CSS du toast. La rupture de
+> catalogue 0.4.0 a rendu cet ancien gel **orphelin** : `#2b2b2b` ne correspond
+> à aucune famille V2. `dark` est donc désormais **aligné** sur `amethyste-dark`,
+> et le défaut CSS injecté (sans thème) est aligné à l'identique —
+> `theme: "dark"` ≡ aucune option `theme`. Pour un toast neutre sombre, utilisez
+> `neutre-dark`.
 
 ```js
-HolafToast.show({ message: "Réglages", theme: "light" });        // clair historique
-HolafToast.show({ message: "Analyse",  theme: "emerald-dark" }); // émeraude sombre
-HolafToast.show({ message: "Détail",   theme: "amber-light" });  // ambre clair
+HolafToast.show({ message: "Réglages", theme: "light" });         // amethyste-light
+HolafToast.show({ message: "Analyse",  theme: "emeraude-dark" }); // émeraude sombre
+HolafToast.show({ message: "Détail",   theme: "turquoise-dark" }); // turquoise sombre
 ```
 
 > Les presets ne figent **pas** `--ht-width` : la largeur reste gouvernée par
@@ -394,12 +397,12 @@ une compatibilité maximale) :
 
 | Preset     | `--ht-bg-success` | `--ht-bg-warning` | `--ht-bg-error` |
 |------------|-------------------|-------------------|-----------------|
-| `dark`     | `#303f35`         | `#463d2c`         | `#463131`       |
-| `light`    | `#dcece2`         | `#f4e5da`         | `#fadede`       |
-| `midnight` | `#152e30`         | `#332b1e`         | `#331f2a`       |
-| `slate`    | `#2b4040`         | `#403d30`         | `#40373d`       |
+| `dark` ≡ `amethyste-dark`      | `#213a3e` | `#3f372d` | `#3f2b38` |
+| `light` ≡ `amethyste-light`    | `#c1d2de` | `#d9ccd6` | `#dac4d9` |
+| `midnight` ≡ `amethyste-dark`  | `#213a3e` | `#3f372d` | `#3f2b38` |
+| `slate` ≡ `neutre-dark`        | `#344d46` | `#524a34` | `#513f41` |
 
-Les 10 combinaisons `<famille>-<mode>` suivent la même formule (mix 15 %).
+Les 12 combinaisons `<famille>-<mode>` suivent la même formule (mix 15 %).
 
 Le type **info** n'a pas de var dans les presets : il garde le fond neutre
 `--ht-bg` du preset. Un thème custom qui veut un fond info dédié ajoute
@@ -447,7 +450,7 @@ HolafToast.themes.register("foret", {
 
 HolafToast.show({ message: "Atelier", theme: "foret" }); // utilisable comme un preset
 
-HolafToast.themes.list();        // → ["indigo-light", …, "amber-dark", "dark", "light", "midnight", "slate", "foret"]
+HolafToast.themes.list();        // → ["corail-light", …, "neutre-dark", "dark", "light", "midnight", "slate", "foret"]
 HolafToast.themes.get("foret");  // → copie des variables (le registre est protégé)
 HolafToast.themes.get("nul");    // → null
 ```
