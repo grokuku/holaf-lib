@@ -31,11 +31,11 @@ brique avec sa version et son fichier :
 {
   "name": "holaf-lib",
   "bricks": {
-    "modal":   { "version": "0.6.1", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
-    "toast":   { "version": "0.7.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
+    "modal":   { "version": "0.7.0", "file": "js/holaf-modal.js",   "category": "component",  "description": "…" },
+    "toast":   { "version": "0.8.0", "file": "js/holaf-toast.js",  "category": "component",  "description": "…" },
     "fetch":   { "version": "0.2.0", "file": "js/holaf-fetch.js",  "category": "component",  "description": "…" },
     "viewport": { "version": "0.1.3", "file": "js/holaf-viewport.js", "category": "component", "description": "…" },
-    "tokens":  { "version": "0.4.1", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
+    "tokens":  { "version": "0.6.0", "file": "js/holaf-tokens.js", "category": "foundation", "description": "…" }
   }
 }
 ```
@@ -54,13 +54,13 @@ Grâce à ça, le script `holaf` sait :
 
 | Brique     | Fichier             | Version | Statut     | Rôle                                                              |
 |------------|---------------------|---------|------------|-------------------------------------------------------------------|
-| modal      | `js/holaf-modal.js` | 0.6.1   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), **12 thèmes `<famille>-<mode>` V2** (miroirs de `HolafTokens` 0.4.1) + 4 alias remappés, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
-| toast      | `js/holaf-toast.js` | 0.7.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, **12 thèmes `<famille>-<mode>` V2** cohérents avec `HolafTokens` 0.4.1, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| modal      | `js/holaf-modal.js` | 0.7.0   | ✅ prête   | Modales, alertes, confirmations, saisies, écrans d'attente (busy), **12 thèmes `<famille>-<mode>` V2** (miroirs de `HolafTokens` 0.6.0, variante C) + 4 alias remappés, fenêtre (drag/resize/persistance/zoom), **modale à contenu libre** (`open` + `actions`, bouton submit hors-form via `form=`), **mode CSS externe** (`getCss()` + `injectStyles`) |
+| toast      | `js/holaf-toast.js` | 0.8.0   | ✅ prête   | Notifications flottantes empilées (4 types à fond teinté avec fallback, position configurable, 6 positions animées, empilement adapté, **12 thèmes `<famille>-<mode>` V2** cohérents avec `HolafTokens` 0.6.0, pause au survol, actions, aria-live, id métier, progression manuelle), **mode CSS externe** (`getCss()` + `injectStyles`) |
 | fetch      | `js/holaf-fetch.js` | 0.2.0   | ✅ prête   | Wrapper HTTP maison (JSON blindé, erreurs typées, timeout, retry, auth enfichable bearer/CSRF/custom, options natives, configure) |
 | viewport   | `js/holaf-viewport.js` | 0.1.3 | ✅ prête | Géométrie + interactions de viewport image (zoom/pan/fit, zoom-to-cursor, clamps, mode content & headless, SANS rendu ni CSS) |
 | notify     | `python/holaf-notify.py` | 0.1.0 | ✅ prête | 1ʳᵉ brique **Python** (rayon `python/`, stdlib pur) : notifie OpenClaw via `POST /hooks/wake` (Bearer `hooks.token`), payload `{text, mode}`, résumé clé=valeur, retry léger (3×, 1s/2s/4s, réseau/5xx) |
 | color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
-| tokens     | `js/holaf-tokens.js` | 0.4.1 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes V2 (RUPTURE)** : 6 familles × clair/sombre (12 presets `corail`/`ambre`/`emeraude`/`turquoise`/`amethyste`/`neutre`) aux valeurs **figées en hex** + 4 alias **remappés** (`dark`/`light`→amethyste, `midnight`→amethyste-dark, `slate`→neutre-dark) ; **table `MIGRATIONS`** exportée pour les hôtes. **Garde V2 rejouée en test** (fonds/accents distincts, texte **et texte atténué**/fond ≥ 4,5:1, profondeur ≥ seuil). **0.4.1 (PATCH de valeur)** : 6 `text-muted` corrigés pour l'AA 4,5:1 sur les 4 paliers. Conserve de la 0.3.0 : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** et **fichier classic-compatible** — voir section dédiée |
+| tokens     | `js/holaf-tokens.js` | 0.6.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 6 familles × clair/sombre (12 presets `corail`/`ambre`/`emeraude`/`turquoise`/`amethyste`/`neutre`) aux valeurs **figées en hex** + 4 alias **remappés** (`dark`/`light`→amethyste, `midnight`→amethyste-dark, `slate`→neutre-dark) ; **table `MIGRATIONS`** exportée pour les hôtes. **0.6.0 (VARIANTE C, RUPTURE de valeurs)** : les 6 familles couleur partagent des **surfaces gris neutre (chroma 0)** sur une **rampe de profondeur unique** — la distinction repose **uniquement sur l'accent** (inchangé). **Garde repensée** : le contrôle « écart de FOND ≥ 0,040 entre familles » (faux par construction) est **remplacé** par deux invariants — surfaces **neutres** (chroma ≤ 0,010) et **rampe partagée** (ΔEok ≤ 0,015) — l'écart d'**accent** (≥ 0,040), le texte **et le texte atténué**/fond ≥ 4,5:1, et la **profondeur** ≥ seuil restant contrôlés. **0.4.1 (PATCH de valeur)** : 6 `text-muted` corrigés pour l'AA 4,5:1 sur les 4 paliers. Conserve de la 0.3.0 : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** et **fichier classic-compatible** — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
 | icons      | `js/holaf-icons.js` | 0.1.5 | ✅ prête | 54 icônes SVG en trait (style Feather, MIT ; 2 tracés Tabler MIT), zéro CSS, `stroke=currentColor` ; tracés cherchables via [icons0.dev](https://icons0.dev/) (licence selon la collection d'origine) |
 
@@ -177,6 +177,40 @@ Les deux briques CSS-injectantes — **modal** et **toast** — exposent :
 > Les helpers (`HolafModal.alert/confirm/prompt/busy`,
 > `HolafToast.success/error/…`) acceptent aussi `injectStyles` dans leurs
 > options et le transmettent à l'ouverture.
+
+## Nouveautés v0.9
+
+### HolafTokens 0.5.0 → 0.6.0 (& miroirs `modal` 0.6.1 → 0.7.0, `toast` 0.7.0 → 0.8.0) — variante C « Neutres purs + accent »
+
+Les **6 familles couleur** du catalogue adoptent la **variante C validée** :
+**surfaces gris neutre** (chroma OKLCH **0**) sur une **rampe de profondeur
+unique PARTAGÉE**, l'**accent** (inchangé) portant seul l'identité. Conséquence
+majeure : les **fonds des 6 familles d'un même mode sont désormais IDENTIQUES**
+(ΔEok = 0) ; la distinction repose **uniquement sur l'accent** (écart minimal
+mesuré **ΔEok 0,071 en clair · 0,125 en sombre**, seuil de garde 0,040).
+
+- **Valeurs recopiées** de la maquette de décision `Yuki and Libs/_tools/theme-variants.mjs`
+  (`PARAMS.C` + `variantPalette`, primitives `_tools/theme-lib.mjs`) : profondeur
+  mesurée `0,062 · 0,048 · 0,030` (sombre) / `0,046 · 0,038` (clair). Les
+  **accents des 6 familles sont inchangés**.
+- **La famille d'IDENTITÉ `matrix` reste FIGÉE** et **hors de la règle** (valeurs
+  Pi-Web, non touchées).
+- **Bump MINOR** (rupture de **valeurs** de catalogue, aucun changement d'API) :
+  `tokens 0.5.0 → 0.6.0` (règle du kit : `0.3.0 → 0.4.0`), d'où `modal 0.6.1 →
+  0.7.0` et `toast 0.7.0 → 0.8.0` (miroirs recopiés à l'identique).
+- **Garde repensée** (`tests/helpers/theme-guard.js`) : le contrôle **« écart de
+  FOND ≥ 0,040 entre familles »** (faux par construction quand les familles
+  partagent la surface) est **explicitement REMPLACÉ** — jamais supprimé en
+  silence — par deux invariants **positifs** de la variante C : surfaces
+  **NEUTRES** (chroma ≤ 0,010 sur les 4 paliers) et **rampe PARTAGÉE** (écart
+  ΔEok entre familles ≤ 0,015). L'écart d'**accent** (≥ 0,040), le **texte
+  atténué** sur les 4 paliers (≥ 4,5:1) et la **profondeur** (≥ 0,020) restent
+  contrôlés ; non-vacuité prouvée par self-test (le catalogue saboté reçoit des
+  surfaces teintées ET différentes par famille).
+
+> ⚠️ Les hôtes qui **vendorisent** `tokens` (ou `modal` / `toast`) doivent
+> rafraîchir leur copie pinnée (`./scripts/holaf upgrade tokens <DEST>`) : les
+> **fonds changent** (gris neutre partagé) — voir la note de migration.
 
 ## Nouveautés v0.8
 

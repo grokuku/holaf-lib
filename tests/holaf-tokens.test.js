@@ -14,7 +14,7 @@ import "../js/holaf-tokens.js";
 import { HolafColor } from "../js/holaf-color.js";
 import {
     checkCatalogGuard, selftestBadCatalog, deltaEok,
-    AA_TEXT, AA_NONTEXT, ACCENT_SEP, SURFACE_SEP, DEPTH_SEP,
+    AA_TEXT, AA_NONTEXT, ACCENT_SEP, CHROMA_MAX, RAMP_SHARE_MAX, DEPTH_SEP,
 } from "./helpers/theme-guard.js";
 
 // 0.3.0 : la brique n'expose plus d'export ESM nommé (correctif « fichier
@@ -109,8 +109,8 @@ describe("HolafTokens — presets", () => {
 
     it("setTheme : pose les variables --holaf-* sur :root", () => {
         HolafTokens.setTheme("dark"); // alias → amethyste-dark
-        expect(getVar("--holaf-surface")).toBe("#1e1f2e");
-        expect(getVar("--holaf-text")).toBe("#eff0f4");
+        expect(getVar("--holaf-surface")).toBe("#171717");
+        expect(getVar("--holaf-text")).toBe("#f1f1f6");
         expect(getVar("--holaf-accent")).toBe("#a1a3ff");
         expect(getVar("--holaf-radius")).toBe("12px");
     });
@@ -123,7 +123,7 @@ describe("HolafTokens — presets", () => {
         HolafTokens.setTheme("midnight"); // alias → amethyste-dark
         const t = HolafTokens.getTheme();
         expect(t.name).toBe("midnight");
-        expect(t.vars["--holaf-surface"]).toBe("#1e1f2e");
+        expect(t.vars["--holaf-surface"]).toBe("#171717");
         expect(t.vars["--holaf-accent-text"]).toBe("#0b0b12");
     });
 
@@ -174,10 +174,33 @@ describe("HolafTokens — GARDE V2 (catalogue)", () => {
         expect(violations.some((v) => v.kind === "texte-sur-accent")).toBe(true);
         // PATCH 0.4.1 : le contrôle du TEXTE ATTÉNUÉ n'est pas vacant non plus.
         expect(violations.some((v) => v.kind === "texte-attenue")).toBe(true);
+        // 0.6.0 : les DEUX invariants de la variante C sont eux aussi non vacants
+        // (ils REMPLACENT l'ancien contrôle « fonds-proches »).
+        expect(violations.some((v) => v.kind === "surfaces-non-neutres")).toBe(true);
+        expect(violations.some((v) => v.kind === "rampe-non-partagee")).toBe(true);
     });
 
     it("seuils exposés conformes à la maquette V2", () => {
-        expect([AA_TEXT, AA_NONTEXT, ACCENT_SEP, SURFACE_SEP, DEPTH_SEP]).toEqual([4.5, 3.0, 0.04, 0.04, 0.02]);
+        expect([AA_TEXT, AA_NONTEXT, ACCENT_SEP, DEPTH_SEP, CHROMA_MAX, RAMP_SHARE_MAX]).toEqual([4.5, 3.0, 0.04, 0.02, 0.010, 0.015]);
+    });
+
+    it("la garde EXCLUT `matrix` : l'inclure déclenche une violation (preuve de l'exclusion)", () => {
+        // `matrix` est HORS règle (identité Pi-Web figée) : son texte atténué
+        // (matrix-light #777770 sur #eeece6 = 3,82:1) ne vise pas AA et ses
+        // surfaces ne suivent pas la rampe partagée. On prouve que la garde la
+        // rejetterait, ce qui justifie son exclusion de `guardRows()`.
+        const rows = guardRows().concat(["matrix-light", "matrix-dark"].map((name) => {
+            const p = HolafTokens.PRESETS[name];
+            return {
+                family: "matrix", mode: name.endsWith("dark") ? "dark" : "light",
+                accent: p.accent, onAccent: p["accent-text"],
+                surface: p.surface, surfaceElev: p["surface-elev"],
+                surfaceRaised: p["surface-raised"], surfaceHover: p["surface-hover"],
+                textMuted: p["text-muted"],
+            };
+        }));
+        const violations = checkCatalogGuard(rows);
+        expect(violations.some((v) => v.kind === "texte-attenue")).toBe(true);
     });
 });
 
@@ -239,7 +262,7 @@ describe("HolafTokens — applyPalette", () => {
         HolafTokens.applyPalette("#ff0000", { surface: "#1e1e1e" });
         const t = HolafTokens.getTheme().vars;
         // accent-hover = mix(accent, surface DU PRESET DE BASE, 15 %) ; la base
-        // de setTheme("dark") est amethyste-dark (surface #1e1f2e).
+        // de setTheme("dark") est amethyste-dark (surface #171717).
         const ca = [255, 0, 0], cb = hexToRgb(HolafTokens.PRESETS.dark.surface);
         const exp = ca.map((v, i) => Math.round(v + (cb[i] - v) * 0.15));
         const hex = "#" + exp.map((n) => n.toString(16).toUpperCase().padStart(2, "0")).join("");
@@ -300,7 +323,7 @@ describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
 
     it("setTheme accepte les noms <famille>-<mode>", () => {
         HolafTokens.setTheme("turquoise-light");
-        expect(getVar("--holaf-surface")).toBe("#c3e2e8");
+        expect(getVar("--holaf-surface")).toBe("#eeeeee");
         expect(HolafTokens.getTheme().name).toBe("turquoise-light");
     });
 
@@ -373,22 +396,22 @@ describe("HolafTokens 0.4.0 — snapshot des 12 presets V2 + 2 matrix + 4 alias"
     // Snapshot FIGÉ des 16 presets (12 V2 + 4 alias) — garde-fou contre toute
     // retouche accidentelle des valeurs calculées depuis la maquette V2.
     const FROZEN_12 = {
-        "corail-light": { "surface": "#ffe3ed", "surface-elev": "#fefefe", "surface-raised": "#f5d9e3", "surface-hover": "#ebcfd9", "border": "#d9b9c4", "text": "#2f2227", "text-muted": "#665159", "accent": "#9c045e", "accent-hover": "#ab2573", "accent-text": "#ffffff", "danger": "#c62222", "danger-hover": "#cf3f40", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "corail-dark": { "surface": "#36252c", "surface-elev": "#433037", "surface-raised": "#503b43", "surface-hover": "#5d464f", "border": "#735963", "text": "#f4eef0", "text-muted": "#ccb7bf", "accent": "#fa7fb5", "accent-hover": "#dd72a0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#db6667", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "ambre-light": { "surface": "#dcc8b5", "surface-elev": "#fefefe", "surface-raised": "#d2bfac", "surface-hover": "#c9b5a3", "border": "#b6a08b", "text": "#2d251c", "text-muted": "#54473b", "accent": "#7a4800", "accent-hover": "#895b1b", "accent-text": "#ffffff", "danger": "#a51d1d", "danger-hover": "#ad3734", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "ambre-dark": { "surface": "#0c0400", "surface-elev": "#170b02", "surface-raised": "#221508", "surface-hover": "#2e1f10", "border": "#42301f", "text": "#f3efec", "text-muted": "#b9a593", "accent": "#f29a2d", "accent-hover": "#d08426", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d56160", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "emeraude-light": { "surface": "#c9dac4", "surface-elev": "#fdfffc", "surface-raised": "#c0d0bb", "surface-hover": "#b6c6b1", "border": "#a0b29a", "text": "#22291f", "text-muted": "#465143", "accent": "#276701", "accent-hover": "#3f781e", "accent-text": "#ffffff", "danger": "#b01e1e", "danger-hover": "#b43a37", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "emeraude-dark": { "surface": "#081005", "surface-elev": "#111b0d", "surface-raised": "#1a2617", "surface-hover": "#253120", "border": "#354430", "text": "#eef1ed", "text-muted": "#9faf9a", "accent": "#7fc765", "accent-hover": "#6dac57", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d46261", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "turquoise-light": { "surface": "#c3e2e8", "surface-elev": "#fdffff", "surface-raised": "#b9d9de", "surface-hover": "#b0cfd5", "border": "#97bbc2", "text": "#1b292c", "text-muted": "#42585c", "accent": "#07606c", "accent-hover": "#23747f", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#bc3d3e", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "turquoise-dark": { "surface": "#051a1e", "surface-elev": "#0e2529", "surface-raised": "#183135", "surface-hover": "#223d41", "border": "#315056", "text": "#ecf1f2", "text-muted": "#91b0b5", "accent": "#0ec7de", "accent-hover": "#0dadc1", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d46465", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "amethyste-light": { "surface": "#dfe1fa", "surface-elev": "#fefefe", "surface-raised": "#d6d8f0", "surface-hover": "#cccee6", "border": "#b6b9d5", "text": "#252530", "text-muted": "#555669", "accent": "#4d41b0", "accent-hover": "#6359bb", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#c03d41", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "amethyste-dark": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "neutre-light": { "surface": "#f2f4f5", "surface-elev": "#fefeff", "surface-raised": "#e8eaeb", "surface-hover": "#dee0e1", "border": "#c6cbd0", "text": "#1f2730", "text-muted": "#4c5a69", "accent": "#515457", "accent-hover": "#696c6f", "accent-text": "#ffffff", "danger": "#d12424", "danger-hover": "#d64343", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "neutre-dark": { "surface": "#343537", "surface-elev": "#3f4144", "surface-raised": "#4a4d51", "surface-hover": "#565a5e", "border": "#686e75", "text": "#edf0f4", "text-muted": "#ced1d4", "accent": "#aeb1b5", "accent-hover": "#9c9ea2", "accent-text": "#0b0b12", "danger": "#f87878", "danger-hover": "#db6e6e", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "dark": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "light": { "surface": "#dfe1fa", "surface-elev": "#fefefe", "surface-raised": "#d6d8f0", "surface-hover": "#cccee6", "border": "#b6b9d5", "text": "#252530", "text-muted": "#555669", "accent": "#4d41b0", "accent-hover": "#6359bb", "accent-text": "#ffffff", "danger": "#bb2020", "danger-hover": "#c03d41", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
-        "midnight": { "surface": "#1e1f2e", "surface-elev": "#292a3a", "surface-raised": "#343547", "surface-hover": "#3f4155", "border": "#52536b", "text": "#eff0f4", "text-muted": "#abadc4", "accent": "#a1a3ff", "accent-hover": "#8d8fe0", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d76567", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
-        "slate": { "surface": "#343537", "surface-elev": "#3f4144", "surface-raised": "#4a4d51", "surface-hover": "#565a5e", "border": "#686e75", "text": "#edf0f4", "text-muted": "#ced1d4", "accent": "#aeb1b5", "accent-hover": "#9c9ea2", "accent-text": "#0b0b12", "danger": "#f87878", "danger-hover": "#db6e6e", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "corail-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#e0dfdf", "surface-hover": "#d4d2d3", "border": "#c4c0c1", "text": "#2b2226", "text-muted": "#4b3f43", "accent": "#9c045e", "accent-hover": "#ac3b72", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "corail-dark": { "surface": "#171717", "surface-elev": "#262526", "surface-raised": "#323132", "surface-hover": "#3b3939", "border": "#4d494a", "text": "#f5f0f2", "text-muted": "#c3bbbe", "accent": "#fa7fb5", "accent-hover": "#d46e9b", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "ambre-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#e0dfde", "surface-hover": "#d4d3d1", "border": "#c3c1be", "text": "#2a241e", "text-muted": "#494138", "accent": "#7a4800", "accent-hover": "#8c6031", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "ambre-dark": { "surface": "#171717", "surface-elev": "#262625", "surface-raised": "#323130", "surface-hover": "#3a3938", "border": "#4c4a48", "text": "#f5f1ee", "text-muted": "#c2bdb7", "accent": "#f29a2d", "accent-hover": "#cd852f", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "emeraude-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#dfdfdf", "surface-hover": "#d2d3d2", "border": "#c0c2bf", "text": "#222720", "text-muted": "#3e453c", "accent": "#276701", "accent-hover": "#467b32", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "emeraude-dark": { "surface": "#171717", "surface-elev": "#252625", "surface-raised": "#313231", "surface-hover": "#383a38", "border": "#494b48", "text": "#f0f3ef", "text-muted": "#bbbfb9", "accent": "#7fc765", "accent-hover": "#6ea959", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "turquoise-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#dedfdf", "surface-hover": "#d1d3d3", "border": "#bec2c3", "text": "#1d2729", "text-muted": "#384548", "accent": "#07606c", "accent-hover": "#38747f", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "turquoise-dark": { "surface": "#171717", "surface-elev": "#252626", "surface-raised": "#303232", "surface-hover": "#373a3a", "border": "#474b4c", "text": "#edf3f4", "text-muted": "#b7c0c1", "accent": "#0ec7de", "accent-hover": "#22aabc", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "amethyste-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#dfdfe0", "surface-hover": "#d2d3d4", "border": "#c0c1c4", "text": "#24242c", "text-muted": "#41414c", "accent": "#4d41b0", "accent-hover": "#615dbb", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "amethyste-dark": { "surface": "#171717", "surface-elev": "#262626", "surface-raised": "#313133", "surface-hover": "#39393b", "border": "#4a4a4d", "text": "#f1f1f6", "text-muted": "#bcbdc4", "accent": "#a1a3ff", "accent-hover": "#8a8cd8", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "neutre-light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#dfdfe0", "surface-hover": "#d2d3d4", "border": "#bfc1c4", "text": "#20262c", "text-muted": "#3b434c", "accent": "#515457", "accent-hover": "#67696c", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "neutre-dark": { "surface": "#171717", "surface-elev": "#252626", "surface-raised": "#313233", "surface-hover": "#38393b", "border": "#494a4d", "text": "#eff2f6", "text-muted": "#babec4", "accent": "#aeb1b5", "accent-hover": "#95979a", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "dark": { "surface": "#171717", "surface-elev": "#262626", "surface-raised": "#313133", "surface-hover": "#39393b", "border": "#4a4a4d", "text": "#f1f1f6", "text-muted": "#bcbdc4", "accent": "#a1a3ff", "accent-hover": "#8a8cd8", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "light": { "surface": "#eeeeee", "surface-elev": "#ffffff", "surface-raised": "#dfdfe0", "surface-hover": "#d2d3d4", "border": "#c0c1c4", "text": "#24242c", "text-muted": "#41414c", "accent": "#4d41b0", "accent-hover": "#615dbb", "accent-text": "#ffffff", "danger": "#cd2323", "danger-hover": "#d74e45", "danger-text": "#ffffff", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "midnight": { "surface": "#171717", "surface-elev": "#262626", "surface-raised": "#313133", "surface-hover": "#39393b", "border": "#4a4a4d", "text": "#f1f1f6", "text-muted": "#bcbdc4", "accent": "#a1a3ff", "accent-hover": "#8a8cd8", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+        "slate": { "surface": "#171717", "surface-elev": "#252626", "surface-raised": "#313233", "surface-hover": "#38393b", "border": "#494a4d", "text": "#eff2f6", "text-muted": "#babec4", "accent": "#aeb1b5", "accent-hover": "#95979a", "accent-text": "#0b0b12", "danger": "#f87171", "danger-hover": "#d26362", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
     };
 
     // Snapshot FIGÉ de la famille d'IDENTITÉ matrix (valeurs Pi-Web, 23 clés :
@@ -515,10 +538,10 @@ describe("HolafTokens 0.4.0 — registre de packs", () => {
 
     it("extends intégré : hérite + dérive depuis la spec", () => {
         const r = HolafTokens.registerPreset("test-ext", { accent: "#e94560" }, { extends: "corail-dark" });
-        expect(r.vars.surface).toBe("#36252c");
+        expect(r.vars.surface).toBe("#171717");
         expect(r.vars.accent).toBe("#e94560");
         expect(r.vars["accent-soft"]).toBe("rgba(233, 69, 96, 0.16)");
-        expect(r.vars["accent-gradient"]).toBe("linear-gradient(135deg, #E94560, #DD72A0)");
+        expect(r.vars["accent-gradient"]).toBe("linear-gradient(135deg, #E94560, #D46E9B)");
     });
 
     it("extends alias et extends pack (dérivées héritées telles quelles)", () => {
@@ -529,7 +552,7 @@ describe("HolafTokens 0.4.0 — registre de packs", () => {
         const grand = HolafTokens.registerPreset("test-grand", {}, { extends: "test-child" });
         expect(grand.vars["accent-soft"]).toBe("rgba(16, 185, 129, 0.16)");
         const alias = HolafTokens.registerPreset("test-alias", { accent: "#abcdef" }, { extends: "dark" });
-        expect(alias.vars.surface).toBe("#1e1f2e");
+        expect(alias.vars.surface).toBe("#171717");
     });
 
     it("spec explicite jamais écrasée par une dérivation", () => {
@@ -542,7 +565,7 @@ describe("HolafTokens 0.4.0 — registre de packs", () => {
         expect(off.vars["accent-soft"]).toBeUndefined();
         const optin = HolafTokens.registerPreset("test-optin", { accent: "#e94560" },
             { extends: "turquoise-dark", derive: ["danger-gradient", "radius-sm"] });
-        expect(optin.vars["danger-gradient"]).toMatch(/^linear-gradient\(135deg, #F87171, #D46465\)$/);
+        expect(optin.vars["danger-gradient"]).toMatch(/^linear-gradient\(135deg, #F87171, #D26362\)$/);
         expect(optin.vars["radius-sm"]).toBe("calc(12px - 2px)");
         expect(optin.vars["accent-soft"]).toBeUndefined(); // hors liste demandée
     });
@@ -601,10 +624,10 @@ describe("HolafTokens 0.4.0 — registre de packs", () => {
 
     it("getPreset : copie d'un intégré/alias, null si inconnu, copie protégée", () => {
         const p = HolafTokens.getPreset("dark");
-        expect(p.surface).toBe("#1e1f2e");
+        expect(p.surface).toBe("#171717");
         p.surface = "#000000";
-        expect(HolafTokens.getPreset("dark").surface).toBe("#1e1f2e");
-        expect(HolafTokens.getPreset("turquoise-light").surface).toBe("#c3e2e8");
+        expect(HolafTokens.getPreset("dark").surface).toBe("#171717");
+        expect(HolafTokens.getPreset("turquoise-light").surface).toBe("#eeeeee");
         expect(HolafTokens.getPreset("nope")).toBeNull();
     });
 });
@@ -614,20 +637,20 @@ describe("HolafTokens 0.4.0 — dérivations", () => {
         const v = HolafTokens.registerPreset("test-der", {}, { extends: "corail-dark" }).vars;
         expect(v["accent-soft"]).toBe("rgba(250, 127, 181, 0.16)");
         expect(v["accent-glow"]).toBe("rgba(250, 127, 181, 0.5)");
-        expect(v["accent-gradient"]).toBe("linear-gradient(135deg, #FA7FB5, #DD72A0)");
+        expect(v["accent-gradient"]).toBe("linear-gradient(135deg, #FA7FB5, #D46E9B)");
         expect(v["accent-gradient-hover"]).toBe(
-            "linear-gradient(135deg, " + mix("#fa7fb5", "#ffffff", 0.12) + ", " + mix("#dd72a0", "#ffffff", 0.12) + ")"
+            "linear-gradient(135deg, " + mix("#fa7fb5", "#ffffff", 0.12) + ", " + mix("#d46e9b", "#ffffff", 0.12) + ")"
         );
         expect(v["accent-shadow"]).toBe("0 0 18px var(--holaf-accent-soft)");
         expect(v["danger-soft"]).toBe("rgba(248, 113, 113, 0.12)");
         expect(v["danger-shadow"]).toBe("0 0 16px var(--holaf-danger-soft)");
-        expect(v["border-muted"]).toBe("rgba(115, 89, 99, 0.45)");
-        expect(v["text-faint"]).toBe(mix("#ccb7bf", "#36252c", 0.42));
+        expect(v["border-muted"]).toBe("rgba(77, 73, 74, 0.45)");
+        expect(v["text-faint"]).toBe(mix("#c3bbbe", "#171717", 0.42));
         // les intégrés V2 PORTENT surface-hover (4ᵉ palier) : hérité tel quel,
         // la règle de dérivation ne s'applique donc PAS ici.
-        expect(v["surface-hover"]).toBe("#5d464f");
-        expect(v["chrome-header"]).toBe("linear-gradient(180deg, rgba(54, 37, 44, 0.92), rgba(54, 37, 44, 0.66))");
-        expect(v["chrome-footer"]).toBe("linear-gradient(0deg, rgba(54, 37, 44, 0.95), rgba(54, 37, 44, 0.66))");
+        expect(v["surface-hover"]).toBe("#3b3939");
+        expect(v["chrome-header"]).toBe("linear-gradient(180deg, rgba(23, 23, 23, 0.92), rgba(23, 23, 23, 0.66))");
+        expect(v["chrome-footer"]).toBe("linear-gradient(0deg, rgba(23, 23, 23, 0.95), rgba(23, 23, 23, 0.66))");
         // opt-ins HORS défaut
         expect(v["danger-gradient"]).toBeUndefined();
         expect(v["radius-sm"]).toBeUndefined();
@@ -679,7 +702,7 @@ describe("HolafTokens 0.4.0 — alpha()", () => {
 describe("HolafTokens 0.4.0 — chargement (sans export nommé)", () => {
     it("la globale est posée par effet de bord et VERSION = 0.5.0", () => {
         expect(window.HolafTokens).toBe(HolafTokens);
-        expect(HolafTokens.VERSION).toBe("0.5.0");
+        expect(HolafTokens.VERSION).toBe("0.6.0");
     });
 
     it("garde-fou statique : AUCUN export top-level dans le fichier", () => {

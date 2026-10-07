@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafToast · version 0.7.0
+ * Holaf UI — Brique HolafToast · version 0.8.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Notifications flottantes (toasts) autonomes, zéro dépendance runtime :
  * 4 types (info/success/warning/error) avec icône, empilement par position
@@ -62,6 +62,16 @@
  * #2b2b2b). Le défaut CSS injecté (sans thème) est aligné à l'identique, donc
  * `theme:"dark"` ≡ aucune option `theme`. Seules les valeurs des presets
  * changent — d'où le bump MINOR (0.x : rupture de valeurs de palette).
+ * v0.8.0 — MIROIR DE LA VARIANTE C (RUPTURE de valeurs, alignée sur HolafTokens
+ * 0.6.0) : les 12 presets sont recopiés EXACTEMENT du catalogue HolafTokens
+ * 0.6.0 (surfaces GRIS NEUTRE chroma 0, rampe UNIQUE PARTAGÉE par les 6
+ * familles, accent inchangé). Cohérence page↔toast conservée sur les surfaces
+ * (`--ht-bg` ← surface), le texte (`--ht-fg` ← text) et la bordure (`--ht-border`
+ * ← border) ; les fonds teintés PAR TYPE (`--ht-bg-success/warning/error` =
+ * mix sRGB 15 % de l'accent du type dans la NOUVELLE surface) et les accents de
+ * type sont recalculés en conséquence. Le défaut du CSS injecté (amethyste-dark)
+ * suit à l'identique. Aucune API ne change : seules les valeurs littérales du
+ * miroir changent — bump MINOR (0.x : rupture de valeurs de palette).
  *
  * v0.4.0 — fond teinté PAR TYPE (info/success/warning/error) avec fallback :
  * nouvelles variables de thème OPTIONNELLES --ht-bg-info, --ht-bg-success,
@@ -97,7 +107,7 @@
 const HolafToast = (function () {
     "use strict";
 
-    const VERSION = "0.7.0";
+    const VERSION = "0.8.0";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const CSS_ID = "holaf-toast-style";
@@ -266,8 +276,9 @@ const HolafToast = (function () {
     // preset : la largeur reste gouvernée par la brique (responsive mobile).
     //
     // PROVENANCE DES VALEURS (DONNÉES LITTÉRALES, aucun calcul runtime) : les
-    // 12 presets sont les MIROIRS des presets homonymes de HolafTokens 0.4.0
-    // (js/holaf-tokens.js — catalogue V2), figés ici pour que la brique reste
+    // 12 presets sont les MIROIRS des presets homonymes de HolafTokens 0.6.0
+    // (js/holaf-tokens.js — variante C : surfaces gris neutre chroma 0, rampe
+    // unique partagée, accent inchangé), figés ici pour que la brique reste
     // AUTONOME (zéro dépendance runtime). Cohérence STRICTE page↔toast sur les
     // surfaces, le texte et la bordure :
     //     --ht-bg ← surface · --ht-fg ← text · --ht-border ← border
@@ -290,26 +301,26 @@ const HolafToast = (function () {
     // de HolafTokens.PRESETS pour que le test de cohérence inter-briques passe.
     const THEME_PRESETS = {
         "corail-light": {
-            "--ht-bg": "#ffe3ed",
-            "--ht-bg-success": "#dcd4d3",
-            "--ht-bg-warning": "#f4cdcb",
-            "--ht-bg-error": "#f6c6cf",
-            "--ht-fg": "#2f2227",
-            "--ht-border": "#d9b9c4",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#2b2226",
+            "--ht-border": "#c4c0c1",
             "--ht-accent-info": "#9c045e",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#c62222",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "corail-dark": {
-            "--ht-bg": "#36252c",
-            "--ht-bg-success": "#363f3c",
-            "--ht-bg-warning": "#543c2b",
-            "--ht-bg-error": "#533036",
-            "--ht-fg": "#f4eef0",
-            "--ht-border": "#735963",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#f5f0f2",
+            "--ht-border": "#4d494a",
             "--ht-accent-info": "#fa7fb5",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
@@ -318,26 +329,26 @@ const HolafToast = (function () {
             "--ht-radius": "10px",
         },
         "ambre-light": {
-            "--ht-bg": "#dcc8b5",
-            "--ht-bg-success": "#bebda3",
-            "--ht-bg-warning": "#d6b69b",
-            "--ht-bg-error": "#d4ae9e",
-            "--ht-fg": "#2d251c",
-            "--ht-border": "#b6a08b",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#2a241e",
+            "--ht-border": "#c3c1be",
             "--ht-accent-info": "#7a4800",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#a51d1d",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "ambre-dark": {
-            "--ht-bg": "#0c0400",
-            "--ht-bg-success": "#122317",
-            "--ht-bg-warning": "#302005",
-            "--ht-bg-error": "#2f1411",
-            "--ht-fg": "#f3efec",
-            "--ht-border": "#42301f",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#f5f1ee",
+            "--ht-border": "#4c4a48",
             "--ht-accent-info": "#f29a2d",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
@@ -346,26 +357,26 @@ const HolafToast = (function () {
             "--ht-radius": "10px",
         },
         "emeraude-light": {
-            "--ht-bg": "#c9dac4",
-            "--ht-bg-success": "#aecdb0",
-            "--ht-bg-warning": "#c6c6a8",
-            "--ht-bg-error": "#c5beab",
-            "--ht-fg": "#22291f",
-            "--ht-border": "#a0b29a",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#222720",
+            "--ht-border": "#c0c2bf",
             "--ht-accent-info": "#276701",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#b01e1e",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "emeraude-dark": {
-            "--ht-bg": "#081005",
-            "--ht-bg-success": "#0f2d1b",
-            "--ht-bg-warning": "#2c2a0a",
-            "--ht-bg-error": "#2c1f15",
-            "--ht-fg": "#eef1ed",
-            "--ht-border": "#354430",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#f0f3ef",
+            "--ht-border": "#494b48",
             "--ht-accent-info": "#7fc765",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
@@ -374,26 +385,26 @@ const HolafToast = (function () {
             "--ht-radius": "10px",
         },
         "turquoise-light": {
-            "--ht-bg": "#c3e2e8",
-            "--ht-bg-success": "#a9d3ce",
-            "--ht-bg-warning": "#c1cdc7",
-            "--ht-bg-error": "#c2c5ca",
-            "--ht-fg": "#1b292c",
-            "--ht-border": "#97bbc2",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#1d2729",
+            "--ht-border": "#bec2c3",
             "--ht-accent-info": "#07606c",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#bb2020",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "turquoise-dark": {
-            "--ht-bg": "#051a1e",
-            "--ht-bg-success": "#0c3630",
-            "--ht-bg-warning": "#2a331f",
-            "--ht-bg-error": "#29272a",
-            "--ht-fg": "#ecf1f2",
-            "--ht-border": "#315056",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#edf3f4",
+            "--ht-border": "#474b4c",
             "--ht-accent-info": "#0ec7de",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
@@ -402,26 +413,26 @@ const HolafToast = (function () {
             "--ht-radius": "10px",
         },
         "amethyste-light": {
-            "--ht-bg": "#dfe1fa",
-            "--ht-bg-success": "#c1d2de",
-            "--ht-bg-warning": "#d9ccd6",
-            "--ht-bg-error": "#dac4d9",
-            "--ht-fg": "#252530",
-            "--ht-border": "#b6b9d5",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#24242c",
+            "--ht-border": "#c0c1c4",
             "--ht-accent-info": "#4d41b0",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#bb2020",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "amethyste-dark": {
-            "--ht-bg": "#1e1f2e",
-            "--ht-bg-success": "#213a3e",
-            "--ht-bg-warning": "#3f372d",
-            "--ht-bg-error": "#3f2b38",
-            "--ht-fg": "#eff0f4",
-            "--ht-border": "#52536b",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#f1f1f6",
+            "--ht-border": "#4a4a4d",
             "--ht-accent-info": "#a1a3ff",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
@@ -430,30 +441,30 @@ const HolafToast = (function () {
             "--ht-radius": "10px",
         },
         "neutre-light": {
-            "--ht-bg": "#f2f4f5",
-            "--ht-bg-success": "#d1e3d9",
-            "--ht-bg-warning": "#e9dcd2",
-            "--ht-bg-error": "#edd5d6",
-            "--ht-fg": "#1f2730",
-            "--ht-border": "#c6cbd0",
+            "--ht-bg": "#eeeeee",
+            "--ht-bg-success": "#cdded3",
+            "--ht-bg-warning": "#e5d7cc",
+            "--ht-bg-error": "#e9d0d0",
+            "--ht-fg": "#20262c",
+            "--ht-border": "#bfc1c4",
             "--ht-accent-info": "#515457",
             "--ht-accent-success": "#15803d",
             "--ht-accent-warning": "#b45309",
-            "--ht-accent-error": "#d12424",
+            "--ht-accent-error": "#cd2323",
             "--ht-shadow": "0 6px 24px rgba(24, 24, 27, 0.18)",
             "--ht-radius": "10px",
         },
         "neutre-dark": {
-            "--ht-bg": "#343537",
-            "--ht-bg-success": "#344d46",
-            "--ht-bg-warning": "#524a34",
-            "--ht-bg-error": "#513f41",
-            "--ht-fg": "#edf0f4",
-            "--ht-border": "#686e75",
+            "--ht-bg": "#171717",
+            "--ht-bg-success": "#1b332b",
+            "--ht-bg-warning": "#393019",
+            "--ht-bg-error": "#392525",
+            "--ht-fg": "#eff2f6",
+            "--ht-border": "#494a4d",
             "--ht-accent-info": "#aeb1b5",
             "--ht-accent-success": "#34d399",
             "--ht-accent-warning": "#fbbf24",
-            "--ht-accent-error": "#f87878",
+            "--ht-accent-error": "#f87171",
             "--ht-shadow": "0 6px 24px rgba(0, 0, 0, 0.55)",
             "--ht-radius": "10px",
         },
@@ -590,9 +601,9 @@ const HolafToast = (function () {
     gap: 10px;
     pointer-events: none;
     max-width: calc(100vw - 24px);
-    --ht-bg: #1e1f2e;
-    --ht-fg: #eff0f4;
-    --ht-border: #52536b;
+    --ht-bg: #171717;
+    --ht-fg: #f1f1f6;
+    --ht-border: #4a4a4d;
     --ht-accent-info: #a1a3ff;
     --ht-accent-success: #34d399;
     --ht-accent-warning: #fbbf24;

@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.6.1)
+# HolafModal — doc d'usage (brique holaf-lib v0.7.0)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -338,24 +338,25 @@ tous vos outils) et la possibilité de déclarer vos propres thèmes.
 - l'option `theme` reste acceptée sous sa forme historique (objet de
   variables) — comportement strictement inchangé.
 
-### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.6.0 ; valeurs v0.6.1)
+### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.6.0 ; valeurs v0.7.0 — variante C)
 
 Enregistrés au chargement de la brique : **12 combinaisons `<famille>-<mode>`**
-(catalogue V2 aligné sur `HolafTokens` 0.4.1) plus les **4 noms historiques**
+(catalogue aligné sur `HolafTokens` 0.6.0) plus les **4 noms historiques**
 remappés en alias. Contraste des textes ≥ 4.5:1, radius 12px et font-size 14px
-partout :
+partout. ⚠️ **Depuis la variante C**, les 6 familles **partagent la même
+surface** (gris neutre, chroma 0) : c'est **l'accent** qui les distingue.
 
-| Famille    | `<famille>-light`              | `<famille>-dark`              |
-|------------|--------------------------------|-------------------------------|
-| `corail`   | fond #ffe3ed · accent #9c045e  | fond #36252c · accent #fa7fb5 |
-| `ambre`    | fond #dcc8b5 · accent #7a4800  | fond #0c0400 · accent #f29a2d |
-| `emeraude` | fond #c9dac4 · accent #276701  | fond #081005 · accent #7fc765 |
-| `turquoise`| fond #c3e2e8 · accent #07606c  | fond #051a1e · accent #0ec7de |
-| `amethyste`| fond #dfe1fa · accent #4d41b0  | fond #1e1f2e · accent #a1a3ff |
-| `neutre`   | fond #f2f4f5 · accent #515457  | fond #343537 · accent #aeb1b5 |
+| Famille    | `<famille>-light`                       | `<famille>-dark`                        |
+|------------|-----------------------------------------|-----------------------------------------|
+| `corail`   | fond #eeeeee · accent #9c045e           | fond #171717 · accent #fa7fb5           |
+| `ambre`    | fond #eeeeee · accent #7a4800           | fond #171717 · accent #f29a2d           |
+| `emeraude` | fond #eeeeee · accent #276701           | fond #171717 · accent #7fc765           |
+| `turquoise`| fond #eeeeee · accent #07606c           | fond #171717 · accent #0ec7de           |
+| `amethyste`| fond #eeeeee · accent #4d41b0           | fond #171717 · accent #a1a3ff           |
+| `neutre`   | fond #eeeeee · accent #515457           | fond #171717 · accent #aeb1b5           |
 
-Les 12 presets sont les **miroirs** des presets homonymes de `HolafTokens` 0.4.1
-(catalogue V2 — mêmes surfaces, même texte, même accent) — pour que page, modale
+Les 12 presets sont les **miroirs** des presets homonymes de `HolafTokens` 0.6.0
+(variante C — mêmes surfaces, même texte, même accent) — pour que page, modale
 et toast restent alignés quelle que soit la famille/mode choisie. Correspondance :
 
 | Variable modale       | Clé HolafTokens | Variable modale         | Clé HolafTokens   |
@@ -383,6 +384,11 @@ scrim zinc + busy 0.82 ; sombre : scrim teinté du fond à 0.55 + busy 0.85).
 
 Ces remaps suivent la table `HolafTokens.MIGRATIONS` (0.4.0).
 
+> **v0.7.0** : **miroir de la VARIANTE C** (`HolafTokens` 0.6.0) — les 12 presets
+> sont recopiés à l'identique (surfaces gris neutre chroma 0, rampe unique
+> partagée, accent inchangé) ; mapping et API inchangés. Le défaut du CSS injecté
+> (`amethyste-dark`) suit. **Bump MINOR** (rupture de valeurs de palette).
+>
 > **v0.6.1 (PATCH)** : miroir du correctif de contraste `HolafTokens` 0.4.1 — les
 > 6 `--hm-text-secondary` mirorant un `text-muted` corrigé (`ambre-light`,
 > `emeraude-light`, `turquoise-light`, `corail-dark`, `amethyste-dark`,
@@ -647,7 +653,7 @@ DEST=/chemin/vers/mon-projet ./scripts/sync-holaf-ui.sh
 Puis, dans le projet cible, committer `vendor/holaf/` pour figer la version
 utilisée. Pour mettre à jour plus tard : `git pull` dans holaf-ui, relancer le
 même script, committer à nouveau. Vérifier la version avec
-`HolafModal.version` (v0.6.1).
+`HolafModal.version` (v0.7.0).
 
 ---
 

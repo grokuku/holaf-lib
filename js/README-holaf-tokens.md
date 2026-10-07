@@ -1,4 +1,4 @@
-# HolafTokens — tokens CSS de page (brique holaf-lib v0.5.0)
+# HolafTokens — tokens CSS de page (brique holaf-lib v0.6.0)
 
 Brique **FONDATION** : elle pose les **tokens CSS de PAGE** sous le préfixe
 **réservé `--holaf-*`** sur `:root`. Un seul fichier (`holaf-tokens.js`), zéro
@@ -21,7 +21,7 @@ La brique **ne rend aucun élément** : elle ne fait que poser / retirer des
 variables CSS sur `:root`. Le CSS auto-injecté est donc minimal (un repère
 documenté, injecté une seule fois) — **rien de scopé n'est nécessaire**.
 
-**Version : 0.5.0**
+**Version : 0.6.0**
 
 ---
 
@@ -74,12 +74,15 @@ Au chargement, **si l'hôte n'a fait aucun choix**, la brique applique le
 Depuis **0.4.0**, les thèmes forment un **catalogue à deux axes** (catalogue V2,
 **rupture** avec les 0.2/0.3) :
 
-- **Axe 1 — la famille** : une identité chromatique (des fonds + un accent).
+- **Axe 1 — la famille** : une identité portée par l'**accent**.
   Le catalogue en compte **7** depuis 0.5.0 : la famille d'**identité** `matrix`
   (thème historique de Pi-Web : monochrome à accent néon vert) **puis** les
-  **6** familles « couleur » de la roue chromatique : `corail`, `ambre`,
-  `emeraude`, `turquoise`, `amethyste`, `neutre` (une teinte franche par famille,
-  le Neutre assumé).
+  **6** familles « couleur » : `corail`, `ambre`, `emeraude`, `turquoise`,
+  `amethyste`, `neutre`.
+  ⚠️ **Depuis 0.6.0 (variante C)**, les 6 familles couleur **partagent la même
+  rampe de surfaces GRIS NEUTRE (chroma 0)** : les fonds ne sont **plus** un axe
+  de distinction — **seul l'accent** (propre à chaque famille, **inchangé**)
+  distingue les familles.
 - **Axe 2 — le mode** : `light` ou `dark`.
 
 Chaque croisement est un **preset** nommé **`<famille>-<mode>`** → **14 presets**.
@@ -101,32 +104,37 @@ une fois depuis la maquette V2 validée ; **aucun moteur OKLCH** n'est embarqué
 |--------|---------|------|--------|-------------|---------|-------|
 | `matrix-light`    | matrix    | light | `#166534` | `#ffffff` | `#eeece6` | `#3d3d3a` |
 | `matrix-dark`     | matrix    | dark  | `#00ff41` | `#000000` | `#0a0a0a` | `#c0c0c0` |
-| `corail-light`    | corail    | light | `#9c045e` | `#ffffff` | `#ffe3ed` | `#2f2227` |
-| `corail-dark`     | corail    | dark  | `#fa7fb5` | `#0b0b12` | `#36252c` | `#f4eef0` |
-| `ambre-light`     | ambre     | light | `#7a4800` | `#ffffff` | `#dcc8b5` | `#2d251c` |
-| `ambre-dark`      | ambre     | dark  | `#f29a2d` | `#0b0b12` | `#0c0400` | `#f3efec` |
-| `emeraude-light`  | emeraude  | light | `#276701` | `#ffffff` | `#c9dac4` | `#22291f` |
-| `emeraude-dark`   | emeraude  | dark  | `#7fc765` | `#0b0b12` | `#081005` | `#eef1ed` |
-| `turquoise-light` | turquoise | light | `#07606c` | `#ffffff` | `#c3e2e8` | `#1b292c` |
-| `turquoise-dark`  | turquoise | dark  | `#0ec7de` | `#0b0b12` | `#051a1e` | `#ecf1f2` |
-| `amethyste-light` | amethyste | light | `#4d41b0` | `#ffffff` | `#dfe1fa` | `#252530` |
-| `amethyste-dark`  | amethyste | dark  | `#a1a3ff` | `#0b0b12` | `#1e1f2e` | `#eff0f4` |
-| `neutre-light`    | neutre    | light | `#515457` | `#ffffff` | `#f2f4f5` | `#1f2730` |
-| `neutre-dark`     | neutre    | dark  | `#aeb1b5` | `#0b0b12` | `#343537` | `#edf0f4` |
+| `corail-light`    | corail    | light | `#9c045e` | `#ffffff` | `#eeeeee` | `#2b2226` |
+| `corail-dark`     | corail    | dark  | `#fa7fb5` | `#0b0b12` | `#171717` | `#f5f0f2` |
+| `ambre-light`     | ambre     | light | `#7a4800` | `#ffffff` | `#eeeeee` | `#2a241e` |
+| `ambre-dark`      | ambre     | dark  | `#f29a2d` | `#0b0b12` | `#171717` | `#f5f1ee` |
+| `emeraude-light`  | emeraude  | light | `#276701` | `#ffffff` | `#eeeeee` | `#222720` |
+| `emeraude-dark`   | emeraude  | dark  | `#7fc765` | `#0b0b12` | `#171717` | `#f0f3ef` |
+| `turquoise-light` | turquoise | light | `#07606c` | `#ffffff` | `#eeeeee` | `#1d2729` |
+| `turquoise-dark`  | turquoise | dark  | `#0ec7de` | `#0b0b12` | `#171717` | `#edf3f4` |
+| `amethyste-light` | amethyste | light | `#4d41b0` | `#ffffff` | `#eeeeee` | `#24242c` |
+| `amethyste-dark`  | amethyste | dark  | `#a1a3ff` | `#0b0b12` | `#171717` | `#f1f1f6` |
+| `neutre-light`    | neutre    | light | `#515457` | `#ffffff` | `#eeeeee` | `#20262c` |
+| `neutre-dark`     | neutre    | dark  | `#aeb1b5` | `#0b0b12` | `#171717` | `#eff2f6` |
 
 > Tableau **indicatif** : les **16 clés** (couleur) / **23 clés** (`matrix`) de
 chaque preset sont exposées par `HolafTokens.PRESETS` (snapshot clé par clé dans
 `tests/holaf-tokens.test.js`).
 
-### Garde V2 (test-only)
+### Garde (test-only)
 
-La règle V2 est **rejouée en test** (`tests/holaf-tokens.test.js`, helper
+La règle est **rejouée en test** (`tests/holaf-tokens.test.js`, helper
 `tests/helpers/theme-guard.js`) **sur la seule roue chromatique** (les 6 familles
-couleur ; `matrix` en est exclue) : fonds et accents **distincts** par mode
-(ΔEok ≥ 0,040), texte **et texte atténué** (`text-muted`) ≥ 4,5:1 sur les 4
-paliers de profondeur, non-textuel ≥ 3:1, profondeur ≥ 0,020 — avec **preuve de
-non-vacuité** (self-test qui échoue volontairement). Aucun coût runtime : la
-garde ne vit que dans les tests.
+couleur ; `matrix` en est exclue). Depuis la **variante C (0.6.0)**, l'ancien
+contrôle « fonds **distincts** par mode (ΔEok ≥ 0,040) » — désormais **faux par
+construction** (les familles **partagent** la surface) — est **remplacé** par
+deux invariants **positifs** : surfaces **NEUTRES** (chroma OKLCH ≤ 0,010 sur les
+4 paliers) et **rampe PARTAGÉE** (écart ΔEok entre familles ≤ 0,015). Les accents
+restent **distincts** (≥ 0,040 ; mesuré ≥ 0,071 clair / 0,125 sombre), le texte
+**et le texte atténué** (`text-muted`) ≥ 4,5:1 sur les 4 paliers de profondeur,
+non-textuel ≥ 3:1, profondeur ≥ 0,020 — avec **preuve de non-vacuité** (self-test
+qui échoue volontairement, y compris sur les deux nouveaux invariants). Aucun
+coût runtime : la garde ne vit que dans les tests.
 
 ### Alias rétrocompatibles (**remappés**)
 
@@ -517,11 +525,13 @@ Presets et palette calculée garantissent **textes ≥ 4.5:1** sur leurs surface
 `surface-hover`, `accent-text` et `danger-text` lisibles sur leur teinte. Depuis
 le **PATCH 0.4.1**, `text-muted` (texte atténué) est lui aussi garanti ≥ 4.5:1 sur
 **les 4 paliers** (6 valeurs du catalogue V2 étaient fautives : `ambre-light` sur
-`surface` = 4,42:1, `neutre-dark` sur `surface-hover` = 2,97:1). La **garde V2**
-(§2, test-only) vérifie en plus texte **et texte atténué** /fond ≥ 4,5:1,
-non-textuel ≥ 3:1, ainsi que la **distinction** des fonds/accents et la
-**profondeur** des **12 presets couleur** (la famille d'identité `matrix` est
-hors roue chromatique et donc hors garde).
+`surface` = 4,42:1, `neutre-dark` sur `surface-hover` = 2,97:1). La **garde** (§2,
+test-only) vérifie en plus texte **et texte atténué** /fond ≥ 4,5:1, non-textuel
+≥ 3:1, la **distinction des accents** (≥ 0,040 — c'est désormais **le** porteur
+de la distinction entre familles), les **surfaces neutres** et la **rampe
+partagée**, ainsi que la **profondeur** des **12 presets couleur** (la famille
+d'identité `matrix` est hors règle et donc hors garde). Avec la variante C, le
+`text-muted` le plus contraignant mesuré est **≥ 6,10:1** sur les 4 paliers.
 
 ---
 
@@ -541,6 +551,21 @@ HolafTokens.setTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matche
 
 ## 10. Version
 
+- **0.6.0** — **VARIANTE C « Neutres purs + accent »** (**RUPTURE de valeurs**,
+  aucun changement d'API). Les **6 familles couleur** adoptent des **surfaces
+  gris neutre** (chroma OKLCH **0**) sur une **rampe de profondeur UNIQUE
+  PARTAGÉE** : les fonds des 6 familles d'un même mode sont désormais
+  **identiques** (`#eeeeee` en clair, `#171717` en sombre) et la distinction
+  repose **uniquement sur l'accent** (**inchangé** ; écart minimal **ΔEok 0,071**
+  clair / **0,125** sombre). Les valeurs de surface/texte/danger sont recopiées
+  **exactement** de la maquette de décision `Yuki and Libs/_tools/theme-variants.mjs`
+  (`PARAMS.C` + `variantPalette` ; profondeur `0,062 · 0,048 · 0,030` sombre /
+  `0,046 · 0,038` clair). La famille d'**identité** `matrix` reste **figée** et
+  **hors** de la règle. La **garde** est **repensée** : « fonds distincts ≥ 0,040 »
+  (**faux par construction**) est **remplacé** par surfaces **neutres** (chroma
+  ≤ 0,010) **et** rampe **partagée** (ΔEok ≤ 0,015) — l'écart d'**accent**
+  (≥ 0,040) restant le porteur de la distinction. **Miroirs** : `modal 0.7.0` et
+  `toast 0.8.0` recopient ces valeurs à l'identique.
 - **0.5.0** — **AJOUT** de la famille d'**identité** `matrix` (presets
   `matrix-dark` / `matrix-light`) : thème historique de Pi-Web, valeurs **figées**
   (zéro changement visuel). Hors roue chromatique (exclue de la garde V2) ; elle

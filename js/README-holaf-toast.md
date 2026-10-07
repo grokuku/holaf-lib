@@ -6,7 +6,7 @@ empilées, avec auto-dismiss, pause au survol, actions cliquables, **fonds
 teintés par type** (avec fallback), **thèmes** (registre + presets) et
 **6 positions**.
 
-**Version : 0.7.0**
+**Version : 0.8.0**
 
 ---
 
@@ -316,27 +316,31 @@ vos propres thèmes. Miroir de la philosophie de `HolafModal`.
 - l'option `theme` reste acceptée sous sa forme historique (objet de
   variables) — comportement strictement inchangé.
 
-### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.7.0)
+### Catalogue de thèmes : 6 familles × 2 modes (V2 — v0.7.0 ; valeurs v0.8.0 — variante C)
 
 Enregistrés au chargement de la brique : **12 combinaisons `<famille>-<mode>`**
-(catalogue V2 aligné sur `HolafTokens` 0.4.1) plus les **4 noms historiques**
-remappés en alias. Contraste des textes ≥ 4.5:1, radius 10px partout :
+(catalogue aligné sur `HolafTokens` 0.6.0) plus les **4 noms historiques**
+remappés en alias. Contraste des textes ≥ 4.5:1, radius 10px partout. ⚠️ **Depuis
+la variante C**, les 6 familles **partagent la même surface** (gris neutre,
+chroma 0) : c'est **l'accent** qui les distingue.
 
-| Famille    | `<famille>-light`                | `<famille>-dark`              |
-|------------|----------------------------------|-------------------------------|
-| `corail`   | fond #ffe3ed · accent #9c045e    | fond #36252c · accent #fa7fb5 |
-| `ambre`    | fond #dcc8b5 · accent #7a4800    | fond #0c0400 · accent #f29a2d |
-| `emeraude` | fond #c9dac4 · accent #276701    | fond #081005 · accent #7fc765 |
-| `turquoise`| fond #c3e2e8 · accent #07606c    | fond #051a1e · accent #0ec7de |
-| `amethyste`| fond #dfe1fa · accent #4d41b0    | fond #1e1f2e · accent #a1a3ff |
-| `neutre`   | fond #f2f4f5 · accent #515457    | fond #343537 · accent #aeb1b5 |
+| Famille    | `<famille>-light`                       | `<famille>-dark`                        |
+|------------|-----------------------------------------|-----------------------------------------|
+| `corail`   | fond #eeeeee · accent #9c045e           | fond #171717 · accent #fa7fb5           |
+| `ambre`    | fond #eeeeee · accent #7a4800           | fond #171717 · accent #f29a2d           |
+| `emeraude` | fond #eeeeee · accent #276701           | fond #171717 · accent #7fc765           |
+| `turquoise`| fond #eeeeee · accent #07606c           | fond #171717 · accent #0ec7de           |
+| `amethyste`| fond #eeeeee · accent #4d41b0           | fond #171717 · accent #a1a3ff           |
+| `neutre`   | fond #eeeeee · accent #515457           | fond #171717 · accent #aeb1b5           |
 
 Cohérence **stricte** page ↔ toast sur les surfaces/texte/bordure : les 12
-presets sont les miroirs des presets homonymes de `HolafTokens` 0.4.1
+presets sont les miroirs des presets homonymes de `HolafTokens` 0.6.0
 (`--ht-bg` ← `surface`, `--ht-fg` ← `text`, `--ht-border` ← `border`). Les
 accents de **type** (`--ht-accent-info/success/warning/error`) sont propres au
 toast : `--ht-accent-info` reprend l'accent de la famille et `--ht-accent-error`
-reprend le `danger` de la famille.
+reprend le `danger` de la famille. Les fonds teintés par type
+(`--ht-bg-success/warning/error`, mix sRGB 15 %) sont recalculés sur la nouvelle
+surface.
 
 **Noms historiques (remappés V2)** — alias exacts (règles `HolafTokens.MIGRATIONS`) :
 
@@ -347,6 +351,11 @@ reprend le `danger` de la famille.
 | `midnight`     | `amethyste-dark`  |
 | `slate`        | `neutre-dark`     |
 
+> **v0.8.0 — miroir de la VARIANTE C** (`HolafTokens` 0.6.0) : les 12 presets sont
+> recopiés à l'identique (surfaces gris neutre chroma 0, rampe unique partagée,
+> accent inchangé) ; les fonds teintés par type et le défaut du CSS injecté
+> (`amethyste-dark`) suivent. API inchangée — **bump MINOR** (rupture de valeurs).
+>
 > **v0.7.0 — fin du gel de `dark`.** Historiquement, `dark` était **gelé**
 > (fond #2b2b2b / texte #f0f0f0 / bordure #4a4a4a, distinct de l'ancien
 > `indigo-dark` #1e1e1e) pour préserver le défaut CSS du toast. La rupture de

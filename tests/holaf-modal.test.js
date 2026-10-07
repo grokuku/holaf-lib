@@ -409,7 +409,7 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.6.1");
+        expect(HolafModal.version).toBe("0.7.0");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
@@ -418,23 +418,23 @@ describe("overlay, boutons & CSS", () => {
 describe("thèmes", () => {
     // Valeurs exactes du CSS injecté (défauts historiques de la brique).
     const DARK_DEFAULTS = {
-        "--hm-bg": "#1e1f2e",
-        "--hm-bg-secondary": "#292a3a",
-        "--hm-bg-input": "#343547",
-        "--hm-text": "#eff0f4",
-        "--hm-text-secondary": "#abadc4",
-        "--hm-border": "#52536b",
+        "--hm-bg": "#171717",
+        "--hm-bg-secondary": "#262626",
+        "--hm-bg-input": "#313133",
+        "--hm-text": "#f1f1f6",
+        "--hm-text-secondary": "#bcbdc4",
+        "--hm-border": "#4a4a4d",
         "--hm-accent": "#a1a3ff",
-        "--hm-accent-hover": "#8d8fe0",
+        "--hm-accent-hover": "#8a8cd8",
         "--hm-accent-text": "#0b0b12",
         "--hm-danger": "#f87171",
-        "--hm-danger-hover": "#d76567",
+        "--hm-danger-hover": "#d26362",
         "--hm-danger-text": "#000000",
         "--hm-radius": "12px",
-        "--hm-overlay-bg": "rgba(30, 31, 46, 0.55)",
+        "--hm-overlay-bg": "rgba(23, 23, 23, 0.55)",
         "--hm-font-size": "14px",
         "--hm-shadow": "0 18px 50px rgba(0, 0, 0, 0.55)",
-        "--hm-busy-bg": "rgba(30, 31, 46, 0.85)",
+        "--hm-busy-bg": "rgba(23, 23, 23, 0.85)",
     };
 
     // 12 combinaisons famille × mode (v0.6.0, catalogue V2) + 4 noms historiques.
@@ -531,8 +531,8 @@ describe("thèmes", () => {
 
     it("theme:'light' applique ses variables", () => {
         const ctrl = HolafModal.open({ title: "L", theme: "light" });
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
-        expect(ctrl.el.style.getPropertyValue("--hm-text")).toBe("#252530");
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#eeeeee");
+        expect(ctrl.el.style.getPropertyValue("--hm-text")).toBe("#24242c");
         expect(ctrl.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("rgba(24, 24, 27, 0.35)");
     });
 
@@ -542,7 +542,7 @@ describe("thèmes", () => {
             theme: { preset: "light", vars: { "--hm-accent": "#123456", "non-css": 42 } },
         });
         expect(ctrl.el.style.getPropertyValue("--hm-accent")).toBe("#123456"); // override
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");      // reste du preset
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#eeeeee");      // reste du preset
         expect(ctrl.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("rgba(24, 24, 27, 0.35)");
     });
 
@@ -595,10 +595,10 @@ describe("thèmes", () => {
     it("setTheme (string) : s'applique aux modales sans theme ; open.theme gagne ; clearTheme revient aux défauts", () => {
         HolafModal.setTheme("light");
         const a = HolafModal.open({ title: "A" });
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa"); // global
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#eeeeee"); // global
 
         const b = HolafModal.open({ title: "B", theme: "dark" }); // open.theme gagne
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#171717");
 
         const c = HolafModal.open({ title: "C", theme: null }); // null = opt-out explicite
         expect(c.el.style.getPropertyValue("--hm-bg")).toBe("");
@@ -611,7 +611,7 @@ describe("thèmes", () => {
     it("setTheme accepte un objet brut et { preset, vars } ; setTheme(null) efface", () => {
         HolafModal.setTheme({ preset: "slate", vars: { "--hm-radius": "4px" } });
         const a = HolafModal.open({ title: "A" });
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#343537"); // preset slate (neutre-dark)
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#171717"); // preset slate (neutre-dark)
         expect(a.el.style.getPropertyValue("--hm-radius")).toBe("4px"); // override
 
         const spec = { "--hm-accent": "#0ea5e9" };
@@ -636,7 +636,7 @@ describe("thèmes", () => {
     it("les helpers transmettent theme à open()", async () => {
         const p = HolafModal.alert("T", "M", { theme: "light" });
         const root = document.querySelector(".holaf-modal-root");
-        expect(root.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
+        expect(root.style.getPropertyValue("--hm-bg")).toBe("#eeeeee");
         document.querySelector(".holaf-modal-btn-primary").click();
         await expect(p).resolves.toBeUndefined();
     });
@@ -650,7 +650,7 @@ describe("thèmes", () => {
         expect(a.el.style.getPropertyValue("--hm-bg")).toBe(""); // ni global ni preset
         expect(a.overlay.style.getPropertyValue("--hm-overlay-bg")).toBe("");
         const b = HolafModal.open({ title: "B" }); // sans theme → le global s'applique bien
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#eeeeee");
         expect(warn).not.toHaveBeenCalled(); // "" est un opt-out explicite, pas un nom inconnu
     });
 
@@ -687,7 +687,7 @@ describe("thèmes", () => {
             theme: { preset: "dark", "--hm-accent": "#123456" },
         });
         expect(a.el.style.getPropertyValue("--hm-accent")).toBe("#123456"); // clé racine appliquée
-        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");     // reste du preset
+        expect(a.el.style.getPropertyValue("--hm-bg")).toBe("#171717");     // reste du preset
 
         // En cas de doublon entre clé racine et vars, vars (champ officiel) gagne.
         const b = HolafModal.open({
@@ -695,7 +695,7 @@ describe("thèmes", () => {
             theme: { preset: "light", "--hm-accent": "#racine", vars: { "--hm-accent": "#123abc" } },
         });
         expect(b.el.style.getPropertyValue("--hm-accent")).toBe("#123abc"); // vars > racine
-        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#dfe1fa");     // preset intact
+        expect(b.el.style.getPropertyValue("--hm-bg")).toBe("#eeeeee");     // preset intact
     });
 });
 
@@ -835,9 +835,9 @@ describe("modale à contenu libre (v0.4.0 actions)", () => {
         const ctrl = HolafModal.open({ title: "T", content, theme: "dark" });
         // Le thème est posé sur la racine de la modale ; le contenu en hérite
         // (variables CSS héritées dans l'arbre de la modale).
-        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#1e1f2e");
+        expect(ctrl.el.style.getPropertyValue("--hm-bg")).toBe("#171717");
         expect(ctrl.body.style.getPropertyValue("--hm-accent")).toBe(""); // porté par la racine
-        expect(getComputedStyle(ctrl.el).getPropertyValue("--hm-bg")).toBe("#1e1f2e");
+        expect(getComputedStyle(ctrl.el).getPropertyValue("--hm-bg")).toBe("#171717");
     });
 
     it("actions n'interfère pas avec buttons (deux footer possibles) — compat additive", () => {

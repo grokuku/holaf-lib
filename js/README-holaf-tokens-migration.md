@@ -1,5 +1,27 @@
 # Note de migration — HolafTokens `0.3.0 → 0.4.0` (catalogue V2)
 
+> **RUPTURE 0.5.0 → 0.6.0 (2026) — VARIANTE C « Neutres purs + accent ».**
+> Les **6 familles couleur** adoptent des **surfaces gris neutre** (chroma
+> OKLCH **0**) sur une **rampe de profondeur UNIQUE PARTAGÉE**. Les **fonds
+> changent** (clair `#eeeeee`, sombre `#171717` pour les 6 familles) : un hôte
+> qui **vendorise** `tokens` **doit rafraîchir sa copie pinnée**
+> (`./scripts/holaf upgrade tokens <DEST>`) pour voir la variante C — sinon il
+> reste sur les anciens fonds teintés.
+>
+> - **Aucun nom de preset ni d'alias ne change**, **aucune API ne change** : la
+>   table `MIGRATIONS` reste **valable telle quelle** (rien à y ajouter).
+> - Les **accents sont inchangés** ; c'est désormais **le seul** axe de
+>   distinction entre familles (les fonds sont **partagés**). Les valeurs de
+>   `text` / `text-muted` / `danger*` / `accent-hover` sont recalculées sur la
+>   nouvelle surface.
+> - La famille d'**identité `matrix` reste figée** (hors règle, non modifiée).
+> - Les **miroirs** `modal` (`0.7.0`) et `toast` (`0.8.0`) recopient les nouvelles
+>   valeurs ; un hôte qui les vendorise doit les rafraîchir aussi. ⚠️ Le CLI ne
+>   copie **pas** les `.css` : ré-extraire `holaf-modal.css` via
+>   `HolafModal.getCss()` (voir README de la brique).
+> - Un hôte qui a **figé** les anciennes surfaces en snapshot de test doit le
+>   mettre à jour.
+>
 > **AJOUT 0.4.1 → 0.5.0 (2026)** — **nouvelle famille d'IDENTITÉ `matrix`**
 > (`matrix-dark` / `matrix-light`, thème historique de Pi-Web, valeurs figées).
 > **Purement additif** : aucun preset ni alias existant ne change, aucune API ne
