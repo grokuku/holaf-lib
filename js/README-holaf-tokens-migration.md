@@ -1,5 +1,14 @@
 # Note de migration — HolafTokens `0.3.0 → 0.4.0` (catalogue V2)
 
+> **AJOUT 0.4.1 → 0.5.0 (2026)** — **nouvelle famille d'IDENTITÉ `matrix`**
+> (`matrix-dark` / `matrix-light`, thème historique de Pi-Web, valeurs figées).
+> **Purement additif** : aucun preset ni alias existant ne change, aucune API ne
+> change, aucune étape de migration n'est requise. La famille `matrix` est **hors
+> roue chromatique** (non soumise à la garde V2) et porte 7 clés hôte en plus
+> (`border-bright`, `text-bright`, `info`, `warn`, `code-inline-bg`,
+> `code-block-bg`, `tool-output-bg`) ; `listFamilies()` compte désormais 7 noms
+> (`matrix` en tête) et `listPresets()` 18 intégrés.
+
 > **PATCH 0.4.0 → 0.4.1 (2026)** — correctif de **valeur**, sans nouvelle étape
 > de migration : la note ci-dessous (0.3.0 → 0.4.0) reste valable telle quelle.
 > Le PATCH corrige le **contraste du texte atténué** (`text-muted`) : 6 valeurs du

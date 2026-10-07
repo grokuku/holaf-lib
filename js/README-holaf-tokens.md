@@ -1,4 +1,4 @@
-# HolafTokens — tokens CSS de page (brique holaf-lib v0.4.1)
+# HolafTokens — tokens CSS de page (brique holaf-lib v0.5.0)
 
 Brique **FONDATION** : elle pose les **tokens CSS de PAGE** sous le préfixe
 **réservé `--holaf-*`** sur `:root`. Un seul fichier (`holaf-tokens.js`), zéro
@@ -21,7 +21,7 @@ La brique **ne rend aucun élément** : elle ne fait que poser / retirer des
 variables CSS sur `:root`. Le CSS auto-injecté est donc minimal (un repère
 documenté, injecté une seule fois) — **rien de scopé n'est nécessaire**.
 
-**Version : 0.4.1**
+**Version : 0.5.0**
 
 ---
 
@@ -69,24 +69,38 @@ Au chargement, **si l'hôte n'a fait aucun choix**, la brique applique le
 
 ---
 
-## 2. Catalogue à 2 axes : famille × mode (V2)
+## 2. Catalogue à 2 axes : famille × mode (V2 + identité)
 
 Depuis **0.4.0**, les thèmes forment un **catalogue à deux axes** (catalogue V2,
 **rupture** avec les 0.2/0.3) :
 
-- **Axe 1 — la famille** : une identité chromatique (des fonds + un accent). Il
-  y en a **6** : `corail`, `ambre`, `emeraude`, `turquoise`, `amethyste`,
-  `neutre` (une teinte franche par famille, le Neutre assumé).
+- **Axe 1 — la famille** : une identité chromatique (des fonds + un accent).
+  Le catalogue en compte **7** depuis 0.5.0 : la famille d'**identité** `matrix`
+  (thème historique de Pi-Web : monochrome à accent néon vert) **puis** les
+  **6** familles « couleur » de la roue chromatique : `corail`, `ambre`,
+  `emeraude`, `turquoise`, `amethyste`, `neutre` (une teinte franche par famille,
+  le Neutre assumé).
 - **Axe 2 — le mode** : `light` ou `dark`.
 
-Chaque croisement est un **preset** nommé **`<famille>-<mode>`** → **12 presets**.
-Chaque preset porte **16 clés** (les 15 clés standard + `surface-hover`, le 4ᵉ
-palier de profondeur : `surface` → `surface-elev` → `surface-raised` →
-`surface-hover`). Les valeurs sont **figées en hex** (calculées une fois depuis
-la maquette V2 validée ; **aucun moteur OKLCH** n'est embarqué).
+Chaque croisement est un **preset** nommé **`<famille>-<mode>`** → **14 presets**.
+Les **12 presets couleur** (V2) portent **16 clés** (les 15 clés standard +
+`surface-hover`, le 4ᵉ palier de profondeur : `surface` → `surface-elev` →
+`surface-raised` → `surface-hover`) ; les **2 presets `matrix-*`** (identité)
+portent **23 clés** : les mêmes 16 clés **plus** 7 clés hôte propres à Pi-Web
+(`border-bright`, `text-bright`, `info`, `warn`, `code-inline-bg`,
+`code-block-bg`, `tool-output-bg`). Les valeurs sont **figées en hex** (calculées
+une fois depuis la maquette V2 validée ; **aucun moteur OKLCH** n'est embarqué).
+
+> ⚠️ La famille `matrix` **n'appartient pas à la roue chromatique** : ses fonds
+> quasi neutres ne sont pas « distinguables à la teinte » et son texte atténué
+> historique ne vise pas AA sur les 4 paliers. Elle est donc **exclue de la garde
+> V2** (§2 bis) — ses valeurs sont en revanche **figées** (Pi-Web, zéro
+> changement visuel).
 
 | Preset | Famille | Mode | Accent | Accent-text | Surface | Texte |
 |--------|---------|------|--------|-------------|---------|-------|
+| `matrix-light`    | matrix    | light | `#166534` | `#ffffff` | `#eeece6` | `#3d3d3a` |
+| `matrix-dark`     | matrix    | dark  | `#00ff41` | `#000000` | `#0a0a0a` | `#c0c0c0` |
 | `corail-light`    | corail    | light | `#9c045e` | `#ffffff` | `#ffe3ed` | `#2f2227` |
 | `corail-dark`     | corail    | dark  | `#fa7fb5` | `#0b0b12` | `#36252c` | `#f4eef0` |
 | `ambre-light`     | ambre     | light | `#7a4800` | `#ffffff` | `#dcc8b5` | `#2d251c` |
@@ -100,14 +114,15 @@ la maquette V2 validée ; **aucun moteur OKLCH** n'est embarqué).
 | `neutre-light`    | neutre    | light | `#515457` | `#ffffff` | `#f2f4f5` | `#1f2730` |
 | `neutre-dark`     | neutre    | dark  | `#aeb1b5` | `#0b0b12` | `#343537` | `#edf0f4` |
 
-> Tableau **indicatif** : les **16 clés** complètes de chaque preset sont
-exposées par `HolafTokens.PRESETS` (snapshot clé par clé dans
+> Tableau **indicatif** : les **16 clés** (couleur) / **23 clés** (`matrix`) de
+chaque preset sont exposées par `HolafTokens.PRESETS` (snapshot clé par clé dans
 `tests/holaf-tokens.test.js`).
 
 ### Garde V2 (test-only)
 
 La règle V2 est **rejouée en test** (`tests/holaf-tokens.test.js`, helper
-`tests/helpers/theme-guard.js`) : fonds et accents **distincts** par mode
+`tests/helpers/theme-guard.js`) **sur la seule roue chromatique** (les 6 familles
+couleur ; `matrix` en est exclue) : fonds et accents **distincts** par mode
 (ΔEok ≥ 0,040), texte **et texte atténué** (`text-muted`) ≥ 4,5:1 sur les 4
 paliers de profondeur, non-textuel ≥ 3:1, profondeur ≥ 0,020 — avec **preuve de
 non-vacuité** (self-test qui échoue volontairement). Aucun coût runtime : la
@@ -131,10 +146,10 @@ HolafTokens.setTheme("turquoise-light"); // nom <famille>-<mode>
 HolafTokens.setFamily("emeraude", "dark"); // équivaut à setTheme("emeraude-dark")
 ```
 
-`HolafTokens.listPresets()` → les **16** noms valides (12 `<famille>-<mode>` +
+`HolafTokens.listPresets()` → les **18** noms valides (14 `<famille>-<mode>` +
 4 alias), **PUIS** les packs hôte enregistrés (voir §6).
-`HolafTokens.listFamilies()` → `["corail", "ambre", "emeraude", "turquoise",
-"amethyste", "neutre"]`.
+`HolafTokens.listFamilies()` → `["matrix", "corail", "ambre", "emeraude",
+"turquoise", "amethyste", "neutre"]`.
 
 ### Migration depuis la 0.3.0
 
@@ -216,13 +231,13 @@ HolafTokens.reset();                             // → plus aucune --holaf-* po
 | Fonction | Rôle |
 |----------|------|
 | `HolafTokens.setTokens({ name?, values })` | Pose des tokens (clés non-préfixées → préfixées `--holaf-*` ; clés déjà `--…` passées telles quelles). |
-| `HolafTokens.setTheme(presetName)` | Applique un preset par son nom — **12 `<famille>-<mode>` ET 4 alias** (throw clair si inconnu). |
+| `HolafTokens.setTheme(presetName)` | Applique un preset par son nom — **14 `<famille>-<mode>` ET 4 alias** (throw clair si inconnu). |
 | `HolafTokens.setFamily(family, mode?)` | Applique `<famille>-<mode>`. Sans `mode` : garde le mode courant de la famille si elle est active, sinon `light`. |
 | `HolafTokens.getTheme()` | → `{ name, vars }` (copie des `--holaf-*` posées) ou `null` après `reset()`. |
 | `HolafTokens.getFamily()` / `getMode()` | → axe 1 / axe 2 du thème courant (alias résolus), ou `null`. |
 | `HolafTokens.applyPalette(accentHex, options?)` | Génère et pose une palette dérivée d'un accent (calculs internes **mix/contrast** — **PAS de dépendance inter-briques** vers HolafColor). |
 | `HolafTokens.reset()` | **Retire toutes** les variables `--holaf-*` posées (retour à « sans thème », aucun preset n'est réappliqué). |
-| `HolafTokens.listPresets()` | Tous les noms de presets valides : **les 16 intégrés (12 famille-mode + 4 alias) PUIS les packs** dans l'ordre d'enregistrement. |
+| `HolafTokens.listPresets()` | Tous les noms de presets valides : **les 18 intégrés (14 famille-mode + 4 alias) PUIS les packs** dans l'ordre d'enregistrement. |
 | `HolafTokens.listFamilies()` | Noms des familles (axe 1). |
 | `HolafTokens.registerPreset(name, tokens, options?)` | **(0.3.0)** Enregistre un **pack hôte** → `{ name, vars }` (copie). `options.extends` / `options.derive`. Nom réservé/vide → throw. **N'émet pas** d'événement. |
 | `HolafTokens.updatePreset(name, tokens)` | **(0.3.0)** Fusionne dans la spec du pack puis **re-résout** (re-dérive) → `{ name, vars }`. Throw si intégré ou inconnu. N'émet pas. |
@@ -274,13 +289,14 @@ HolafTokens.getFamily(); // → "amethyste"
 HolafTokens.getMode();   // → "dark"
 
 // Parcourir le catalogue :
-HolafTokens.listFamilies(); // ["corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"]
-HolafTokens.listPresets();  // 12 famille-mode + 4 alias
+HolafTokens.listFamilies(); // ["matrix", "corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"]
+HolafTokens.listPresets();  // 14 famille-mode + 4 alias
 ```
 
 ### Clés des presets V2 (catalogue figé)
 
-Les **12 presets** portent les **16 clés** standard (voir §3). Les valeurs sont
+Les presets **couleur** (12) portent les **16 clés** standard (voir §3) ; les
+presets `matrix-*` (2) en portent **23** (+ 7 clés hôte Pi-Web). Les valeurs sont
 **figées en hex** : il n'y a **plus** de génération `generateTheme` interne (les
 0.2/0.3 en avaient une ; le catalogue V2 est littéral). `applyPalette` reste
 calculée par les primitives internes `mix` / `contrast`.
@@ -371,7 +387,7 @@ Le pack **fournit** `ok` et `warn` (couleur) ; leurs dérivées sont calculées 
 ## 6. Theme packs (registre hôte)
 
 Un **pack** est un preset nommé **enregistré par l'hôte** (via `registerPreset`)
-sans toucher aux 16 intégrés. Idéal pour l'identité d'un projet.
+sans toucher aux 18 intégrés. Idéal pour l'identité d'un projet.
 
 ### API
 
@@ -425,7 +441,7 @@ HolafTokens.unregisterPreset("bxrgb-neon");                    // → true
 
 Sont **réservés** (un pack ne peut pas les reprendre → `throw` clair) :
 
-- les **12** `<famille>-<mode>` (`corail-light` … `neutre-dark`) ;
+- les **14** `<famille>-<mode>` (`matrix-light` … `neutre-dark`) ;
 - les **4** alias (`dark`, `light`, `midnight`, `slate`) ;
 - les **6** noms de familles (`corail`, `ambre`, `emeraude`, `turquoise`,
   `amethyste`, `neutre`).
@@ -450,7 +466,7 @@ Notes de cycle de vie :
   `holaf-tokens-changed` ; `setTheme("<pack>")` **émet** comme les autres.
 - `getFamily()` / `getMode()` renvoient **`null`** pour un pack (aucun axe
   famille × mode).
-- `listPresets()` = les **16 intégrés d'abord**, puis les packs dans l'ordre
+- `listPresets()` = les **18 intégrés d'abord**, puis les packs dans l'ordre
   d'enregistrement.
 - Un `updatePreset` du pack **actif** ne repose rien : refaites `setTheme` pour
   voir le changement appliqué.
@@ -504,7 +520,8 @@ le **PATCH 0.4.1**, `text-muted` (texte atténué) est lui aussi garanti ≥ 4.5
 `surface` = 4,42:1, `neutre-dark` sur `surface-hover` = 2,97:1). La **garde V2**
 (§2, test-only) vérifie en plus texte **et texte atténué** /fond ≥ 4,5:1,
 non-textuel ≥ 3:1, ainsi que la **distinction** des fonds/accents et la
-**profondeur** des **12 presets**.
+**profondeur** des **12 presets couleur** (la famille d'identité `matrix` est
+hors roue chromatique et donc hors garde).
 
 ---
 
@@ -524,6 +541,12 @@ HolafTokens.setTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matche
 
 ## 10. Version
 
+- **0.5.0** — **AJOUT** de la famille d'**identité** `matrix` (presets
+  `matrix-dark` / `matrix-light`) : thème historique de Pi-Web, valeurs **figées**
+  (zéro changement visuel). Hors roue chromatique (exclue de la garde V2) ; elle
+  porte **7 clés hôte** supplémentaires (`border-bright`, `text-bright`, `info`,
+  `warn`, `code-inline-bg`, `code-block-bg`, `tool-output-bg`). Le catalogue
+  compte donc **14 presets** + 4 alias = **18 intégrés**. Aucun changement d'API.
 - **0.4.1** — **PATCH de VALEUR** (aucun changement d'API, aucune clé nouvelle) :
   correction du contraste du **texte atténué**. Dans le catalogue 0.4.0, 6
   `text-muted` passaient sous le seuil **AA 4,5:1** sur au moins un palier de

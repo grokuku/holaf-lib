@@ -1,7 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafTokens · version 0.4.1
+ * Holaf UI — Brique HolafTokens · version 0.5.0
  * ─────────────────────────────────────────────────────────────────────────────
  * BRIQUE « FONDATION » — les tokens CSS de PAGE.
+ *
+ * ▸ AJOUT 0.5.0 (famille d'IDENTITÉ `matrix`) ───────────────────────────────
+ *   Nouvelle famille `matrix` (identité Pi-Web, monochrome à accent néon vert)
+ *   fournissant les presets `matrix-dark` et `matrix-light`. Contrairement aux
+ *   6 familles « couleur » du catalogue V2, `matrix` n'appartient PAS à la roue
+ *   chromatique : sa garde de distinction/profondeur ne s'y applique donc pas
+ *   (voir tests). Elle est en REVANCHE le thème d'identité historique de Pi-Web
+ *   et ses valeurs y sont FIGÉES (zéro changement visuel) ; elle porte EN PLUS
+ *   les clés hôtes non standard nécessaires à Pi-Web (`border-bright`,
+ *   `text-bright`, `info`, `warn`, `code-inline-bg`, `code-block-bg`,
+ *   `tool-output-bg`). Aucun changement d'API.
  *
  * ▸ PATCH 0.4.1 (contraste du texte atténué) ────────────────────────────────
  *   Correction de VALEUR (aucun changement d'API, aucune clé nouvelle) :
@@ -80,9 +91,11 @@
  *     --shadow     → var(--holaf-shadow)
  *   Voir js/README-holaf-tokens.md pour le mapping complet.
  *
- * ▸ FAMILLES × MODES (catalogue à 2 axes — V2) ─────────────────────────────
- *   6 familles (corail, ambre, emeraude, turquoise, amethyste, neutre) ×
- *   2 modes (light, dark) = 12 presets `<famille>-<mode>`, PLUS 4 alias
+ * ▸ FAMILLES × MODES (catalogue à 2 axes — V2 + identité) ──────────────────
+ *   La famille d'IDENTITÉ `matrix` ouvre le catalogue (Pi-Web), puis les
+ *   6 familles « couleur » (corail, ambre, emeraude, turquoise, amethyste,
+ *   neutre) × 2 modes (light, dark) = 12 presets `<famille>-<mode>` (soit 14
+ *   presets `<famille>-<mode>` au total), PLUS 4 alias
  *   historiques (dark / light / midnight / slate) REMAPPÉS vers les nouvelles
  *   familles (valeurs RIGOUREUSEMENT identiques à leur jumeau). Chaque famille
  *   a sa propre clarté de fond (les fonds restent distincts malgré un chroma
@@ -91,7 +104,7 @@
  *   AUCUN choix, la brique applique au chargement
  *   le preset initial issu de `prefers-color-scheme` (dark/light).
  *
- * ▸ API 0.4.0 ────────────────────────────────────────────────────────────────
+ * ▸ API 0.5.0 ────────────────────────────────────────────────────────────────
  *   setTokens / setTheme / setFamily / getTheme / getFamily / getMode /
  *   applyPalette / reset / listPresets / listFamilies / FAMILIES / PRESETS /
  *   ALIASES / PREFIX / VERSION                    — INCHANGÉS (0.2.0)
@@ -101,19 +114,19 @@
  *   getPreset(name)                          → copie | null (intégré/alias/pack)
  *   alpha(color, a)                          → hex → rgba (non-hex inchangé)
  *   MIGRATIONS                               → table ancien→nouveau (hôtes)
- *   listPresets() = 16 intégrés (12 presets + 4 alias) PUIS packs dans l'ordre.
+ *   listPresets() = 18 intégrés (14 presets + 4 alias) PUIS packs dans l'ordre.
  *   Événement : à CHAQUE changement de palette appliquée (setTokens / setTheme /
  *   applyPalette / reset / initial). register / update / unregister n'émettent
  *   PAS ; setTheme("<pack>") émet comme les autres.
  *
  * ▸ REGISTRE DE PACKS (0.3.0) ───────────────────────────────────────────────
  *   Un PACK hôte est un preset nommé enregistré via registerPreset, sans
- *   toucher aux 16 intégrés. options.extends : nom d'un intégré / alias / pack
+ *   toucher aux 18 intégrés. options.extends : nom d'un intégré / alias / pack
  *   (base = copie complète). options.derive : true (défaut = groupe A+B moins
  *   danger-gradient/txt-glow) | false | tableau de clés. Priorité de fusion :
  *   spec explicite > extends > dérivé. Une dérivation dont la source est
  *   absente ou non-hex est SAUTÉE silencieusement (clé non posée, pas d'erreur).
- *   Noms réservés : les 12 <famille>-<mode> + 4 alias + 6 familles → throw.
+ *   Noms réservés : les 14 <famille>-<mode> + 4 alias + 7 familles → throw.
  *   Registre VOLATILE : les packs sont perdus au rechargement, l'hôte les
  *   ré-enregistre au boot. getFamily() / getMode() renvoient null pour un pack.
  *
@@ -137,7 +150,7 @@
 const HolafTokens = (function () {
     "use strict";
 
-    const VERSION = "0.4.1";
+    const VERSION = "0.5.0";
 
     // Préfixe RÉSERVÉ : toutes les variables posées sont sous --holaf-*.
     const PREFIX = "--holaf-";
@@ -228,6 +241,64 @@ const HolafTokens = (function () {
     //   danger-text  = readableText(danger) (#ffffff ou #000000)
     //   radius = "12px" ; font-size = "14px" ; shadow = ombre par mode.
     const FAMILIES = {
+        // Famille d'IDENTITÉ (Pi-Web) : monochrome à accent néon vert. Valeurs
+        // FIGÉES (= ex-thème « Matrix » de Pi-Web, zéro changement visuel). Elle
+        // porte 7 clés hôte EN PLUS des 16 clés standard (border-bright,
+        // text-bright, info, warn, code-inline-bg, code-block-bg, tool-output-bg).
+        // Hors roue chromatique : non soumise à la garde de distinction/profondeur.
+        matrix: {
+            label: "Matrix", hue: 135,
+            light: {
+                "surface": "#eeece6",
+                "surface-elev": "#f8f7f4",
+                "surface-raised": "#ffffff",
+                "surface-hover": "#f1f0ea",
+                "border": "#d0d0c8",
+                "border-bright": "#b8b8b0",
+                "text": "#3d3d3a",
+                "text-bright": "#1a1a18",
+                "text-muted": "#777770",
+                "info": "#0070cc",
+                "warn": "#cc8800",
+                "accent": "#166534",
+                "accent-hover": "#15803d",
+                "accent-text": "#ffffff",
+                "danger": "#cc2222",
+                "danger-hover": "#D1403F",
+                "danger-text": "#ffffff",
+                "code-inline-bg": "rgba(0, 0, 0, 0.06)",
+                "code-block-bg": "rgba(0, 0, 0, 0.08)",
+                "tool-output-bg": "rgba(0, 0, 0, 0.05)",
+                "radius": "12px",
+                "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)",
+                "font-size": "14px",
+            },
+            dark: {
+                "surface": "#0a0a0a",
+                "surface-elev": "#161616",
+                "surface-raised": "#1e1e1e",
+                "surface-hover": "#262626",
+                "border": "#2a2a2a",
+                "border-bright": "#3a3a3a",
+                "text": "#c0c0c0",
+                "text-bright": "#e0e0e0",
+                "text-muted": "#888888",
+                "info": "#00aaff",
+                "warn": "#ffaa00",
+                "accent": "#00ff41",
+                "accent-hover": "#00cc34",
+                "accent-text": "#000000",
+                "danger": "#ff4444",
+                "danger-hover": "#DA3B3B",
+                "danger-text": "#000000",
+                "code-inline-bg": "rgba(0, 0, 0, 0.3)",
+                "code-block-bg": "rgba(0, 0, 0, 0.4)",
+                "tool-output-bg": "rgba(0, 0, 0, 0.3)",
+                "radius": "12px",
+                "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)",
+                "font-size": "14px",
+            },
+        },
         corail: {
             label: "Corail", hue: 354,
             light: {
@@ -464,9 +535,11 @@ const HolafTokens = (function () {
         },
     };
 
-    // Ordre d'affichage stable (par teinte, le Neutre en dernier).
+    // Ordre d'affichage stable : la famille d'IDENTITÉ `matrix` d'abord
+    // (thème de référence Pi-Web), puis les 6 familles « couleur » par teinte
+    // (le Neutre en dernier).
     const MODES = ["light", "dark"];
-    const FAMILY_NAMES = ["corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"];
+    const FAMILY_NAMES = ["matrix", "corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"];
 
     // ─── Catalogue des presets (12 familles×modes + 4 alias REMAPPÉS) ──────
     const PRESETS = {};

@@ -33,10 +33,10 @@
       "description": "Utilitaires couleur en PUR JS, SANS DOM et SANS style (hex/hsl/rgb, mix, lighten/darken, contraste WCAG, generateTheme, generateFamily)."
     },
     "tokens": {
-      "version": "0.4.1",
+      "version": "0.5.0",
       "file": "js/holaf-tokens.js",
       "category": "foundation",
-      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). 0.4.1 : PATCH de VALEUR (aucun changement d'API) — 6 `text-muted` du catalogue V2 corrigés pour tenir le seuil AA 4,5:1 sur les 4 paliers de profondeur (`ambre-light` sur `surface` passait à 4,42:1, `neutre-dark` sur `surface-hover` à 2,97:1), à luminosité ajustée et teinte préservée ; la garde V2 contrôle désormais AUSSI `text-muted` (lacune comblée). 0.4.0 : catalogue V2 REMPLACÉ (RUPTURE) — 6 familles × clair/sombre (12 presets corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) aux valeurs figées en hex + 4 alias historiques remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark) ; table MIGRATIONS exportée pour les hôtes ; garde V2 rejouée en test (fonds/accents distincts, texte et texte atténué/fond ≥4,5:1, profondeur ≥ seuil). Conserve de la 0.3.0 : 23 clés optionnelles (dérivables accent-soft/glow/gradient(-hover)/shadow, danger-soft/shadow/gradient*, border-muted, text-faint, surface-hover, chrome-header/footer, états ok/ok-text/ok-soft/warn/warn-text, identité bg-image/txt-glow*/radius-sm/font-sans/font-mono ; * = opt-in), registre de packs hôte (registerPreset/updatePreset/unregisterPreset/getPreset/alpha), purge par possession d'ensemble, fichier chargeable en <script> classique (file:// ET HTTP) sans export top-level."
+      "description": "BRIQUE FONDATION : la SEULE autorisée à poser les variables --holaf-* sur :root (contrat explicite opt-in, thème global de page). 0.5.0 : AJOUT de la famille d'IDENTITÉ `matrix` (presets matrix-dark / matrix-light, thème historique de Pi-Web, valeurs FIGÉES = zéro changement visuel). Hors roue chromatique : elle n'est pas soumise à la garde V2 de distinction/profondeur et porte 7 clés hôte supplémentaires (border-bright, text-bright, info, warn, code-inline-bg, code-block-bg, tool-output-bg). Le catalogue compte désormais 14 presets <famille>-<mode> + 4 alias = 18 intégrés. Aucun changement d'API. 0.4.1 : PATCH de VALEUR (aucun changement d'API) — 6 `text-muted` du catalogue V2 corrigés pour tenir le seuil AA 4,5:1 sur les 4 paliers de profondeur (`ambre-light` sur `surface` passait à 4,42:1, `neutre-dark` sur `surface-hover` à 2,97:1), à luminosité ajustée et teinte préservée ; la garde V2 contrôle désormais AUSSI `text-muted` (lacune comblée). 0.4.0 : catalogue V2 REMPLACÉ (RUPTURE) — 6 familles × clair/sombre (12 presets corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) aux valeurs figées en hex + 4 alias historiques remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark) ; table MIGRATIONS exportée pour les hôtes ; garde V2 rejouée en test (fonds/accents distincts, texte et texte atténué/fond ≥4,5:1, profondeur ≥ seuil). Conserve de la 0.3.0 : 23 clés optionnelles (dérivables accent-soft/glow/gradient(-hover)/shadow, danger-soft/shadow/gradient*, border-muted, text-faint, surface-hover, chrome-header/footer, états ok/ok-text/ok-soft/warn/warn-text, identité bg-image/txt-glow*/radius-sm/font-sans/font-mono ; * = opt-in), registre de packs hôte (registerPreset/updatePreset/unregisterPreset/getPreset/alpha), purge par possession d'ensemble, fichier chargeable en <script> classique (file:// ET HTTP) sans export top-level."
     },
     "ambient": {
       "version": "0.3.0",
@@ -45,10 +45,10 @@
       "description": "Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; density = intensité, blur global, elementCount exposé, animation dt ; options perf scale (résolution du buffer + upscale CSS) et fps (plafond de framerate)."
     },
     "icons": {
-      "version": "0.1.5",
+      "version": "0.1.6",
       "file": "js/holaf-icons.js",
       "category": "component",
-      "description": "54 icônes SVG en trait (style Feather, MIT ; 2 tracés Tabler MIT), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine). 0.1.5 : + arrow-left, volume, volume-off (Feather MIT)."
+      "description": "93 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine). 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
     },
     "collection": {
       "version": "0.1.0",

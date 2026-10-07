@@ -4,8 +4,9 @@
  * getTheme / listPresets, setTokens (--holaf-* sur :root), reset (retrait),
  * événement "holaf-tokens-changed" à chaque changement, applyPalette
  * (calculs internes mix/contrast, cohérence contraste), catalogue V2 (6 familles
- * × 2 modes + 4 alias remappés), GARDE V2 (fonds/accents distincts, profondeur),
- * table MIGRATIONS, registre de packs, dérivations.
+ * × 2 modes + 4 alias remappés) + famille d'IDENTITÉ `matrix` (matrix-light /
+ * matrix-dark, valeurs figées Pi-Web), GARDE V2 (fonds/accents distincts,
+ * profondeur), table MIGRATIONS, registre de packs, dérivations.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
@@ -34,6 +35,10 @@ const CANON = [
     "neutre-light", "neutre-dark",
 ];
 const ALIAS_NAMES = ["dark", "light", "midnight", "slate"];
+// Famille d'IDENTITÉ (Pi-Web) : hors roue chromatique, presets figés.
+const MATRIX_CANON = ["matrix-light", "matrix-dark"];
+// Les 6 familles « couleur » de la roue chromatique V2 (garde de distinction).
+const V2_FAMILIES = ["corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"];
 // 15 clés standard + surface-hover (4ᵉ palier de profondeur).
 const KEYS16 = [
     "surface", "surface-elev", "surface-raised", "surface-hover", "border", "text",
@@ -59,10 +64,14 @@ function collectEvents() {
     document.addEventListener("holaf-tokens-changed", (e) => events.push(e.detail));
     return events;
 }
-// Range les 12 presets intégrés en lignes pour la garde V2.
+// Range les presets en lignes pour la garde V2. La garde ne porte que sur la
+// ROUe chromatique (les 6 familles couleur). La famille d'IDENTITÉ `matrix`
+// (monochrome, valeurs Pi-Web figées : ses gris de texte atténué ne visent pas
+// AA sur les 4 paliers) en est VOLONTAIREMENT exclue — elle est contrôlée par
+// le describe « famille d'identité Matrix » plus bas.
 function guardRows() {
     const rows = [];
-    for (const fam of HolafTokens.listFamilies()) {
+    for (const fam of V2_FAMILIES) {
         for (const mode of ["dark", "light"]) {
             const p = HolafTokens.PRESETS[fam + "-" + mode];
             rows.push({
@@ -86,15 +95,16 @@ beforeEach(() => {
 afterEach(() => {
     // Le registre de packs est global au module (volatile) : on retire les
     // packs enregistrés par un test pour ne pas polluer les suivants.
-    HolafTokens.listPresets().slice(16).forEach((n) => HolafTokens.unregisterPreset(n));
+    HolafTokens.listPresets().slice(18).forEach((n) => HolafTokens.unregisterPreset(n));
 });
 
 describe("HolafTokens — presets", () => {
-    it("expose les 4 alias historiques + les 12 presets <famille>-<mode>", () => {
+    it("expose les 4 alias historiques + les 14 presets <famille>-<mode>", () => {
         const names = HolafTokens.listPresets();
         ALIAS_NAMES.forEach((alias) => expect(names).toContain(alias));
         CANON.forEach((name) => expect(names).toContain(name));
-        expect(names).toHaveLength(16);
+        MATRIX_CANON.forEach((name) => expect(names).toContain(name));
+        expect(names).toHaveLength(18);
     });
 
     it("setTheme : pose les variables --holaf-* sur :root", () => {
@@ -267,8 +277,8 @@ describe("HolafTokens — applyPalette", () => {
 });
 
 describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
-    it("expose les 6 familles (ordre des teintes)", () => {
-        expect(HolafTokens.listFamilies()).toEqual(["corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"]);
+    it("expose les 7 familles (identité Matrix + roue chromatique V2)", () => {
+        expect(HolafTokens.listFamilies()).toEqual(["matrix", "corail", "ambre", "emeraude", "turquoise", "amethyste", "neutre"]);
     });
 
     it("les 12 presets <famille>-<mode> existent et couvrent les 16 clés", () => {
@@ -327,7 +337,8 @@ describe("HolafTokens — catalogue 2 axes (familles × modes)", () => {
     });
 
     it("expose FAMILIES (libellé + teinte + descripteurs de modes) et ALIASES", () => {
-        expect(Object.keys(HolafTokens.FAMILIES).sort()).toEqual(["ambre", "amethyste", "corail", "emeraude", "neutre", "turquoise"]);
+        expect(Object.keys(HolafTokens.FAMILIES).sort()).toEqual(["ambre", "amethyste", "corail", "emeraude", "matrix", "neutre", "turquoise"]);
+        expect(HolafTokens.FAMILIES.matrix.label).toBe("Matrix");
         expect(HolafTokens.FAMILIES.neutre.hue).toBe(250);
         expect(HolafTokens.FAMILIES.neutre.light.accent).toBe("#515457");
         expect(HolafTokens.ALIASES).toEqual({
@@ -358,7 +369,7 @@ describe("HolafTokens 0.4.0 — alias remappés & table MIGRATIONS", () => {
     });
 });
 
-describe("HolafTokens 0.4.0 — snapshot des 12 presets V2 + 4 alias", () => {
+describe("HolafTokens 0.4.0 — snapshot des 12 presets V2 + 2 matrix + 4 alias", () => {
     // Snapshot FIGÉ des 16 presets (12 V2 + 4 alias) — garde-fou contre toute
     // retouche accidentelle des valeurs calculées depuis la maquette V2.
     const FROZEN_12 = {
@@ -380,11 +391,58 @@ describe("HolafTokens 0.4.0 — snapshot des 12 presets V2 + 4 alias", () => {
         "slate": { "surface": "#343537", "surface-elev": "#3f4144", "surface-raised": "#4a4d51", "surface-hover": "#565a5e", "border": "#686e75", "text": "#edf0f4", "text-muted": "#ced1d4", "accent": "#aeb1b5", "accent-hover": "#9c9ea2", "accent-text": "#0b0b12", "danger": "#f87878", "danger-hover": "#db6e6e", "danger-text": "#000000", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
     };
 
-    it("les 16 presets intégrés sont identiques au snapshot V2 (clé par clé)", () => {
-        expect(Object.keys(HolafTokens.PRESETS).sort()).toEqual(Object.keys(FROZEN_12).sort());
-        Object.keys(FROZEN_12).forEach((name) => {
-            expect(HolafTokens.PRESETS[name], name).toEqual(FROZEN_12[name]);
+    // Snapshot FIGÉ de la famille d'IDENTITÉ matrix (valeurs Pi-Web, 23 clés :
+    // 16 standard + 7 clés hôte Pi-Web). Ajoutée en 0.5.0.
+    const FROZEN_MATRIX = {
+        "matrix-light": { "surface": "#eeece6", "surface-elev": "#f8f7f4", "surface-raised": "#ffffff", "surface-hover": "#f1f0ea", "border": "#d0d0c8", "border-bright": "#b8b8b0", "text": "#3d3d3a", "text-bright": "#1a1a18", "text-muted": "#777770", "info": "#0070cc", "warn": "#cc8800", "accent": "#166534", "accent-hover": "#15803d", "accent-text": "#ffffff", "danger": "#cc2222", "danger-hover": "#D1403F", "danger-text": "#ffffff", "code-inline-bg": "rgba(0, 0, 0, 0.06)", "code-block-bg": "rgba(0, 0, 0, 0.08)", "tool-output-bg": "rgba(0, 0, 0, 0.05)", "radius": "12px", "shadow": "0 18px 50px rgba(24, 24, 27, 0.18)", "font-size": "14px" },
+        "matrix-dark": { "surface": "#0a0a0a", "surface-elev": "#161616", "surface-raised": "#1e1e1e", "surface-hover": "#262626", "border": "#2a2a2a", "border-bright": "#3a3a3a", "text": "#c0c0c0", "text-bright": "#e0e0e0", "text-muted": "#888888", "info": "#00aaff", "warn": "#ffaa00", "accent": "#00ff41", "accent-hover": "#00cc34", "accent-text": "#000000", "danger": "#ff4444", "danger-hover": "#DA3B3B", "danger-text": "#000000", "code-inline-bg": "rgba(0, 0, 0, 0.3)", "code-block-bg": "rgba(0, 0, 0, 0.4)", "tool-output-bg": "rgba(0, 0, 0, 0.3)", "radius": "12px", "shadow": "0 18px 50px rgba(0, 0, 0, 0.55)", "font-size": "14px" },
+    };
+
+    it("les 18 presets intégrés sont identiques au snapshot (clé par clé)", () => {
+        const FROZEN_ALL = Object.assign({}, FROZEN_12, FROZEN_MATRIX);
+        expect(Object.keys(HolafTokens.PRESETS).sort()).toEqual(Object.keys(FROZEN_ALL).sort());
+        Object.keys(FROZEN_ALL).forEach((name) => {
+            expect(HolafTokens.PRESETS[name], name).toEqual(FROZEN_ALL[name]);
         });
+    });
+});
+
+describe("HolafTokens 0.5.0 — famille d'identité Matrix", () => {
+    it("matrix-light / matrix-dark existent, nommés <famille>-<mode>", () => {
+        MATRIX_CANON.forEach((name) => {
+            expect(HolafTokens.PRESETS[name], name).toBeTruthy();
+            expect(HolafTokens.getPreset(name), name).not.toBeNull();
+        });
+    });
+
+    it("porte les 7 clés hôte Pi-Web non standard (info/warn/border-bright/…)", () => {
+        for (const name of MATRIX_CANON) {
+            const p = HolafTokens.PRESETS[name];
+            for (const key of ["border-bright", "text-bright", "info", "warn", "code-inline-bg", "code-block-bg", "tool-output-bg"]) {
+                expect(typeof p[key], name + "." + key).toBe("string");
+                expect(p[key], name + "." + key).not.toBe("");
+            }
+        }
+        expect(HolafTokens.PRESETS["matrix-dark"].info).toBe("#00aaff");
+        expect(HolafTokens.PRESETS["matrix-dark"].warn).toBe("#ffaa00");
+        expect(HolafTokens.PRESETS["matrix-light"].info).toBe("#0070cc");
+    });
+
+    it("setTheme('matrix-dark') pose l'accent néon vert et le fond noir Pi-Web", () => {
+        HolafTokens.setTheme("matrix-dark");
+        expect(getVar("--holaf-surface")).toBe("#0a0a0a");
+        expect(getVar("--holaf-accent")).toBe("#00ff41");
+        expect(getVar("--holaf-accent-hover")).toBe("#00cc34");
+        expect(getVar("--holaf-info")).toBe("#00aaff");
+        expect(getVar("--holaf-warn")).toBe("#ffaa00");
+        expect(HolafTokens.getFamily()).toBe("matrix");
+        expect(HolafTokens.getMode()).toBe("dark");
+    });
+
+    it("ses noms (famille + 2 presets) sont RÉSERVÉS aux packs", () => {
+        expect(() => HolafTokens.registerPreset("matrix", {})).toThrow(/réservé/i);
+        expect(() => HolafTokens.registerPreset("matrix-dark", {})).toThrow(/réservé/i);
+        expect(() => HolafTokens.registerPreset("matrix-light", {})).toThrow(/réservé/i);
     });
 });
 
@@ -499,15 +557,16 @@ describe("HolafTokens 0.4.0 — registre de packs", () => {
         expect(HolafTokens.unregisterPreset("dark")).toBe(false); // intégré jamais dans PACKS
     });
 
-    it("listPresets = les 16 intégrés PUIS les packs dans l'ordre d'enregistrement", () => {
-        expect(HolafTokens.listPresets()).toHaveLength(16);
+    it("listPresets = les 18 intégrés PUIS les packs dans l'ordre d'enregistrement", () => {
+        expect(HolafTokens.listPresets()).toHaveLength(18);
         HolafTokens.registerPreset("test-p1", {});
         HolafTokens.registerPreset("test-p2", {});
         const list = HolafTokens.listPresets();
-        expect(list[0]).toBe("corail-light");
-        expect(list[15]).toBe("slate");
-        expect(list.slice(16)).toEqual(["test-p1", "test-p2"]);
-        expect(list.slice(0, 16)).not.toContain("test-p1");
+        expect(list[0]).toBe("matrix-light");
+        expect(list[1]).toBe("matrix-dark");
+        expect(list[17]).toBe("slate");
+        expect(list.slice(18)).toEqual(["test-p1", "test-p2"]);
+        expect(list.slice(0, 18)).not.toContain("test-p1");
     });
 
     it("setTheme(pack) émet l'événement ; getFamily/getMode → null", () => {
@@ -618,9 +677,9 @@ describe("HolafTokens 0.4.0 — alpha()", () => {
 });
 
 describe("HolafTokens 0.4.0 — chargement (sans export nommé)", () => {
-    it("la globale est posée par effet de bord et VERSION = 0.4.1", () => {
+    it("la globale est posée par effet de bord et VERSION = 0.5.0", () => {
         expect(window.HolafTokens).toBe(HolafTokens);
-        expect(HolafTokens.VERSION).toBe("0.4.1");
+        expect(HolafTokens.VERSION).toBe("0.5.0");
     });
 
     it("garde-fou statique : AUCUN export top-level dans le fichier", () => {

@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.5)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.6)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -40,7 +40,16 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `folder` · `terminal` · `git-branch` · `sun` · `moon` ·
 `file-text` · `external-link` · `arrow-up-circle` · `arrow-up` · `arrow-down` ·
 `user` · `key` · `power` · `star` · `folder-open` · `brain` ·
-`arrow-left` · `volume` · `volume-off`
+`arrow-left` · `volume` · `volume-off` ·
+`file` · `file-down` · `folder-plus` · `folder-x` ·
+`save` · `send` · `undo-2` · `redo-2` · `unlink` · `zoom-in` · `zoom-out` ·
+`message-square-plus` ·
+`check-check` · `check-circle` · `check-square` · `plus-square` · `square` ·
+`toggle-left` · `toggle-right` ·
+`code` · `cpu` · `git-commit` · `keyboard` · `wifi` · `wrench` · `test-tube` ·
+`calendar` · `hash` · `pie-chart` · `trending-up` · `gauge` ·
+`package` · `palette` · `puzzle` · `lightbulb` · `sparkles` · `mail` ·
+`paperclip` · `image-off`
 
 > `HolafIcons.list()` retourne ce tableau (dans l'ordre de définition).
 
@@ -110,9 +119,10 @@ tracé** : les collections disponibles mélangent des licences permissives
 (MIT, ISC, Apache-2.0, CC0, Unlicense) et des licences copyleft/restrictives
 (GPL, CC BY-NC 4.0, CC BY-NC-SA, CC BY-SA).
 
-La plupart des tracés du set actuel viennent du jeu
-**[Feather Icons](https://feathericons.com/)** de Cole Bemis, distribué sous
-**licence MIT** :
+La plupart des tracés du set viennent de collections sous licence permissive :
+**[Feather Icons](https://feathericons.com/)** (MIT), **Tabler Icons** (MIT)
+et, depuis la v0.1.6, **Lucide** (ISC) — plus quelques tracés propres au set
+(style Feather). Feather est distribué sous **licence MIT** :
 
 ```
 MIT License
@@ -136,6 +146,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+La v0.1.6 reprend 39 tracés de **Lucide** (`lucide-react` v0.446.0, dont
+certaines icônes dérivent de Feather), distribué sous **licence ISC** :
+
+```
+ISC License
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part
+of Feather (MIT). All other copyright (c) for Lucide are held by Lucide
+Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
 ---
@@ -170,6 +203,22 @@ SOFTWARE.
 
 ## 7. Version
 
+- **0.1.6** — +39 icônes pour **finir la migration d'icônes de Pi-Web** :
+  `file`, `file-down`, `folder-plus`, `folder-x`, `save`, `send`, `undo-2`,
+  `redo-2`, `unlink`, `zoom-in`, `zoom-out`, `message-square-plus`,
+  `check-check`, `check-circle`, `check-square`, `plus-square`, `square`,
+  `toggle-left`, `toggle-right`, `code`, `cpu`, `git-commit`, `keyboard`,
+  `wifi`, `wrench`, `test-tube`, `calendar`, `hash`, `pie-chart`,
+  `trending-up`, `gauge`, `package`, `palette`, `puzzle`, `lightbulb`,
+  `sparkles`, `mail`, `paperclip`, `image-off`. Tracés repris **à l'identique
+  de lucide-react v0.446.0** (licence **ISC** — Lucide Contributors, portions
+  Feather MIT ; texte au §5) : la parité de rendu a été vérifiée icône par
+  icône (innerHTML identique), aucun changement visuel à la migration. Deux
+  noms sémantiques courts : `test-tube` reprend le tracé Lucide `test-tube-2`
+  (tube incliné) et `check-circle`/`check-square` les tracés Lucide
+  `circle-check-big`/`square-check-big` (alias actuels de `CheckCircle` /
+  `CheckSquare` côté lucide-react). En-tête + `const VERSION` + `manifest.json`
+  synchronisés (règle du §6, étape 5).
 - **0.1.5** — +3 icônes pour la migration d'icônes de Yuki : `arrow-left`,
   `volume`, `volume-off` (tracés **Feather littéraux**, MIT — Cole Bemis).
   `arrow-left` est le miroir exact de `arrow-right` ; `volume` reprend le tracé

@@ -44,6 +44,65 @@ describe("liste des icônes", () => {
             expect(names).toContain(n);
         }
     });
+
+    it("list() contient les 39 icônes ajoutées en v0.1.6 (fin de la migration Pi-Web)", () => {
+        const names = HolafIcons.list();
+        for (const n of [
+            "file", "file-down", "folder-plus", "folder-x",
+            "save", "send", "undo-2", "redo-2", "unlink", "zoom-in", "zoom-out",
+            "message-square-plus", "check-check", "check-circle", "check-square",
+            "plus-square", "square", "toggle-left", "toggle-right",
+            "code", "cpu", "git-commit", "keyboard", "wifi", "wrench", "test-tube",
+            "calendar", "hash", "pie-chart", "trending-up", "gauge",
+            "package", "palette", "puzzle", "lightbulb", "sparkles", "mail",
+            "paperclip", "image-off",
+        ]) {
+            expect(names).toContain(n);
+        }
+    });
+});
+
+describe("icônes v0.1.6 — tracés Lucide repris à l'identique (ISC)", () => {
+    it("les 39 nouvelles icônes rendent un SVG trait valide", () => {
+        const news = [
+            "file", "file-down", "folder-plus", "folder-x",
+            "save", "send", "undo-2", "redo-2", "unlink", "zoom-in", "zoom-out",
+            "message-square-plus", "check-check", "check-circle", "check-square",
+            "plus-square", "square", "toggle-left", "toggle-right",
+            "code", "cpu", "git-commit", "keyboard", "wifi", "wrench", "test-tube",
+            "calendar", "hash", "pie-chart", "trending-up", "gauge",
+            "package", "palette", "puzzle", "lightbulb", "sparkles", "mail",
+            "paperclip", "image-off",
+        ];
+        for (const n of news) {
+            const svg = HolafIcons.get(n);
+            expect(svg).toMatch(/^<svg/);
+            expect(svg).toContain('stroke="currentColor"');
+            expect(svg).toContain('stroke-width="2"');
+            expect(svg).toContain('fill="none"');
+            expect(svg).toContain('viewBox="0 0 24 24"');
+            expect(svg).toMatch(/<(path|polygon|line|polyline|circle|rect) /);
+        }
+    });
+
+    it("alias lucide résolus : check-circle = circle-check-big, test-tube = test-tube-2", () => {
+        // lucide-react 0.446 expose CheckCircle → circle-check-big ; le tracé
+        // attendu est celui du "grand cercle" (arc ouvert + coche).
+        expect(HolafIcons.get("check-circle")).toContain(
+            'd="M21.801 10A10 10 0 1 1 17 3.335"'
+        );
+        // TestTube2 → test-tube-diagonal (tube incliné) ; le tracé reprend la
+        // base du tube (M21 7 6.82 21.18…) et le petit trait M12 16H4.
+        const tube = HolafIcons.get("test-tube");
+        expect(tube).toContain("M21 7 6.82 21.18");
+        expect(tube).toContain('d="M12 16H4"');
+    });
+
+    it("non-régression : plus-square = carré arrondi + croix, comme lucide", () => {
+        const svg = HolafIcons.get("plus-square");
+        expect(svg).toContain('<rect width="18" height="18" x="3" y="3" rx="2"></rect>');
+        expect(svg).toContain('d="M12 8v8"');
+    });
 });
 
 describe("icônes v0.1.5 — arrow-left / volume / volume-off", () => {
