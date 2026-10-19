@@ -45,10 +45,10 @@
       "description": "Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; density = intensité, blur global, elementCount exposé, animation dt ; options perf scale (résolution du buffer + upscale CSS) et fps (plafond de framerate)."
     },
     "icons": {
-      "version": "0.1.6",
+      "version": "0.1.7",
       "file": "js/holaf-icons.js",
       "category": "component",
-      "description": "93 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine). 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
+      "description": "114 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine, collections permissives seulement). 0.1.7 : + 21 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes d'AI-Helper ; 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
     },
     "collection": {
       "version": "0.1.0",

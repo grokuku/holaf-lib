@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.6)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.7)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -49,9 +49,19 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `code` · `cpu` · `git-commit` · `keyboard` · `wifi` · `wrench` · `test-tube` ·
 `calendar` · `hash` · `pie-chart` · `trending-up` · `gauge` ·
 `package` · `palette` · `puzzle` · `lightbulb` · `sparkles` · `mail` ·
-`paperclip` · `image-off`
+`paperclip` · `image-off` ·
+`lock` · `lock-open` · `ban` ·
+`users` · `message-square` · `heart` ·
+`monitor` · `video` ·
+`filter` · `tag` · `shuffle` · `dices` ·
+`crosshair` · `circle` · `grip-vertical` ·
+`eraser` ·
+`loader` · `skip-forward` ·
+`syringe` · `recycle` · `scaling`
 
-> `HolafIcons.list()` retourne ce tableau (dans l'ordre de définition).
+> **114 icônes** au total. `HolafIcons.list()` retourne ce tableau (dans l'ordre
+> de définition). Les 21 dernières sont les ajouts **v0.1.7** (migration
+> d'icônes d'AI-Helper), tracés **Lucide** (ISC) — voir §7.
 
 ---
 
@@ -113,16 +123,34 @@ Les tracés ne proviennent pas uniquement de Feather : ils peuvent être repris
 de **n'importe quelle collection** disponible via
 **[icons0.dev](https://icons0.dev/)** (voir §6, étape 0).
 
+**icons0.dev n'est PAS un fournisseur d'icônes** : c'est un **moteur de
+recherche multi-collections** (200k+ icônes, 150+ collections open source) qui
+ne détient aucun droit sur les tracés qu'il indexe.
+
 **La licence d'un tracé est celle de sa COLLECTION D'ORIGINE** — pas de
-Feather systématique. **Vérifie la licence de la collection avant de copier un
-tracé** : les collections disponibles mélangent des licences permissives
-(MIT, ISC, Apache-2.0, CC0, Unlicense) et des licences copyleft/restrictives
-(GPL, CC BY-NC 4.0, CC BY-NC-SA, CC BY-SA).
+Feather systématique, et aucune « licence icons0.dev ». **Vérifie la licence de
+la collection avant de copier un tracé** : les collections disponibles
+mélangent des licences permissives (MIT, ISC, Apache-2.0, CC0, Unlicense) et
+des licences copyleft/restrictives (GPL, CC BY-NC 4.0, CC BY-NC-SA, CC BY-SA).
+
+### Règles de sélection du set (`holaf-icons`)
+
+- **Seules les collections permissives sont admises** (MIT, ISC,
+  Apache-2.0, CC0, Unlicense). Aucun tracé **GPL / copyleft / non-commercial**
+  n'entre dans la brique.
+- **Style retenu : trait (`stroke`) uniquement**, `stroke-width="2"`,
+  `fill="none"`, 24×24, `currentColor`. Priorité à **Lucide** (préfixe
+  `lucide:`, ISC), repli sur **Feather** (`feather:`, MIT) si la recherche
+  Lucide ne renvoie rien. Les styles **« filled » / « duotone » / colorés**
+  sont écartés (incompatibles avec le wrapper `buildSvg`).
+- Le tracé est repris **à l'identique** (géométrie inchangée) : on ne retire
+  que le groupe `<g>` englobant et les attributs de présentation fournis par
+  le wrapper (voir §6, étape 1).
 
 La plupart des tracés du set viennent de collections sous licence permissive :
-**[Feather Icons](https://feathericons.com/)** (MIT), **Tabler Icons** (MIT)
-et, depuis la v0.1.6, **Lucide** (ISC) — plus quelques tracés propres au set
-(style Feather). Feather est distribué sous **licence MIT** :
+**[Feather Icons](https://feathericons.com/)** (MIT), **Tabler Icons** (MIT),
+et, depuis les v0.1.6 et v0.1.7, **Lucide** (ISC) — plus quelques tracés
+propres au set (style Feather). Feather est distribué sous **licence MIT** :
 
 ```
 MIT License
@@ -149,7 +177,9 @@ SOFTWARE.
 ```
 
 La v0.1.6 reprend 39 tracés de **Lucide** (`lucide-react` v0.446.0, dont
-certaines icônes dérivent de Feather), distribué sous **licence ISC** :
+certaines icônes dérivent de Feather) et la v0.1.7 en reprend 21 de plus
+(**Lucide**, sourcés via l'API icons0.dev), Lucide étant distribué sous
+**licence ISC** :
 
 ```
 ISC License
@@ -182,27 +212,69 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
    # ex. : https://icons0.dev/api/icons?q=lucide:bot
    ```
    La réponse contient un tableau `results` ; chaque entrée porte `fullName`,
-   `name`, `prefix`, `collection` et **`body`** — le SVG 24×24 (déjà en
-   `currentColor`), au format attendu par la table `ICONS`.
+   `name`, `prefix`, `collection`, `width`/`height` et **`body`** — le SVG
+   24×24 (déjà en `currentColor`), au format attendu par la table `ICONS`.
    **Vérifie la licence de la collection d'origine (§5) avant de copier le
-   tracé.**
+   tracé** : seules les collections **permissives** sont admises (MIT, ISC,
+   Apache-2.0, CC0, Unlicense — jamais GPL/copyleft/non-commercial).
+   **Style** : viser **Lucide** (`lucide:<nom>`, ISC) ; si la requête `lucide:`
+   ne renvoie rien d'exploitable, se replier sur **Feather** (`feather:<nom>`,
+   MIT). Refuser tout tracé « filled »/« duotone ».
+   `q=` fait une **recherche** (résultats approchants) : ne retiens que
+   l'entrée dont `fullName` vaut **exactement** `<prefix>:<nom>`.
+
+   > **Attention au nommage** : le nom de la brique est un nom **sémantique**,
+   > pas nécessairement le nom de la collection. Ex. `loader` ←
+   > `lucide:loader-circle`, `volume` ← `feather:volume-2`, `volume-off` ←
+   > `feather:volume-x`, `test-tube` ← `lucide:test-tube-2`. Documente l'alias
+   > dans le commentaire de la table **et** au §7.
+
 1. Dans `js/holaf-icons.js`, ajoute une entrée à la table `ICONS` :
    ```js
    "bell":  '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>' +
             '<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>',
    ```
+   **Normalise le `body` avant de le coller** (géométrie inchangée) :
+   - retire le groupe `<g fill="none" …>` **englobant** s'il existe (le wrapper
+     `buildSvg` porte déjà `stroke`, `fill`, `stroke-width`, `stroke-linecap`,
+     `stroke-linejoin`) ;
+   - retire des éléments les mêmes attributs de présentation
+     (`fill="none"`, `stroke="currentColor"`, `stroke-width`, `*-linecap`,
+     `*-linejoin`) — **sauf** les `fill="currentColor"` des points pleins
+     (ex. le point de `tag`, les points de `palette`) ;
+   - convertit les balises auto-fermantes (`<path … />`) en `<path …></path>`
+     (style de la table).
+   Si une requête ne renvoie **rien d'exploitable**, replie-toi sur
+   `feather:` ; si les deux échouent, **n'invente jamais de tracé** : signale
+   l'icône manquante.
 2. Le nom devient automatiquement disponible via `get()`, `render()` et
    `list()` (et proposé dans l'erreur « Proches » pour les fautes de frappe).
 3. Rien d'autre à faire : chaque corps SVG est un trait 24×24, `fill="none"`,
    `stroke="currentColor"`, `stroke-width="2"` — appliqués par le wrapper.
 4. (Optionnel) documente l'icône dans la liste de la « §2 ».
 5. **Incrémente la version PATCH** : en-tête + `const VERSION` +
-   `manifest.json` — les trois synchronisés.
+   `manifest.json` — les trois synchronisés (ainsi que la ligne du tableau
+   `icons` de `README.md` racine et le compte d'icônes).
 
 ---
 
 ## 7. Version
 
+- **0.1.7** — +21 icônes pour la **phase 0 du plan de migration d'icônes
+d'AI-Helper** : `lock`, `lock-open`, `ban`, `users`, `message-square`,
+`heart`, `monitor`, `video`, `filter`, `tag`, `shuffle`, `dices`,
+`crosshair`, `circle`, `grip-vertical`, `eraser`, `loader`, `skip-forward`,
+`syringe`, `recycle`, `scaling`. Tracés **repris à l'identique de la
+collection Lucide** (licence **ISC** — Lucide Contributors, portions Feather
+MIT ; texte au §5), **sourcés via l'API de
+[icons0.dev](https://icons0.dev/)** : `GET /api/icons?q=lucide:<nom>` → champ
+`body`, puis retrait du `<g>` englobant et des attributs de présentation
+(aucune géométrie modifiée — vérifié icône par icône contre le `body` de
+l'API). Un seul alias de nom : `loader` reprend `lucide:loader-circle` (nom
+court demandé par AI-Helper). Aucun repli Feather n'a été nécessaire et aucun
+nom n'était déjà présent. Compte : **93 → 114** icônes. En-tête +
+`const VERSION` + `manifest.json` + tableau `icons` de `README.md` racine
+synchronisés (règle du §6, étape 5).
 - **0.1.6** — +39 icônes pour **finir la migration d'icônes de Pi-Web** :
   `file`, `file-down`, `folder-plus`, `folder-x`, `save`, `send`, `undo-2`,
   `redo-2`, `unlink`, `zoom-in`, `zoom-out`, `message-square-plus`,

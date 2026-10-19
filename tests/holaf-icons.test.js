@@ -3,10 +3,33 @@
  * Couverture : list() (non vide, taille attendue), get()/render() sur TOUS les
  * noms connus (boucle), attributs feather (currentColor, stroke-width 2, fill
  * none, viewBox 24×24), render() avec size/class appliqués, erreur claire sur
- * nom inconnu (avec propositions des proches), exposition globale + version.
+ * nom inconnu (avec propositions des proches), exposition globale + version,
+ * et par vague d'ajout (v0.1.4 → v0.1.7) la présence des noms + quelques
+ * assertions de tracé.
  */
 import { describe, expect, it } from "vitest";
 import { HolafIcons } from "../js/holaf-icons.js";
+
+// Icônes ajoutées en v0.1.7 (phase 0 de la migration d'icônes d'AI-Helper).
+// Tracés Lucide (ISC) sourcés via l'API icons0.dev : GET /api/icons?q=lucide:<nom>.
+const NEW_017 = [
+    // verrou / accès
+    "lock", "lock-open", "ban",
+    // personnes / messagerie / expression
+    "users", "message-square", "heart",
+    // affichage / médias
+    "monitor", "video",
+    // filtres / étiquettes / aléatoire
+    "filter", "tag", "shuffle", "dices",
+    // sélection / géométrie
+    "crosshair", "circle", "grip-vertical",
+    // édition
+    "eraser",
+    // progression
+    "loader", "skip-forward",
+    // technique / écologie / mise à l'échelle
+    "syringe", "recycle", "scaling",
+];
 
 describe("liste des icônes", () => {
     it("list() retourne un tableau non vide d'au moins 30 noms", () => {
@@ -59,6 +82,89 @@ describe("liste des icônes", () => {
         ]) {
             expect(names).toContain(n);
         }
+    });
+
+    it("list() contient les 21 icônes ajoutées en v0.1.7 (migration AI-Helper)", () => {
+        const names = HolafIcons.list();
+        for (const n of NEW_017) {
+            expect(names).toContain(n);
+        }
+    });
+
+    it("list() compte 114 icônes (93 en v0.1.6 + 21 en v0.1.7)", () => {
+        expect(HolafIcons.list().length).toBe(114);
+    });
+});
+
+describe("icônes v0.1.7 — tracés Lucide repris à l'identique (ISC, via icons0.dev)", () => {
+    it("les 21 nouvelles icônes rendent un SVG trait valide", () => {
+        for (const n of NEW_017) {
+            const svg = HolafIcons.get(n);
+            expect(svg).toMatch(/^<svg/);
+            expect(svg).toContain('stroke="currentColor"');
+            expect(svg).toContain('stroke-width="2"');
+            expect(svg).toContain('fill="none"');
+            expect(svg).toContain('viewBox="0 0 24 24"');
+            expect(svg).toMatch(/<(path|polygon|line|polyline|circle|rect) /);
+        }
+    });
+
+    it("aucun attribut de présentation dupliqué dans le corps (wrapper unique)", () => {
+        for (const n of NEW_017) {
+            const svg = HolafIcons.get(n);
+            // stroke-width / stroke / fill ne doivent apparaître qu'UNE fois :
+            // sur le <svg> construit par buildSvg, jamais sur les éléments.
+            expect(svg.match(/stroke-width=/g)).toHaveLength(1);
+            expect(svg.match(/stroke="currentColor"/g)).toHaveLength(1);
+            expect(svg.match(/fill="none"/g)).toHaveLength(1);
+            expect(svg).not.toContain("<g ");
+        }
+    });
+
+    it("render() applique size/class sur les 21 nouvelles icônes", () => {
+        for (const n of NEW_017) {
+            const svg = HolafIcons.render(n, { size: 16, class: "aih-icon" });
+            expect(svg).toContain('width="16"');
+            expect(svg).toContain('height="16"');
+            expect(svg).toContain('class="aih-icon"');
+        }
+    });
+
+    it("tracés de référence : lock, lock-open, loader (alias lucide:loader-circle)", () => {
+        // lucide:lock — corps de serrure + anse fermée
+        const lock = HolafIcons.get("lock");
+        expect(lock).toContain('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>');
+        expect(lock).toContain('d="M7 11V7a5 5 0 0 1 10 0v4"');
+        // lucide:lock-open — même corps, anse ouverte (seul le tracé diffère)
+        const open = HolafIcons.get("lock-open");
+        expect(open).toContain('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>');
+        expect(open).toContain('d="M7 11V7a5 5 0 0 1 9.9-1"');
+        // `loader` est l'alias court de lucide:loader-circle (arc ouvert)
+        expect(HolafIcons.get("loader")).toContain('d="M21 12a9 9 0 1 1-6.219-8.56"');
+        // …et n'est PAS le loader « 8 rayons » de Lucide
+        expect(HolafIcons.get("loader")).not.toContain("<line");
+    });
+
+    it("message-square est distinct de message-square-plus (pas de croix)", () => {
+        const plain = HolafIcons.get("message-square");
+        expect(plain).toContain('d="M22 17a2 2 0 0 1-2 2H6.828a2 2');
+        expect(plain).not.toContain('d="M12 7v6"');
+        expect(plain).not.toContain('d="M9 10h6"');
+        expect(HolafIcons.get("message-square-plus")).toContain('d="M12 7v6"');
+    });
+
+    it("les points pleins gardent fill=currentColor, les disques restent en trait", () => {
+        // lucide:tag — pastille pleine de l'étiquette
+        expect(HolafIcons.get("tag")).toContain('r=".5" fill="currentColor"');
+        // lucide:circle — un seul disque, en TRAIT (non rempli)
+        const circle = HolafIcons.get("circle");
+        expect(circle.match(/<(circle|path|line|rect)/g)).toHaveLength(1);
+        expect(circle).toContain('<circle cx="12" cy="12" r="10"></circle>');
+        expect(circle).not.toContain('fill="currentColor"');
+        // lucide:grip-vertical — six disques en trait
+        const grip = HolafIcons.get("grip-vertical");
+        expect(grip.match(/<circle /g)).toHaveLength(6);
+        expect(grip).not.toContain('fill="currentColor"');
     });
 });
 
