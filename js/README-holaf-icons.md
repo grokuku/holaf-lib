@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.7)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.8)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent
@@ -57,11 +57,22 @@ import { HolafIcons } from "./vendor/holaf/holaf-icons.js";
 `crosshair` · `circle` · `grip-vertical` ·
 `eraser` ·
 `loader` · `skip-forward` ·
-`syringe` · `recycle` · `scaling`
+`syringe` · `recycle` · `scaling` ·
+`chart-column` · `rotate-ccw-clock` ·
+`clipboard-list` · `file-plus` ·
+`bot` · `cable` · `hard-drive` · `plug` · `rocket` · `webhook` ·
+`layout-grid` · `list` · `message-circle` · `panel-right` · `square-pen` ·
+`refresh-cw` · `trash-2`
 
-> **114 icônes** au total. `HolafIcons.list()` retourne ce tableau (dans l'ordre
-> de définition). Les 21 dernières sont les ajouts **v0.1.7** (migration
+> **131 icônes** au total. `HolafIcons.list()` retourne ce tableau (dans l'ordre
+> de définition). Les 17 dernières sont les ajouts **v0.1.8** (migration
+> d'icônes de Docky), tracés **Lucide** (ISC) sous leurs noms **canoniques**
+> — voir §7. Les 21 précédentes sont les ajouts **v0.1.7** (migration
 > d'icônes d'AI-Helper), tracés **Lucide** (ISC) — voir §7.
+>
+> Attention : `loader` a changé de **tracé** en 0.1.8 (étoile 12 rayons,
+> `lucide:loader` canonique) sans changer de **nom** ; `trash` (Feather) et
+> `trash-2` (Lucide) coexistent, ce sont deux icônes distinctes.
 
 ---
 
@@ -260,6 +271,25 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ## 7. Version
 
+- **0.1.8** — +17 icônes pour la **migration d'icônes de Docky** :
+`chart-column`, `rotate-ccw-clock`, `clipboard-list`, `file-plus`, `bot`,
+`cable`, `hard-drive`, `plug`, `rocket`, `webhook`, `layout-grid`, `list`,
+`message-circle`, `panel-right`, `square-pen`, `refresh-cw`, `trash-2`. Tracés
+**repris à l'identique de la collection Lucide** (licence **ISC** — Lucide
+Contributors, portions Feather MIT ; texte au §5), **sourcés via l'API de
+[icons0.dev](https://icons0.dev/)** : `GET /api/icons?q=lucide:<nom>` → champ
+`body`, puis retrait du `<g>` englobant et des attributs de présentation
+(aucune géométrie modifiée). **Noms canoniques Lucide** (pas d'alias) :
+`chart-column` reprend le tracé `lucide:bar-chart-3` (nom déprécié côté
+Lucide), `rotate-ccw-clock` le tracé `lucide:history` et `square-pen` le tracé
+`lucide:pen-square` — ce sont les alias canoniques actuels de ces icônes.
+Deux points d'attention : **`loader` change de tracé** (étoile à 12 rayons =
+`lucide:loader` canonique) mais **garde son nom** (le corps `loader-circle` de
+la 0.1.7 est remplacé) ; **`trash-2` est ajouté** sans toucher à `trash`
+(Feather) — ce sont deux icônes distinctes. `refresh-cw` (nom canonique
+Lucide) est ajouté à côté de `refresh` (tracé Feather), qui reste inchangé.
+Compte : **114 → 131** icônes. En-tête + `const VERSION` + `manifest.json` +
+tableau `icons` de `README.md` racine synchronisés (règle du §6, étape 5).
 - **0.1.7** — +21 icônes pour la **phase 0 du plan de migration d'icônes
 d'AI-Helper** : `lock`, `lock-open`, `ban`, `users`, `message-square`,
 `heart`, `monitor`, `video`, `filter`, `tag`, `shuffle`, `dices`,

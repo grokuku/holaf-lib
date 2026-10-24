@@ -4,7 +4,7 @@
  * noms connus (boucle), attributs feather (currentColor, stroke-width 2, fill
  * none, viewBox 24×24), render() avec size/class appliqués, erreur claire sur
  * nom inconnu (avec propositions des proches), exposition globale + version,
- * et par vague d'ajout (v0.1.4 → v0.1.7) la présence des noms + quelques
+ * et par vague d'ajout (v0.1.4 → v0.1.8) la présence des noms + quelques
  * assertions de tracé.
  */
 import { describe, expect, it } from "vitest";
@@ -29,6 +29,23 @@ const NEW_017 = [
     "loader", "skip-forward",
     // technique / écologie / mise à l'échelle
     "syringe", "recycle", "scaling",
+];
+
+// Icônes ajoutées en v0.1.8 (migration d'icônes de Docky).
+// Tracés Lucide (ISC) sourcés via l'API icons0.dev : GET /api/icons?q=lucide:<nom>.
+// Noms CANONIQUES Lucide : chart-column ← bar-chart-3, rotate-ccw-clock ← history,
+// square-pen ← pen-square. `loader` a vu son TRACÉ remplacé (même nom).
+const NEW_018 = [
+    // graphiques / historique
+    "chart-column", "rotate-ccw-clock",
+    // fichiers / presse-papiers
+    "clipboard-list", "file-plus",
+    // système / matériel / réseau
+    "bot", "cable", "hard-drive", "plug", "rocket", "webhook",
+    // interface / listes
+    "layout-grid", "list", "message-circle", "panel-right", "square-pen",
+    // actions / rafraîchissement
+    "refresh-cw", "trash-2",
 ];
 
 describe("liste des icônes", () => {
@@ -91,8 +108,15 @@ describe("liste des icônes", () => {
         }
     });
 
-    it("list() compte 114 icônes (93 en v0.1.6 + 21 en v0.1.7)", () => {
-        expect(HolafIcons.list().length).toBe(114);
+    it("list() contient les 17 icônes ajoutées en v0.1.8 (migration Docky)", () => {
+        const names = HolafIcons.list();
+        for (const n of NEW_018) {
+            expect(names).toContain(n);
+        }
+    });
+
+    it("list() compte 131 icônes (114 en v0.1.7 + 17 en v0.1.8)", () => {
+        expect(HolafIcons.list().length).toBe(131);
     });
 });
 
@@ -130,7 +154,7 @@ describe("icônes v0.1.7 — tracés Lucide repris à l'identique (ISC, via icon
         }
     });
 
-    it("tracés de référence : lock, lock-open, loader (alias lucide:loader-circle)", () => {
+    it("tracés de référence : lock, lock-open", () => {
         // lucide:lock — corps de serrure + anse fermée
         const lock = HolafIcons.get("lock");
         expect(lock).toContain('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>');
@@ -139,10 +163,6 @@ describe("icônes v0.1.7 — tracés Lucide repris à l'identique (ISC, via icon
         const open = HolafIcons.get("lock-open");
         expect(open).toContain('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>');
         expect(open).toContain('d="M7 11V7a5 5 0 0 1 9.9-1"');
-        // `loader` est l'alias court de lucide:loader-circle (arc ouvert)
-        expect(HolafIcons.get("loader")).toContain('d="M21 12a9 9 0 1 1-6.219-8.56"');
-        // …et n'est PAS le loader « 8 rayons » de Lucide
-        expect(HolafIcons.get("loader")).not.toContain("<line");
     });
 
     it("message-square est distinct de message-square-plus (pas de croix)", () => {
@@ -165,6 +185,90 @@ describe("icônes v0.1.7 — tracés Lucide repris à l'identique (ISC, via icon
         const grip = HolafIcons.get("grip-vertical");
         expect(grip.match(/<circle /g)).toHaveLength(6);
         expect(grip).not.toContain('fill="currentColor"');
+    });
+});
+
+describe("icônes v0.1.8 — tracés Lucide sous noms canoniques (ISC, via icons0.dev)", () => {
+    it("les 17 nouvelles icônes rendent un SVG trait valide", () => {
+        for (const n of NEW_018) {
+            const svg = HolafIcons.get(n);
+            expect(svg).toMatch(/^<svg/);
+            expect(svg).toContain('stroke="currentColor"');
+            expect(svg).toContain('stroke-width="2"');
+            expect(svg).toContain('fill="none"');
+            expect(svg).toContain('viewBox="0 0 24 24"');
+            expect(svg).toMatch(/<(path|polygon|line|polyline|circle|rect) /);
+        }
+    });
+
+    it("aucun attribut de présentation dupliqué et aucun <g> dans le corps", () => {
+        for (const n of NEW_018) {
+            const svg = HolafIcons.get(n);
+            expect(svg.match(/stroke-width=/g)).toHaveLength(1);
+            expect(svg.match(/stroke="currentColor"/g)).toHaveLength(1);
+            expect(svg.match(/fill="none"/g)).toHaveLength(1);
+            expect(svg).not.toContain("<g ");
+        }
+    });
+
+    it("render() applique size/class sur les 17 nouvelles icônes", () => {
+        for (const n of NEW_018) {
+            const svg = HolafIcons.render(n, { size: 20, class: "docky-icon" });
+            expect(svg).toContain('width="20"');
+            expect(svg).toContain('height="20"');
+            expect(svg).toContain('class="docky-icon"');
+        }
+    });
+
+    it("les alias canoniques portent bien le tracé de leur icône Lucide d'origine", () => {
+        // chart-column ← lucide:bar-chart-3 (bar-chart-3 est déprécié côté Lucide)
+        expect(HolafIcons.get("chart-column")).toContain('d="M3 3v18h18m-3-4V9m-5 8V5M8 17v-3"');
+        // rotate-ccw-clock ← lucide:history (arc + aiguille horaire)
+        const hist = HolafIcons.get("rotate-ccw-clock");
+        expect(hist).toContain('d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8"');
+        expect(hist).toContain('d="M3 3v5h5m4-1v5l4 2"');
+        // square-pen ← lucide:pen-square (cadre ouvert + stylo)
+        const sq = HolafIcons.get("square-pen");
+        expect(sq).toContain('d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"');
+        expect(sq).toContain("M18.375 2.625");
+        // les anciens noms Docky ne sont PAS exposés (pas d'alias)
+        for (const old of ["bar-chart-3", "history", "pen-square"]) {
+            expect(HolafIcons.list()).not.toContain(old);
+        }
+    });
+
+    it("loader : tracé lucide:loader canonique (même nom qu'en 0.1.7)", () => {
+        const loader = HolafIcons.get("loader");
+        expect(loader).toContain('d="M12 2v4m4.2 1.8l2.9-2.9M18 12h4m-5.8 4.2l2.9 2.9');
+        // ce n'est plus l'arc loader-circle de la 0.1.7
+        expect(loader).not.toContain('d="M21 12a9 9 0 1 1-6.219-8.56"');
+        // un seul tracé (étoile 12 rayons) dans le corps
+        expect(loader.match(/<path /g)).toHaveLength(1);
+    });
+
+    it("trash-2 est distinct de trash et trash reste le tracé Feather d'origine", () => {
+        const trash = HolafIcons.get("trash");
+        const trash2 = HolafIcons.get("trash-2");
+        expect(trash).not.toBe(trash2);
+        // trash : tracé Feather (polyline de couvercle + deux <line>)
+        expect(trash).toContain('<polyline points="3 6 5 6 21 6"></polyline>');
+        expect(trash.match(/<line /g)).toHaveLength(2);
+        // trash-2 : tracé Lucide, UN SEUL path, couvercle intégré
+        expect(trash2).toContain('d="M10 11v6m4-6v6m5-11v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"');
+        expect(trash2.match(/<path /g)).toHaveLength(1);
+    });
+
+    it("refresh (Feather) reste inchangé et refresh-cw est ajouté à côté", () => {
+        const refresh = HolafIcons.get("refresh");
+        const refreshCw = HolafIcons.get("refresh-cw");
+        expect(refresh).not.toBe(refreshCw);
+        // refresh : tracé Feather (deux polyline + un path)
+        expect(refresh).toContain('<polyline points="23 4 23 10 17 10"></polyline>');
+        expect(refresh.match(/<polyline /g)).toHaveLength(2);
+        // refresh-cw : nom canonique Lucide (trois path, aucune polyline)
+        expect(refreshCw).toContain('d="M3 12a9 9 0 0 1 9-9a9.75 9.75 0 0 1 6.74 2.74L21 8"');
+        expect(refreshCw.match(/<path /g)).toHaveLength(3);
+        expect(refreshCw).not.toContain("<polyline");
     });
 });
 

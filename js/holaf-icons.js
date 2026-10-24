@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.7
+ * Holaf UI — Brique HolafIcons · version 0.1.8
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
@@ -9,10 +9,10 @@
  * `stroke-width="2"`, lignes/arrondis dans le style Feather. La plupart des
  * tracés sont repris du jeu d'icônes **Feather Icons** (licence MIT — voir
  * `README-holaf-icons.md` pour le crédit complet) ; les icônes des vagues
- * v0.1.6 (fin de la migration Pi-Web) et v0.1.7 (migration AI-Helper) sont des
- * tracés **Lucide** (licence ISC) et certaines icônes ajoutées auparavant
- * (ex. `bar-chart`) reprennent le style Feather sans être des tracés Feather
- * littéraux.
+ * v0.1.6 (fin de la migration Pi-Web), v0.1.7 (migration AI-Helper) et v0.1.8
+ * (migration Docky) sont des tracés **Lucide** (licence ISC) et certaines
+ * icônes ajoutées auparavant (ex. `bar-chart`) reprennent le style Feather
+ * sans être des tracés Feather littéraux.
  *
  * AJOUT D'ICÔNE : cherche d'abord l'icône sur icons0.dev — moteur de recherche
  * multi-collections, API JSON publique sans clé :
@@ -34,7 +34,7 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.7";
+    const VERSION = "0.1.8";
 
     const NS = "http://www.w3.org/2000/svg";
 
@@ -494,6 +494,8 @@ const HolafIcons = (function () {
         // englobant et les attributs de présentation ont été retirés (buildSvg
         // les fournit) : AUCUNE géométrie n'est modifiée. Un seul alias de nom :
         // `loader` ← lucide:loader-circle (nom court demandé par AI-Helper).
+        // NOTE 0.1.8 : ce corps a été REMPLACÉ par le tracé `lucide:loader`
+        // canonique (étoile à 12 rayons) — le nom `loader` est inchangé.
 
         // Verrou (chiffrement, accès réservé) & état bloqué.
         lock:
@@ -550,7 +552,9 @@ const HolafIcons = (function () {
         eraser: '<path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21m-7.752-9.91l8.828 8.828"></path>',
 
         // Progression (lecteur vidéo, chargement).
-        loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>',
+        // 0.1.8 : tracé `lucide:loader` canonique (étoile 12 rayons) — remplace
+        // l'arc `loader-circle` utilisé jusqu'en 0.1.7 (même nom).
+        loader: '<path d="M12 2v4m4.2 1.8l2.9-2.9M18 12h4m-5.8 4.2l2.9 2.9M12 18v4m-7.1-2.9l2.9-2.9M2 12h4M4.9 4.9l2.9 2.9"></path>',
         "skip-forward": '<path d="M21 4v16M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"></path>',
 
         // Technique / écologie / mise à l'échelle.
@@ -562,6 +566,73 @@ const HolafIcons = (function () {
         scaling:
             '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
             '<path d="M14 15H9v-5m7-7h5v5m0-5L9 15"></path>',
+
+        // ── v0.1.8 : ajouts pour la migration d'icônes de Docky ───────────────
+        // 17 entrées reprises À L'IDENTIQUE de la collection **Lucide** (licence
+        // ISC — copyright Lucide Contributors 2022, portions Feather MIT de Cole
+        // Bemis 2013-2022 ; texte complet au §5 de README-holaf-icons.md),
+        // sourcées via le moteur icons0.dev : GET /api/icons?q=lucide:<nom> →
+        // champ `body`. Seuls le groupe <g> englobant et les attributs de
+        // présentation ont été retirés (buildSvg les fournit) : AUCUNE géométrie
+        // n'est modifiée. Noms **canoniques** Lucide : trois icônes arrivent sous
+        // leur nom canonique — `chart-column` (ex. bar-chart-3, déprécié),
+        // `rotate-ccw-clock` (ex. history) et `square-pen` (ex. pen-square).
+
+        // Graphiques / historique (noms canoniques Lucide).
+        "chart-column": '<path d="M3 3v18h18m-3-4V9m-5 8V5M8 17v-3"></path>',
+        "rotate-ccw-clock":
+            '<path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8"></path>' +
+            '<path d="M3 3v5h5m4-1v5l4 2"></path>',
+
+        // Fichiers / presse-papiers.
+        "clipboard-list":
+            '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>' +
+            '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2m4 7h4m-4 5h4m-8-5h.01M8 16h.01"></path>',
+        "file-plus":
+            '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>' +
+            '<path d="M14 2v5a1 1 0 0 0 1 1h5M9 15h6m-3 3v-6"></path>',
+
+        // Système / matériel / réseau.
+        bot:
+            '<path d="M12 8V4H8"></path>' +
+            '<rect width="16" height="12" x="4" y="8" rx="2"></rect>' +
+            '<path d="M2 14h2m16 0h2m-7-1v2m-6-2v2"></path>',
+        cable:
+            '<path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1zm0 2v-2"></path>' +
+            '<path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10m16 11v-2M3 5V3"></path>' +
+            '<path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2zm3-5V3"></path>',
+        "hard-drive": '<path d="M10 16h.01m-7.798-4.423a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zm19.734.436H2.054M6 16h.01"></path>',
+        plug: '<path d="M12 22v-5m3-9V2m2 6a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1zM9 8V2"></path>',
+        rocket:
+            '<path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"></path>' +
+            '<path d="M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"></path>' +
+            '<path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"></path>',
+        webhook:
+            '<path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"></path>' +
+            '<path d="m6 17l3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"></path>' +
+            '<path d="m12 6l3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"></path>',
+
+        // Interface / listes (dont un nom canonique Lucide).
+        "layout-grid":
+            '<rect width="7" height="7" x="3" y="3" rx="1"></rect>' +
+            '<rect width="7" height="7" x="14" y="3" rx="1"></rect>' +
+            '<rect width="7" height="7" x="14" y="14" rx="1"></rect>' +
+            '<rect width="7" height="7" x="3" y="14" rx="1"></rect>',
+        list: '<path d="M3 5h.01M3 12h.01M3 19h.01M8 5h13M8 12h13M8 19h13"></path>',
+        "message-circle": '<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092a10 10 0 1 0-4.777-4.719"></path>',
+        "panel-right":
+            '<rect width="18" height="18" x="3" y="3" rx="2"></rect>' +
+            '<path d="M15 3v18"></path>',
+        "square-pen":
+            '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
+            '<path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path>',
+
+        // Actions / rafraîchissement.
+        "refresh-cw":
+            '<path d="M3 12a9 9 0 0 1 9-9a9.75 9.75 0 0 1 6.74 2.74L21 8"></path>' +
+            '<path d="M21 3v5h-5m5 4a9 9 0 0 1-9 9a9.75 9.75 0 0 1-6.74-2.74L3 16"></path>' +
+            '<path d="M8 16H3v5"></path>',
+        "trash-2": '<path d="M10 11v6m4-6v6m5-11v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
     };
 
     // ── Helpers ─────────────────────────────────────────────────────────────

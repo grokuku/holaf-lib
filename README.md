@@ -62,9 +62,15 @@ Grâce à ça, le script `holaf` sait :
 | color      | `js/holaf-color.js`  | 0.1.1 | ✅ prête | Utilitaires couleur en PUR JS, SANS DOM ni CSS (hex↔rgb↔hsl, mix, lighten/darken, contraste WCAG, `generateTheme`, `generateFamily`) |
 | tokens     | `js/holaf-tokens.js` | 0.6.0 | ✅ prête | **Brique FONDATION** : la SEULE à poser les vars `--holaf-*` sur `:root` (thème global, opt-in explicite). **Catalogue à 2 axes** : 6 familles × clair/sombre (12 presets `corail`/`ambre`/`emeraude`/`turquoise`/`amethyste`/`neutre`) aux valeurs **figées en hex** + 4 alias **remappés** (`dark`/`light`→amethyste, `midnight`→amethyste-dark, `slate`→neutre-dark) ; **table `MIGRATIONS`** exportée pour les hôtes. **0.6.0 (VARIANTE C, RUPTURE de valeurs)** : les 6 familles couleur partagent des **surfaces gris neutre (chroma 0)** sur une **rampe de profondeur unique** — la distinction repose **uniquement sur l'accent** (inchangé). **Garde repensée** : le contrôle « écart de FOND ≥ 0,040 entre familles » (faux par construction) est **remplacé** par deux invariants — surfaces **neutres** (chroma ≤ 0,010) et **rampe partagée** (ΔEok ≤ 0,015) — l'écart d'**accent** (≥ 0,040), le texte **et le texte atténué**/fond ≥ 4,5:1, et la **profondeur** ≥ seuil restant contrôlés. **0.4.1 (PATCH de valeur)** : 6 `text-muted` corrigés pour l'AA 4,5:1 sur les 4 paliers. Conserve de la 0.3.0 : **23 clés optionnelles** (halos, gradients, chrome, états `ok`/`warn`, identité), **registre de packs hôte** (`registerPreset`/`updatePreset`/`unregisterPreset`/`getPreset`/`alpha`), **purge par possession d'ensemble** et **fichier classic-compatible** — voir section dédiée |
 | ambient    | `js/holaf-ambient.js` | 0.3.0 | ✅ prête | Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; `density` = curseur d'intensité, `blur` global, `elementCount` exposé, animation dt (indépendante du framerate), options perf **`scale`** (résolution du buffer interne + upscale compositeur) et **`fps`** (plafond de framerate), brique sans style (l'hôte fournit le canvas) |
-| icons      | `js/holaf-icons.js` | 0.1.7 | ✅ prête | 114 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT, Lucide ISC), zéro CSS, `stroke=currentColor` ; tracés cherchables via [icons0.dev](https://icons0.dev/) (moteur multi-collections, licence selon la collection d'origine — collections **permissives** uniquement) |
+| icons      | `js/holaf-icons.js` | 0.1.8 | ✅ prête | 131 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT, Lucide ISC), zéro CSS, `stroke=currentColor` ; tracés cherchables via [icons0.dev](https://icons0.dev/) (moteur multi-collections, licence selon la collection d'origine — collections **permissives** uniquement) |
+| collection | `js/holaf-collection.js` | 0.1.0 | ✅ prête | Cœur de **données PUR** (sans DOM ni CSS) pour liste paginée virtualisée : tableau creux, cache de fenêtres (`window`/`append`), réconciliation incrémentale (`insertTop`/`removeByIds`/`applyDelta`, seuil de suppression de masse) |
+| thumbcache | `js/holaf-thumbcache.js` | 0.1.0 | ✅ prête | Cache + ordonnanceur de vignettes **PUR** (sans DOM ni CSS) : LRU à éviction (revoke des blobs), concurrence bornée, dédup des requêtes en vol, prefetch basse priorité, timeout + retries bornés, protocole `202` + `Retry-After`, priorisation des vignettes visibles |
+| virtualgrid | `js/holaf-virtual-grid.js` | 0.1.0 | ✅ prête | Grille virtualisée **DOM GÉNÉRIQUE** et instanciable : layout (colonnes/gap/aspect/buffer), pool de cellules recyclées + squelettes, resize avec ancrage de rangée, sélection mono/multi (shift/ctrl), navigation clavier et scroll/alignement |
+| lightbox   | `js/holaf-lightbox.js` | 0.2.0 | ✅ prête | Visionneuse plein écran/inline **GÉNÉRIQUE** et instanciable : machine à états idle⇄zoom⇄fullscreen avec restauration de la vue source, navigation item→item et grille, préchargement des suivants, clavier, délégation zoom/pan à `HolafViewport` |
+| infopane   | `js/holaf-infopane.js` | 0.1.0 | ✅ prête | Panneau d'informations média **GÉNÉRIQUE** et instanciable : états vide/chargement/erreur/prêt, champs label/valeur, blocs de texte copiables, actions par bloc ou globales (source injectée) |
+| qrcode     | `js/holaf-qrcode.js` | 0.1.0 | ✅ prête | Générateur de QR codes **AUTO-HÉBERGÉ** (zéro dépendance, zéro requête réseau) : ISO/IEC 18004 mode byte UTF-8, versions 1-40, correction L/M/Q/H, masque par pénalités, rendu SVG (1 path)/canvas/dataURL |
 
-> 9 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons
+> 15 briques au total : modal · toast · fetch · viewport · notify · color · tokens · ambient · icons · collection · thumbcache · virtualgrid · lightbox · infopane · qrcode
 
 ## Convention — trouver une icône (brique `icons`)
 
@@ -618,7 +624,19 @@ holaf-lib/
 │   ├── holaf-ambient.js
 │   ├── README-holaf-ambient.md
 │   ├── holaf-icons.js
-│   └── README-holaf-icons.md
+│   ├── README-holaf-icons.md
+│   ├── holaf-collection.js
+│   ├── README-holaf-collection.md
+│   ├── holaf-thumbcache.js
+│   ├── README-holaf-thumbcache.md
+│   ├── holaf-virtual-grid.js
+│   ├── README-holaf-virtual-grid.md
+│   ├── holaf-lightbox.js
+│   ├── README-holaf-lightbox.md
+│   ├── holaf-infopane.js
+│   ├── README-holaf-infopane.md
+│   ├── holaf-qrcode.js
+│   └── README-holaf-qrcode.md
 ├── python/                     ← les briques Python (stdlib pur, + leur doc)
 │   ├── holaf-notify.py
 │   └── README-holaf-notify.md
