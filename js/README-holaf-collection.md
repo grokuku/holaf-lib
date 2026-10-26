@@ -1,4 +1,4 @@
-# HolafCollection — doc d'usage (brique holaf-lib v0.1.0)
+# HolafCollection — doc d'usage (brique holaf-lib v0.2.0)
 
 Cœur de **données pur** (sans DOM, sans CSS) pour une liste paginée
 virtualisée : un seul fichier (`holaf-collection.js`), zéro dépendance.
@@ -67,6 +67,24 @@ const col = HolafCollection.create({
 Dans les deux modes une « fenêtre » commence à un offset aligné sur `pageSize`
 (0, pageSize, 2·pageSize, …).
 
+### Frontière du mode `append` (0.2.0)
+
+La frontière est la **fin du préfixe contigu chargé** (`_loadedPrefixEnd()`) :
+la première plage ininterrompue d'items définis, calculée depuis le premier
+index défini.
+
+```
+images : [a0 a1 … a59]  [trou ×60]  [c120 … c179]   total = 1600
+length = 180        ← étendue allouée du tableau creux
+frontière = 60      ← fin du préfixe contigu → missingStarts(60, 119) = [60]
+```
+
+**Elle n'est jamais calculée sur `length` ni sur `total`.** C'était le défaut
+≤ 0.1.0 : `insertTop` / `removeByIds` portaient `length` au **total serveur**,
+la frontière sautait donc au-delà de toute la plage demandée et
+`missingStarts` renvoyait `[]` pour le reste de la session — la galerie
+n'émettait plus aucune requête et empilait des squelettes.
+
 ---
 
 ## 4. Options
@@ -82,6 +100,8 @@ Dans les deux modes une « fenêtre » commence à un offset aligné sur `pageSi
 | `filters`     | `null`          | Transmis tel quel à `fetchPage`. |
 | `since`       | `null`          | Curseur initial pour `refresh()`. |
 | `total`       | `0`             | Total initial connu (sinon renseigné par `fetchPage`). |
+| `timeoutMs`   | `30000`         | Borne d'**une** tentative de `fetchPage` (`0` = aucune borne). |
+| `retry`       | `{max:4,delayMs:3000}` | Retries **sur timeout** uniquement, bornés. |
 
 ### Contrat `fetchPage`
 
@@ -91,7 +111,19 @@ fetchPage({ offset, limit, page, filters, signal }) -> Promise<{ items, total }>
 
 - `offset` : offset de la fenêtre ; `limit` : `pageSize` ;
 - `page` : `Math.floor(offset / pageSize)` (0-indexé) — l'adaptateur peut faire `page + 1` s'il attend du 1-indexé ;
-- `signal` : `AbortSignal`, annulé à `reset()` / ré-ancrage (`reconfigure` les fetch en vol).
+- `signal` : `AbortSignal`, annulé au **timeout** de la tentative, à `reset()` et au ré-ancrage.
+
+### Timeout + retry (0.2.0)
+
+Chaque tentative est bornée par `timeoutMs` (défaut **30 s**, `0` = aucune
+borne). Au timeout : `abort()` du signal puis **abandon** de la promesse de
+l'hôte — même si elle ne résout **jamais**. La fenêtre n'est donc plus jamais
+immobilisée « en vol » : un timeout est réessayé `retry.max` fois (défaut **4**)
+espacées de `retry.delayMs` (défaut **3 s**), puis l'échec est définitif
+(`'error'` avec `timedOut:true`) et la fenêtre redevient demandable par
+`missingStarts`. Mêmes règles que `HolafThumbCache` (seuls les timeouts sont
+réessayés ; une erreur de l'hôte est définitive). Réglages de test typiques :
+`timeoutMs: 20, retry: { max: 0 }`.
 
 ---
 
@@ -128,7 +160,7 @@ fetchPage({ offset, limit, page, filters, signal }) -> Promise<{ items, total }>
 |-----------|--------------|
 | `'load'`  | `{ start, count }` — fenêtre résolue. |
 | `'patch'` | `{ mode, inserted, removed }` — delta appliqué en place. |
-| `'error'` | `{ start, error }` — `fetchPage` a échoué (hors annulation). |
+| `'error'` | `{ start, error, timedOut }` — `fetchPage` a échoué (hors annulation) ; `timedOut:true` = abandon sur timeout. |
 | `'total'` | `number` — le total a changé. |
 
 ```js
@@ -197,7 +229,10 @@ pas être recalculé, l'hôte doit recharger.
 - **Mutations en place** : `insertTop` / `removeByIds` modifient le tableau
   `images` **par référence** (les consommateurs gardent leur référence).
 - **`length` ≠ `total`** : `length` est la taille du tableau creux (cases
-  allouées), `total` le nombre d'items côté source.
+  allouées) et reste **borné au dernier index défini + 1** — `insertTop` et
+  `removeByIds` ne l'étendent **jamais** au total serveur (0.2.0) ; `total` est
+  le nombre d'items côté source. Conséquence : `ids()` / `forEachLoaded()` /
+  `missingStarts()` ne voient que des cases réellement occupées.
 - **Annulation** : `reset()` et le ré-ancrage annulent les `fetchPage` en vol
   via leur `AbortSignal` ; une page annulée n'émet pas `'error'`.
 - **`MASS_REMOVAL_THRESHOLD`** est exposé statiquement

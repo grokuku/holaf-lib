@@ -51,10 +51,10 @@
       "description": "131 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine, collections permissives seulement). 0.1.8 : + 17 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes de Docky, sous leurs noms CANONIQUES Lucide (chart-column, rotate-ccw-clock, square-pen) ; loader passe au tracé lucide:loader canonique (étoile 12 rayons, même nom). 0.1.7 : + 21 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes d'AI-Helper ; 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
     },
     "collection": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "file": "js/holaf-collection.js",
       "category": "component",
-      "description": "Cœur de données PUR (sans DOM) pour liste paginée virtualisée : tableau creux + cache de fenêtres (window|append) + réconciliation incrémentale (insertTop/removeByIds/applyDelta avec seuil de suppression de masse)."
+      "description": "Cœur de données PUR (sans DOM) pour liste paginée virtualisée : tableau creux + cache de fenêtres (window|append) + réconciliation incrémentale (insertTop/removeByIds/applyDelta avec seuil de suppression de masse). 0.2.0 : CORRECTIF de la frontière du mode 'append' (elle était calculée sur `length`, que insertTop/removeByIds portaient au TOTAL serveur → missingStarts devenait aveugle et des centaines de squelettes restaient à l'écran) — la frontière est désormais la fin du PRÉFIXE CONTIGU chargé (`_loadedPrefixEnd()`), et `length` reste borné au dernier index défini + 1 (jamais le total). AJOUT : timeout + retry bornés sur fetchPage (alignés sur HolafThumbCache : 30 s par tentative, 4 retries, abort() au timeout, 'error' avec `timedOut:true`) — une promesse qui ne résout jamais n'immobilise plus la fenêtre. Le mode 'window' est inchangé."
     },
     "thumbcache": {
       "version": "0.1.0",

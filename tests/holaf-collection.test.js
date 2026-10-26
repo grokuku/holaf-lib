@@ -27,8 +27,8 @@ function pagedFetch(total = 1000, perPage = null) {
 // ─────────────────────────────────────────────────────────────────────────────
 describe("create / valeurs par défaut", () => {
     it("expose la version et le seuil statique", () => {
-        expect(VERSION).toBe("0.1.0");
-        expect(HolafCollection.VERSION).toBe("0.1.0");
+        expect(VERSION).toBe("0.2.0");
+        expect(HolafCollection.VERSION).toBe("0.2.0");
         expect(HolafCollection.MASS_REMOVAL_THRESHOLD).toBe(100);
         expect(MASS_REMOVAL_THRESHOLD).toBe(100);
     });
@@ -264,7 +264,10 @@ describe("insertTop", () => {
         expect(c.at(0).id).toBe("NEW_a");
         expect(c.at(1).id).toBe("NEW_b");
         expect(c.at(2)).toBe(oldFirst);
-        expect(c.length).toBe(1002);
+        // `length` = ÉTENDUE chargée (dernier index défini + 1) : 4 items
+        // chargés + 2 insérés = 6. AVANT 0.2.0 la longueur sautait au total
+        // serveur (1002) — c'était le mensonge qui aveuglait missingStarts.
+        expect(c.length).toBe(6);
         expect(c.total).toBe(1002);
     });
 
@@ -570,5 +573,149 @@ describe("refresh (fetchDelta)", () => {
         expect(r).toEqual({ mode: "patched", inserted: 1, removed: 0 });
         expect(c.at(0).id).toBe("NEW");
         expect(c.total).toBe(5);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 0.2.0 — FRONTIÈRE du mode 'append' (préfixe contigu) + timeout/retry.
+//
+// Régression couverte : `_rangeStarts` calculait la frontière sur
+// `windowStart(_images.length)` alors que `insertTop`/`removeByIds` portaient
+// `_images.length` au TOTAL SERVEUR. Après le premier poll (10 s), le clamp
+// sautait au-delà de toute la plage demandée → `missingStarts` renvoyait []
+// pour le reste de la session et des centaines de squelettes restaient à
+// l'écran (mesure en prod : total 1600, length 1600, 960 trous, 0 manquant).
+describe("0.2.0 — frontière 'append' + timeout/retry de fetchPage", () => {
+    /** Remplit le tableau creux par fenêtres PLEINES (scroll séquentiel). */
+    function fillSequential(col, lastStart) {
+        for (let w = 0; w <= lastStart; w += col.pageSize) {
+            col.setWindow(w, makeItems("w" + w + "_", col.pageSize, 100000 - w));
+        }
+    }
+
+    it("T1 — insertTop ne fait plus sauter length au total : la frontière reste vivante", () => {
+        const c = HolafCollection.create({
+            pageSize: 60, mode: "append", total: 1600,
+            getId: (i) => i.id, sortKey: (i) => i.sort,
+        });
+        fillSequential(c, 480);                 // 9 fenêtres = 540 cases chargées
+        expect(c.length).toBe(540);
+        expect(c.missingStarts(480, 539)).toEqual([]);   // tout est chargé
+
+        const inserted = c.insertTop([
+            { id: "NEW_b", sort: 1000000 },
+            { id: "NEW_a", sort: 1000001 },
+        ]);
+        expect(inserted).toBe(2);
+
+        // A2 : `length` = éTENDUE chargée (540 + 2), PAS le total (1602).
+        expect(c.length).toBe(542);
+        expect(c.total).toBe(1602);
+
+        // A1 : frontière = fin du préfixe contigu (542 → fenêtre 540), et non
+        // windowStart(1602) = 1560 qui avalait toute la plage (→ [] = le bug).
+        const missing = c.missingStarts(480, 540);
+        expect(missing.length).toBeGreaterThan(0);
+        expect(missing).toEqual([540]);
+    });
+
+    it("T1bis — la frontière suit le PRÉFIXE CONTIGU, jamais length (trou au milieu)", () => {
+        const c = HolafCollection.create({
+            pageSize: 60, mode: "append", total: 1600, getId: (i) => i.id,
+        });
+        c.setWindow(0, makeItems("a", 60, 1000));
+        c.setWindow(120, makeItems("b", 60, 900));      // saut : trou 60..119
+        // `length` couvre la zone allouée (180) MAIS le préfixe contigu s'arrête
+        // à 60 : la frontière doit être 60, sinon le trou 60..119 n'est jamais
+        // demandé (c'est exactement le bug : frontière calculée sur length).
+        expect(c.length).toBe(180);
+        expect(c.missingStarts(60, 119)).toEqual([60]);
+    });
+
+    it("T2 — removeByIds laisse un trou en fin de zone, bien reproposé par missingStarts", () => {
+        const c = HolafCollection.create({
+            pageSize: 60, mode: "append", total: 1600, getId: (i) => i.id,
+        });
+        fillSequential(c, 120);                 // fenêtres 0 / 60 / 120 = 180 cases
+        expect(c.length).toBe(180);
+        expect(c.missingStarts(0, 179)).toEqual([]);
+
+        expect(c.removeByIds(["w120_7"])).toBe(1);       // item de la DERNIÈRE fenêtre
+        // Le retrait décale les suivants : la zone chargée finit sur un trou.
+        expect(c.length).toBe(179);
+        expect(c.has(179)).toBe(false);
+        expect(c.missingStarts(0, 179)).toEqual([120]);
+    });
+
+    it("T3 — ensureRange après insertTop demande les fenêtres manquantes, y compris sous l'ancienne frontière fantôme", async () => {
+        const fetchPage = pagedFetch(1600);
+        const c = HolafCollection.create({
+            pageSize: 60, mode: "append", total: 1600, getId: (i) => i.id,
+            sortKey: (i) => i.sort, fetchPage,
+        });
+        c.setWindow(0, makeItems("w0_", 60, 1000));
+        c.insertTop([{ id: "NEW", sort: 99999 }]);
+        expect(c.length).toBe(61);
+        expect(c.total).toBe(1601);
+
+        // Fenêtre à la frontière réelle (61 → fenêtre 60).
+        await c.ensureRange(60, 119);
+        expect(fetchPage.calls.map((k) => k.offset)).toEqual([60]);
+
+        // Saut de défilement / reprise de position : la zone 480..539 était
+        // SOUS la frontière fantôme de l'ancien code (windowStart(total) =
+        // 1560), qui avalait toute la plage → aucun fetch, squelettes à vie.
+        fetchPage.calls.length = 0;
+        await c.ensureRange(480, 539);
+        expect(fetchPage.calls.map((k) => k.offset)).toEqual([480]);
+        expect(c.at(480).id).toBe("p480_0");
+    });
+
+    it("T4 — une promesse qui ne résout JAMAIS est abandonnée (timeout) et n'immobilise pas la suite", async () => {
+        const offsets = [];
+        const fetchPage = vi.fn(({ offset, limit }) => {
+            offsets.push(offset);
+            if (offset === 10) return new Promise(() => {});   // pend à jamais
+            return Promise.resolve({ items: makeItems("p" + offset + "_", limit), total: 100 });
+        });
+        const c = HolafCollection.create({
+            pageSize: 10, mode: "window", getId: (i) => i.id, fetchPage,
+            timeoutMs: 20, retry: { max: 2, delayMs: 1 },
+        });
+        const errors = [];
+        c.on("error", (p) => errors.push(p));
+
+        const t0 = Date.now();
+        await c.ensureRange(0, 29);              // fenêtres 0, 10 (pend), 20
+        const elapsed = Date.now() - t0;
+
+        // (a) abandonnée au bout du timeout, une seule erreur, marquée timedOut.
+        expect(errors).toHaveLength(1);
+        expect(errors[0].start).toBe(10);
+        expect(errors[0].timedOut).toBe(true);
+        expect(errors[0].error.timedOut).toBe(true);
+        expect(elapsed).toBeGreaterThanOrEqual(20);
+        expect(c.isWindowLoading(10)).toBe(false);
+        // (M3) 1 tentative + 2 retries : la promesse pendante est bien réessayée.
+        expect(offsets.filter((o) => o === 10)).toHaveLength(3);
+        // (b) la fenêtre 2 se charge MALGRÉ la fenêtre 1 bloquée.
+        expect(c.isWindowLoaded(20)).toBe(true);
+        // (c) la fenêtre abandonnée redevient demandable.
+        expect(c.missingStarts(0, 29)).toContain(10);
+        // (d) les autres fenêtres sont intactes.
+        expect(c.at(0).id).toBe("p0_0");
+        expect(c.at(20).id).toBe("p20_0");
+        expect(c.has(10)).toBe(false);
+    });
+
+    it("T5 — mode window : AUCUNE frontière n'est appliquée (comportement inchangé)", () => {
+        const c = HolafCollection.create({
+            pageSize: 60, mode: "window", total: 1600, getId: (i) => i.id, sortKey: (i) => i.sort,
+        });
+        c.setWindow(480, makeItems("w480_", 60, 900));    // seule la FIN est chargée
+        c.insertTop([{ id: "NEW", sort: 99999 }]);
+        // En 'window' la frontière 'append' ne s'applique pas : les fenêtres
+        // 0 et 60 restent demandables même sous le préfixe chargé.
+        expect(c.missingStarts(0, 119)).toEqual([0, 60]);
     });
 });
