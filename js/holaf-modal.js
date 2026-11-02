@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafModal · version 0.7.0
+ * Holaf UI — Brique HolafModal · version 0.8.0
  * ─────────────────────────────────────────────────────────────────────────────
  * Modale autonome (zéro dépendance runtime) : overlay, pile d'overlays
  * document-level, helpers Promise (alert / confirm / prompt / busy), focus
@@ -89,7 +89,7 @@
 const HolafModal = (function () {
     "use strict";
 
-    const VERSION = "0.7.0";
+    const VERSION = "0.8.0";
 
     // ─── État global du module (partagé par toutes les modales) ──────────────
     // Pile des modales ouvertes : la DERNIÈRE entrée est le « sommet », la
@@ -896,10 +896,10 @@ body.holaf-modal-open { overflow: hidden; }
         el.appendChild(header);
         el.setAttribute("aria-labelledby", titleId);
 
-        // ── Body (content : string → innerHTML de confiance, ou Node) ───────
+        // ── Body (content : string → innerHTML si contentHtml, sinon textContent) ──
         const body = document.createElement("div");
         body.className = "holaf-modal-body";
-        renderContent(body, opts.content);
+        renderContent(body, opts.content, opts.contentHtml);
         el.appendChild(body);
 
         // ── Footer + boutons ─────────────────────────────────────────────────
@@ -1302,7 +1302,7 @@ body.holaf-modal-open { overflow: hidden; }
 
         function setContent(c) {
             body.innerHTML = "";
-            renderContent(body, c);
+            renderContent(body, c, ctrl._contentHtml);
         }
 
         function bringToFront() {
@@ -1326,6 +1326,10 @@ body.holaf-modal-open { overflow: hidden; }
             setContent: setContent,
             setBusy: setBusy,
             bringToFront: bringToFront,
+            // Contrat de rendu hérité par les setContent() suivants (v0.8.0).
+            _contentHtml: opts.contentHtml,
+            // Permet à un appelant de basculer un contenu déjà ouvert.
+            setContentHtml(flag) { ctrl._contentHtml = flag; },
         };
         el._holafModalCtrl = ctrl; // utilisé par l'anti-doublon / le cleanup
 
@@ -1350,11 +1354,45 @@ body.holaf-modal-open { overflow: hidden; }
     // Rend le contenu dans le conteneur : string → innerHTML (contenu de
     // confiance, documenté) ; Node → rattaché tel quel (recommandé) ; fonction
     // (v0.3.0) → appelée avec le conteneur (opts.content(body)).
-    function renderContent(target, content) {
+    //
+    // ── SÉCURITÉ : `contentHtml` (0.8.0) ──────────────────────────────────
+    // C'était le SEUL endroit du kit où une *string* était du HTML par défaut
+    // (holaf-toast exige `html: true`, holaf-infopane exige `html` au niveau
+    // instance ; les helpers alert/confirm/prompt/busy passent par
+    // textContent). D'où un XSS stocké trivial :
+    //   HolafModal.open({ content: "<p>" + err.message + "</p>" })
+    // Le contrat est désormais EXPLICITE :
+    //   - `contentHtml: true`  → innerHTML (rétro-compatible, défaut actuel) ;
+    //   - `contentHtml: false` → textContent : la chaîne est affichée TELLE
+    //     QUELLE, aucun balisage interprété (à préférer pour tout contenu
+    //     contenant une donnée serveur) ;
+    //   - Node / fonction            → inchangé quel que soit le drapeau.
+    // Le défaut reste `true` parce que les 4 projets hôtes (dont Docky)
+    // passent massivement du HTML légitime (formulaires, tableaux, listes).
+    // Un `console.warn` UNE SEULE FOIS par page signale la forme risquée
+    // (string contenant `<` sans `contentHtml` explicite) et indique le
+    // remède. Aucun appelant n'est cassé.
+    let contentHtmlWarned = false;
+
+    function renderContent(target, content, contentHtml) {
         if (content === undefined || content === null) return;
         if (typeof content === "function") { content(target); return; }
-        if (isNode(content)) target.appendChild(content);
-        else target.innerHTML = String(content);
+        if (isNode(content)) { target.appendChild(content); return; }
+        const raw = String(content);
+        // Mode TEXTE demandé explicitement.
+        if (contentHtml === false) { target.textContent = raw; return; }
+        // HTML (défaut rétro-compatible) : avertit une fois si la chaîne
+        // ressemble à du balisage sans que l'hôte ait choisi explicitement.
+        if (contentHtml === undefined && !contentHtmlWarned && /[<]/.test(raw)) {
+            contentHtmlWarned = true;
+            console.warn(
+                "[HolafModal] `content` est interprété comme du HTML. " +
+                "Si la chaîne contient une donnée serveur (message d'erreur, nom…), " +
+                "passez `contentHtml: false` (ou un Node) pour éviter un XSS. " +
+                "Cet avertissement n'apparaît qu'une fois."
+            );
+        }
+        target.innerHTML = raw;
     }
 
     // Conteneur « message » des helpers (textContent → injection impossible).

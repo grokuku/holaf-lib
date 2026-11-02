@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafIcons · version 0.1.8
+ * Holaf UI — Brique HolafIcons · version 0.1.9
  * ─────────────────────────────────────────────────────────────────────────────
  * Set d'icônes SVG en trait (style « feather »), ZÉRO CSS (aucune feuille
  * n'est injectée) : chaque icône utilise `stroke="currentColor"` et lèse à
@@ -34,7 +34,7 @@
 const HolafIcons = (function () {
     "use strict";
 
-    const VERSION = "0.1.8";
+    const VERSION = "0.1.9";
 
     const NS = "http://www.w3.org/2000/svg";
 
@@ -658,10 +658,32 @@ const HolafIcons = (function () {
         return d[m][n];
     }
 
+    // Échappement d'une valeur destinée à un ATTRIBUT d'une chaîne HTML.
+    // Une brique qui PRODUIT du HTML doit échapper ses attributs : `class` et
+    // `size` viennent de l'hôte et peuvent contenir un nom de projet, un tag
+    // ou un type d'agent renvoyé par un serveur. Sans cela, `class: 'x"
+    // onload="…'` injectait un handler dans le SVG (XSS). Échappe aussi `'`
+    // et `>` (utile si la valeur finit dans un handler inline construit par
+    // l'hôte).
+    function escapeAttr(value) {
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
     // Construction du SVG complet (wrapper + corps) avec taille/class.
+    //
+    // Tous les attributs variables sont échappés : `class` via escapeAttr, et
+    // `size` est en plus FORCÉ numérique (une chaîne comme `24" onload=x`
+    // donnerait Number(...) = NaN, mais un `size` fourni en chaîne numérique
+    // reste accepté ; Number.isFinite ne laisse passer que de vrais nombres).
+    // Le `viewBox` est une constante du module, jamais une entrée.
     function buildSvg(body, size, className) {
         const s = Number.isFinite(size) && size > 0 ? size : 24;
-        const cls = className ? ' class="' + className + '"' : "";
+        const cls = className ? ' class="' + escapeAttr(className) + '"' : "";
         return (
             '<svg xmlns="' + NS + '" viewBox="0 0 24 24" width="' + s + '" height="' + s +
             '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
@@ -710,6 +732,8 @@ const HolafIcons = (function () {
                 o.size !== undefined && o.size !== null
                     ? Number(o.size)
                     : 24;
+            // `class` ET `className` sont acceptés ; la valeur est échappée
+            // dans buildSvg (jamais concaténée brute dans la chaîne SVG).
             const cls = o.class || o.className || "";
             return buildSvg(bodyOf(name), size, cls);
         },

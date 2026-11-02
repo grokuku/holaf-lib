@@ -3,10 +3,10 @@
   "description": "Briques maison (JS et Python), versionnées par brique. Chaque brique est un fichier autonome, copié (pinné) dans les projets qui en ont besoin.",
   "bricks": {
     "modal": {
-      "version": "0.7.0",
+      "version": "0.8.0",
       "file": "js/holaf-modal.js",
       "category": "component",
-      "description": "Modale autonome (overlay, pile, helpers Promise, thèmes). Catalogue V2 : 12 presets <famille>-<mode> (corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) miroirs de HolafTokens 0.6.0 + 4 alias remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark). 0.7.0 : MIROIR DE LA VARIANTE C — surfaces gris neutre (chroma 0), rampe de profondeur UNIQUE PARTAGÉE par les 6 familles, accent inchangé ; mapping des clés et API inchangés. 0.6.1 : miroir du PATCH HolafTokens 0.4.1 (6 --hm-text-secondary corrigés pour le contraste AA du texte atténué)."
+      "description": "Modale autonome (overlay, pile, helpers Promise, thèmes). 0.8.0 (SÉCURITÉ) : option `contentHtml` — `content` en STRING n'est plus du HTML par défaut *implicite* : `contentHtml: false` affiche la chaîne telle quelle (textContent), un Node/une fonction restent inchangés ; le défaut reste `true` pour ne pas casser les hôtes (Docky et les autres passent du HTML légitime), avec un console.warn UNE SEULE FOIS quand une string contenant `<` est interprétée sans choix explicite. `ctrl.setContentHtml(flag)` et héritage de `contentHtml` par `ctrl.setContent()`. Catalogue V2 : 12 presets <famille>-<mode> (corail/ambre/emeraude/turquoise/amethyste/neutre × light/dark) miroirs de HolafTokens 0.6.0 + 4 alias remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark). 0.7.0 : MIROIR DE LA VARIANTE C — surfaces gris neutre (chroma 0), rampe de profondeur UNIQUE PARTAGÉE par les 6 familles, accent inchangé ; mapping des clés et API inchangés. 0.6.1 : miroir du PATCH HolafTokens 0.4.1 (6 --hm-text-secondary corrigés pour le contraste AA du texte atténué)."
     },
     "toast": {
       "version": "0.8.0",
@@ -15,8 +15,10 @@
       "description": "Notifications flottantes autonomes (types, pause, positions, fonds teintés). Catalogue V2 : 12 presets <famille>-<mode> (cohérence surface/texte/bordure avec HolafTokens 0.6.0) ; 4 alias remappés (dark/light→amethyste, midnight→amethyste-dark, slate→neutre-dark). 0.8.0 : MIROIR DE LA VARIANTE C — surfaces gris neutre (chroma 0), rampe UNIQUE PARTAGÉE par les 6 familles, accent inchangé ; les fonds teintés par type (--ht-bg-success/warning/error) et les accents de type sont recalculés sur la nouvelle surface ; API inchangée."
     },
     "fetch": {
-      "version": "0.2.0",
-      "file": "js/holaf-fetch.js"
+      "version": "0.2.1",
+      "file": "js/holaf-fetch.js",
+      "category": "logic",
+      "description": "Wrapper HTTP maison, purement LOGIQUE (aucun DOM, aucun CSS) : JSON blindé (Content-Type vérifié avant parsing, détection de page de login SSO → « session expirée »), erreurs typées HolafFetchError {status, data, body}, timeout AbortController, retry exponentiel (réseau/5xx seulement), auth enfichable (bearer/CSRF/custom), forward des options natives, configure(). 0.2.1 (CORRECTIF) : une réponse SANS corps n'est plus une erreur — 204 No Content / 205 / 304 et un 2xx au corps vide (même en Content-Type JSON) renvoient null au lieu de lever « réponse non-JSON (statut 204) » ; un JSON malformé sur un corps NON vide lève toujours, et un 5xx au corps vide continue de lever. Aucun changement d'API."
     },
     "viewport": {
       "version": "0.1.3",
@@ -45,10 +47,10 @@
       "description": "Fonds animés canvas (waves/particles/aurora) : rubans liquides, halos en profondeur, nappes transparentes ; density = intensité, blur global, elementCount exposé, animation dt ; options perf scale (résolution du buffer + upscale CSS) et fps (plafond de framerate)."
     },
     "icons": {
-      "version": "0.1.8",
+      "version": "0.1.9",
       "file": "js/holaf-icons.js",
       "category": "component",
-      "description": "131 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine, collections permissives seulement). 0.1.8 : + 17 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes de Docky, sous leurs noms CANONIQUES Lucide (chart-column, rotate-ccw-clock, square-pen) ; loader passe au tracé lucide:loader canonique (étoile 12 rayons, même nom). 0.1.7 : + 21 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes d'AI-Helper ; 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
+      "description": "131 icônes SVG en trait (style Feather ; tracés Feather MIT, Tabler MIT et Lucide ISC), zéro CSS, stroke=currentColor ; tracés cherchables via icons0.dev (150+ collections, licence selon la collection d'origine, collections permissives seulement). 0.1.9 (SÉCURITÉ) : les attributs variables du SVG sont désormais échappés (escapeAttr : &, guillemet, apostrophe, <, >) — `render(name, {class})` ne peut plus produire un handler exécutable depuis une valeur d'hôte (nom de projet, tag, type d'agent) ; `size` reste forcé numérique. Aucun changement d'API. 0.1.8 : + 17 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes de Docky, sous leurs noms CANONIQUES Lucide (chart-column, rotate-ccw-clock, square-pen) ; loader passe au tracé lucide:loader canonique (étoile 12 rayons, même nom). 0.1.7 : + 21 icônes (tracés Lucide ISC sourcés via l'API icons0.dev, géométrie reprise à l'identique) pour la migration d'icônes d'AI-Helper ; 0.1.6 : + 39 icônes (tracés Lucide ISC, parité de rendu vérifiée) pour finir la migration d'icônes de Pi-Web."
     },
     "collection": {
       "version": "0.2.0",

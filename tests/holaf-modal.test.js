@@ -409,12 +409,95 @@ describe("overlay, boutons & CSS", () => {
     });
 
     it("version exposée + global window.HolafModal", () => {
-        expect(HolafModal.version).toBe("0.7.0");
+        expect(HolafModal.version).toBe("0.8.0");
         expect(window.HolafModal).toBe(HolafModal);
     });
 });
 
 // ── Thèmes ─────────────────────────────────────────────────────────────────────
+// ── contentHtml (v0.8.0) : le contenu string n'est plus du HTML implicite ────
+describe("contentHtml (v0.8.0) — contenu string : HTML ou texte", () => {
+    it("contentHtml:false → la chaîne est affichée telle quelle (aucun balisage interprété)", () => {
+        const payload = '<b id="hm-xss">gras</b><img src=x onerror="window.__pwned=1">';
+        const ctrl = HolafModal.open({ title: "T", content: payload, contentHtml: false });
+        const body = ctrl.el.querySelector(".holaf-modal-body");
+        // Aucun élément enfant : le texte est un nœud texte unique.
+        expect(body.querySelector("#hm-xss")).toBeNull();
+        expect(body.querySelector("img")).toBeNull();
+        expect(body.textContent).toBe(payload);
+        ctrl.close();
+    });
+
+    it("contentHtml:true → le HTML est interprété", () => {
+        const ctrl = HolafModal.open({
+            title: "T",
+            content: '<b id="hm-html">gras</b>',
+            contentHtml: true,
+        });
+        const body = ctrl.el.querySelector(".holaf-modal-body");
+        expect(body.querySelector("#hm-html")).not.toBeNull();
+        expect(body.textContent).toBe("gras");
+        ctrl.close();
+    });
+
+    it("défaut (sans contentHtml) → HTML interprété, rétro-compatible", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const ctrl = HolafModal.open({ title: "T", content: '<b id="hm-def">gras</b>' });
+        expect(ctrl.el.querySelector(".holaf-modal-body #hm-def")).not.toBeNull();
+        ctrl.close();
+        warn.mockRestore();
+    });
+
+    it("un Node reste rendu tel quel quel que soit contentHtml", () => {
+        const node = document.createElement("p");
+        node.id = "hm-node";
+        node.textContent = "<pas du balisage>";
+        const ctrl = HolafModal.open({ title: "T", content: node, contentHtml: false });
+        const body = ctrl.el.querySelector(".holaf-modal-body");
+        expect(body.querySelector("#hm-node")).not.toBeNull();
+        expect(body.textContent).toBe("<pas du balisage>");
+        ctrl.close();
+    });
+
+    it("console.warn UNE SEULE FOIS quand une string contenant < est interprétée sans choix explicite", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        // Le module peut déjà avoir averti dans un autre test : on ne teste pas
+        // le compte exact (il dépend de l'ordre), mais l'absence de spam.
+        const c1 = HolafModal.open({ title: "T", content: "<p>a</p>" });
+        const c2 = HolafModal.open({ title: "T", content: "<p>b</p>" });
+        const warns = warn.mock.calls.filter((c) => String(c[0]).includes("contentHtml"));
+        expect(warns.length).toBeLessThanOrEqual(1);
+        c1.close();
+        c2.close();
+        warn.mockRestore();
+    });
+
+    it("aucun avertissement pour une string SANS balisage ni pour contentHtml explicite", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const before = warn.mock.calls.length;
+        const c1 = HolafModal.open({ title: "T", content: "juste du texte" });
+        const c2 = HolafModal.open({ title: "T", content: "<p>x</p>", contentHtml: true });
+        expect(warn.mock.calls.length).toBe(before);
+        c1.close();
+        c2.close();
+        warn.mockRestore();
+    });
+
+    it("ctrl.setContent() hérite du contentHtml de open() (et setContentHtml le change)", () => {
+        const ctrl = HolafModal.open({ title: "T", content: "init", contentHtml: false });
+        const body = ctrl.el.querySelector(".holaf-modal-body");
+
+        ctrl.setContent('<i id="hm-set">x</i>');
+        expect(body.querySelector("#hm-set")).toBeNull();
+        expect(body.textContent).toBe('<i id="hm-set">x</i>');
+
+        ctrl.setContentHtml(true);
+        ctrl.setContent('<i id="hm-set2">x</i>');
+        expect(body.querySelector("#hm-set2")).not.toBeNull();
+        ctrl.close();
+    });
+});
+
 describe("thèmes", () => {
     // Valeurs exactes du CSS injecté (défauts historiques de la brique).
     const DARK_DEFAULTS = {

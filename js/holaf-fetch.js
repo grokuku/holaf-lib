@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Holaf UI — Brique HolafFetch · version 0.2.0
+ * Holaf UI — Brique HolafFetch · version 0.2.1
  * ─────────────────────────────────────────────────────────────────────────────
  * Wrapper HTTP maison, purement LOGIQUE : aucun DOM, aucun CSS. Il remplace
  * les apiFetch maison des projets (AiKore, CaddyPanel, airunner, Kinoscribe,
@@ -15,6 +15,9 @@
  *     non-JSON (page HTML de login / 502 proxy) lève une erreur claire, avec
  *     détection de page de login (authentik/outpost/sign-in) → « session
  *     expirée ». (Inspiré du parseJsonResponse de Pi-Web, mais autonome.)
+ *   - Corps absent ≠ erreur (0.2.1) : 204/205/304 et un 2xx au corps vide
+ *     renvoient `null` au lieu de lever « réponse non-JSON ». Un JSON
+ *     malformé sur un corps NON vide lève toujours.
  *   - Erreurs typées : HolafFetchError extends Error avec { status, data,
  *     body } — les appelants réagissent au code (ex. err.data.code ===
  *     "GIT_AUTH_REQUIRED"). Message automatique : body.error d'abord
@@ -34,7 +37,7 @@
 const HolafFetch = (function () {
     "use strict";
 
-    const VERSION = "0.2.0";
+    const VERSION = "0.2.1";
 
     // ─── Constantes du module ────────────────────────────────────────────────
     const DEFAULT_TIMEOUT = 30000; // ms ; 0 = aucun timeout
@@ -142,14 +145,28 @@ const HolafFetch = (function () {
     // Vérifie le Content-Type AVANT res.json() ; si la réponse n'est pas du
     // JSON (page HTML de login, 502 proxy…), lit le texte et lève une erreur
     // claire. Détecte une page de login SSO → « session expirée ».
+    //
+    // CORPS ABSENT ≠ CORPS NON-JSON : un 204/205/304, ou un 2xx au corps vide
+    // (Content-Type JSON compris), est une réponse SANS charge utile, pas une
+    // erreur. Sans ce cas, un simple `DELETE` répondant 204 levait
+    // « réponse non-JSON (statut 204) » alors que res.ok valait true.
+    const NO_CONTENT_STATUSES = { 204: true, 205: true, 304: true };
+
     async function parseResponse(res, raw) {
         if (raw) return res; // mode brut : l'appelant gère blob/stream
+
+        // ── Aucun corps par définition HTTP : ne JAMAIS lire ni parser ──
+        // 204 No Content / 205 Reset Content / 304 Not Modified.
+        if (NO_CONTENT_STATUSES[res.status]) return null;
 
         const contentType = res.headers.get("content-type") || "";
 
         // ── Réponse non-JSON : probablement du HTML (login SSO, proxy…) ──
+        // (un corps vide en non-JSON retombe aussi ici, mais on le traite
+        // plus bas comme « vide » puisqu'il n'y a rien à interpréter).
         if (!contentType.includes("application/json")) {
             const text = await res.text().catch(() => "");
+            if (text.trim().length === 0 && res.ok) return null;
             const lower = text.toLowerCase();
             if (LOGIN_PAGE_MARKERS.some((m) => lower.includes(m))) {
                 // Page de login Authentik : la session a été invalidée.
@@ -161,10 +178,34 @@ const HolafFetch = (function () {
             );
         }
 
-        // ── Réponse JSON : parse classique ──
+        // ── Réponse JSON : un corps vide n'est pas un JSON illisible ──
+        // (`200` + Content-Type JSON + corps vide : par exemple une route qui
+        // renvoie juste un code de succès.) On lit d'abord le texte pour
+        // distinguer le vide du malformé : un JSON invalide sur un corps NON
+        // vide doit toujours lever.
+        let textBody;
+        try {
+            textBody = await res.text();
+        } catch (e) {
+            throw new HolafFetchError(
+                "réponse JSON illisible (statut " + res.status + ")",
+                { status: res.status }
+            );
+        }
+        if (textBody === "" || (textBody !== null && textBody !== undefined && textBody.trim().length === 0)) {
+            if (!res.ok) {
+                throw new HolafFetchError("erreur serveur (statut " + res.status + ")", {
+                    status: res.status,
+                    data: null,
+                    body: textBody,
+                });
+            }
+            return null;
+        }
+
         let data;
         try {
-            data = await res.json();
+            data = JSON.parse(textBody);
         } catch (e) {
             // Content-Type JSON mais corps illisible (réponse tronquée…)
             throw new HolafFetchError(

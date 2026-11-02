@@ -157,6 +157,63 @@ describe("HolafFetch — JSON blindé", () => {
         }
     });
 
+    // ─── Réponses sans corps : null, PAS une erreur ─────────────────────────
+    // Un statut « sans contenu » n'est pas une « réponse non-JSON » : avant ce
+    // correctif, un DELETE répondant 204 levait « réponse non-JSON (statut 204) »
+    // alors que res.ok était true.
+    it("DELETE 204 No Content → null, aucune exception", async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+        await expect(HolafFetch.request("/api/x", { method: "DELETE" })).resolves.toBeNull();
+    });
+
+    it("204 avec Content-Type JSON et aucun corps → null", async () => {
+        fetchMock.mockResolvedValue(
+            new Response(null, { status: 204, headers: { "Content-Type": "application/json" } })
+        );
+        await expect(HolafFetch.request("/api/x", { method: "DELETE" })).resolves.toBeNull();
+    });
+
+    it("205 Reset Content → null", async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 205 }));
+        await expect(HolafFetch.request("/api/x", { method: "POST" })).resolves.toBeNull();
+    });
+
+    it("304 Not Modified → null", async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 304 }));
+        await expect(HolafFetch.request("/api/x", { method: "GET" })).resolves.toBeNull();
+    });
+
+    it("200 + Content-Type JSON + corps vide → null", async () => {
+        fetchMock.mockResolvedValue(
+            new Response("", { status: 200, headers: { "Content-Type": "application/json" } })
+        );
+        await expect(HolafFetch.get("/api/x")).resolves.toBeNull();
+    });
+
+    it("200 + corps JSON réduit à des espaces → null", async () => {
+        fetchMock.mockResolvedValue(
+            new Response("   \n\t ", { status: 200, headers: { "Content-Type": "application/json" } })
+        );
+        await expect(HolafFetch.get("/api/x")).resolves.toBeNull();
+    });
+
+    it("200 + JSON malformé (corps NON vide) → lève toujours", async () => {
+        fetchMock.mockResolvedValue(
+            new Response('{"a": 1', { status: 200, headers: { "Content-Type": "application/json" } })
+        );
+        await expect(HolafFetch.get("/api/x")).rejects.toThrow("réponse JSON illisible");
+    });
+
+    it("200 + JSON valide → objet parsé (comportement inchangé)", async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+        await expect(HolafFetch.get("/api/x")).resolves.toEqual({ ok: true });
+    });
+
+    it("non-JSON 5xx avec corps vide → erreur « non-JSON » (pas de null silencieux)", async () => {
+        fetchMock.mockResolvedValue(new Response("", { status: 502, headers: { "Content-Type": "text/html" } }));
+        await expect(HolafFetch.get("/api/x")).rejects.toMatchObject({ status: 502 });
+    });
+
     it("err.data.code préservé (ex. GIT_AUTH_REQUIRED)", async () => {
         fetchMock.mockResolvedValue(jsonResponse({ error: "auth", code: "GIT_AUTH_REQUIRED" }, 401));
         try {
@@ -274,8 +331,8 @@ describe("HolafFetch — divers", () => {
         expect(onStatus).toHaveBeenCalledWith(201);
     });
 
-    it("version 0.2.0 exposée", () => {
-        expect(HolafFetch.version).toBe("0.2.0");
+    it("version exposée (0.2.1)", () => {
+        expect(HolafFetch.version).toBe("0.2.1");
     });
 
     it("HolafFetchError est une instance de Error avec name", async () => {

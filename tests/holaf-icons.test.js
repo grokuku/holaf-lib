@@ -395,6 +395,45 @@ describe("render() — options size / class", () => {
         expect(svg).not.toMatch(/class=/);
     });
 
+    // ─── Échappement des attributs (correctif sécurité) ─────────────────────
+    // buildSvg concatène `class` dans une chaîne HTML : sans échappement, une
+    // valeur comme `x" onload="alert(1)` sortait un handler exécutable.
+    it("render() échappe les guillemets de l'attribut class (pas d'XSS)", () => {
+        const svg = HolafIcons.render("bot", { class: 'x" onload="alert(1)' });
+        expect(svg).not.toContain('onload="alert(1)"');
+        expect(svg).toContain("&quot;");
+        // La classe reste lisible après décodage de l'entité.
+        expect(svg).toContain('class="x&quot; onload=&quot;alert(1)"');
+    });
+
+    it("render() échappe & < > ' dans class", () => {
+        const svg = HolafIcons.render("bot", { class: "a&b<c>d'e" });
+        expect(svg).toContain("class=\"a&amp;b&lt;c&gt;d&#39;e\"");
+        // Aucun des caractères dangereux ne subsiste dans l'attribut.
+        const attr = svg.match(/class="([^"]*)"/)[1];
+        expect(attr).not.toContain("<");
+        expect(attr).not.toContain(">");
+        expect(attr).not.toContain("'");
+    });
+
+    it("render() échappe aussi className", () => {
+        const svg = HolafIcons.render("bot", { className: 'a"b' });
+        expect(svg).toContain('class="a&quot;b"');
+    });
+
+    it("render() force size en numérique (pas d'injection via width/height)", () => {
+        const svg = HolafIcons.render("bot", { size: '24" onload="alert(1)' });
+        // Number(...) → NaN → retombe sur 24, aucune trace de l'injection.
+        expect(svg).toContain('width="24"');
+        expect(svg).toContain('height="24"');
+        expect(svg).not.toContain("onload");
+    });
+
+    it("render() accepte size en chaîne numérique", () => {
+        const svg = HolafIcons.render("bot", { size: "32" });
+        expect(svg).toContain('width="32"');
+    });
+
     it("render() sur tous les noms connus (boucle) ne jette pas", () => {
         for (const name of HolafIcons.list()) {
             expect(() => HolafIcons.render(name, { size: 20, class: "ic" })).not.toThrow();

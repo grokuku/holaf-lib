@@ -1,4 +1,4 @@
-# HolafModal — doc d'usage (brique holaf-lib v0.7.0)
+# HolafModal — doc d'usage (brique holaf-lib v0.8.0)
 
 Modale autonome : **un seul fichier** (`holaf-modal.js`), zéro dépendance.
 Elle gère pour vous : l'overlay sombre, le centrage, la pile de modales
@@ -105,6 +105,7 @@ ctrl.close();
 | `labels`         | —      | **v0.3.0** : `{ ok, cancel, close, loading }` — libellés des boutons/fermeture/chargement |
 | `actions`        | `[]`   | **v0.4.0** : modale à contenu libre — boutons du footer, dont la soumission de formulaires (§2ter) |
 | `injectStyles`   | `true` | **v0.4.2** : `false` → la brique n'injecte PAS son `<style>` (mode CSS externe, §5ter) |
+| `contentHtml`    | `true` | **v0.8.0** : `content` en **string** → `true` = interprété comme du HTML (rétro-compatible), `false` = affiché **tel quel** (`textContent`, aucun balisage). Sans effet sur un Node ou une fonction. Voir §5quater |
 
 ### Boutons
 
@@ -639,6 +640,59 @@ Alternative propre au nonce pour un hôte à CSP strict (`style-src 'self'`) :
 
 ---
 
+## 5quater. SÉCURITÉ — `content` en string : HTML ou texte ? (`contentHtml`, v0.8.0)
+
+C'était le **seul** endroit du kit où une *string* était du HTML par défaut
+(`HolafToast` exige `html: true`, `HolafInfopane` exige `html` au niveau
+instance, et les helpers `alert`/`confirm`/`prompt`/`busy` passent par
+`textContent`). Conséquence : un simple
+
+```js
+HolafModal.open({ content: "<p>" + err.message + "</p>" });   // ⚠ XSS stocké
+```
+
+injectait le message serveur comme du balisage.
+
+Le contrat est désormais **explicite** :
+
+| `contentHtml` | Effet sur une **string**                    |
+| ------------- | ------------------------------------------- |
+| `true` (défaut) | `innerHTML` — rétro-compatible, le contenu est réputé de confiance |
+| `false`       | `textContent` — la chaîne est affichée **littéralement**, aucun balisage interprété |
+| —             | un **Node** ou une **fonction** est rendu comme avant, quel que soit le drapeau |
+
+Pourquoi le défaut reste `true` : les projets hôtes passent massivement du
+HTML légitime (formulaires, tableaux, listes) et changer le défaut casserait
+leur UI. En contrepartie, la forme risquée est signalée :
+
+```js
+// UN SEUL console.warn par page, et seulement si la chaîne contient "<"
+// sans que l'hôte ait choisi explicitement :
+[HolafModal] `content` est interprété comme du HTML. Si la chaîne contient
+une donnée serveur (message d'erreur, nom…), passez `contentHtml: false`
+(ou un Node) pour éviter un XSS.
+```
+
+Bonnes pratiques :
+
+```js
+// 1) Donnée serveur → texte brut (aucun balisage interprété) :
+HolafModal.open({ title: "Erreur", content: err.message, contentHtml: false });
+
+// 2) HTML légitime construit par l'hôte → Node (le plus sûr), ou string :
+const p = document.createElement("p"); p.textContent = userInput;
+HolafModal.open({ title: "Détail", content: p });
+
+// 3) Changer d'avis sur une modale déjà ouverte :
+ctrl.setContentHtml(false); ctrl.setContent(err.message);
+```
+
+`ctrl.setContent(c)` hérite du `contentHtml` passé à `open()` (et de
+`ctrl.setContentHtml(flag)`) : une modale ouverte en mode texte le reste
+pour ses re-rendus.
+
+---
+
 ## 6. Procédure de sync (mettre à jour / installer dans un projet)
 
 Le fichier consommé vit dans `vendor/holaf/` du projet cible. Depuis ce dépôt
@@ -663,9 +717,11 @@ même script, committer à nouveau. Vérifier la version avec
 - Un **seul** listener `keydown` au niveau document pour tout le module
   (Échap + Tab du focus trap), en capture, supprimé… jamais : installé une
   fois, il est inactif quand aucune modale n'est ouverte.
-- `content` en string passe par `innerHTML` (le HTML fourni est réputé de
-  confiance). Pour toute donnée utilisateur, passez un **Node** :
+- `content` en string passe par `innerHTML` **par défaut** (le HTML fourni est
+  réputé de confiance). Pour toute donnée utilisateur, passez `contentHtml:
+  false`, ou un **Node** :
   `const p = document.createElement("p"); p.textContent = userInput;`
+  (voir §5quater).
 - **Thèmes** : le registre (`HolafModal.themes`) vit en mémoire — les presets
   sont déclarés au chargement du fichier, les thèmes customs par le projet ;
   `setTheme` est lui aussi volatil (pas de localStorage, par conception).

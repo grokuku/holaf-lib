@@ -262,6 +262,22 @@ cmd_check() {
 
     echo "Vérification des briques installées dans $dest :"
     echo ""
+
+    # La sortie du Python est CAPTURÉE d'abord : en `done < <(python3 …)`, un
+    # échec du Python ne faisait PAS échouer la boucle (l'entrée était vide),
+    # et le script concluait quand même « Tout est à jour. 🎉 ».
+    local manifest_tsv
+    manifest_tsv="$(python3 - "$local_manifest" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    d = json.load(f)
+if not isinstance(d, dict):
+    raise SystemExit("manifest local invalide (attendu : objet)")
+for k, val in d.items():
+    print(f"{k}\t{val}")
+PY
+)" || fail "manifest local illisible : $local_manifest (JSON invalide ?)"
+
     local any_delay=0
     while IFS=$'\t' read -r brick v; do
         [ -n "$brick" ] || continue
@@ -277,13 +293,7 @@ cmd_check() {
             echo "  ⚠️  EN RETARD     : '$brick' installée v$v, dispo v$central"
             any_delay=1
         fi
-    done < <(python3 - "$local_manifest" <<'PY'
-import json, sys
-d = json.load(open(sys.argv[1]))
-for k, val in d.items():
-    print(f"{k}\t{val}")
-PY
-)
+    done <<< "$manifest_tsv"
 
     echo ""
     if [ "$any_delay" -eq 1 ]; then

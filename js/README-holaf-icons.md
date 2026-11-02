@@ -1,4 +1,4 @@
-# HolafIcons — doc d'usage (brique holaf-lib v0.1.8)
+# HolafIcons — doc d'usage (brique holaf-lib v0.1.9)
 
 Set d'icônes SVG en **trait** (style « feather »), destiné aux widgets Homy
 (frame, link, clock, image, search, notes, weather, …) qui n'utilisent

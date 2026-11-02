@@ -7,7 +7,7 @@ comportement **blindé** et homogène : JSON vérifié avant parsing, erreurs
 typées, timeout, retry, et une **authentification enfichable** configurée par
 l'hôte.
 
-**Version : 0.2.0**
+**Version : 0.2.1**
 
 ---
 
@@ -235,6 +235,10 @@ try {
 ```
 
 Cas particuliers :
+- **Aucun corps** (v0.2.1) — `204 No Content`, `205 Reset Content`,
+  `304 Not Modified`, ou un `2xx`/`err` au corps vide (même avec un
+  `Content-Type: application/json`) → la promesse résout **`null`**, elle ne
+  lève pas. Un `DELETE` qui répond `204` n'est pas une erreur ;
 - **Page HTML de login** (authentik / outpost / sign-in dans le corps) →
   message `"session expirée"` ;
 - **Réponse non-JSON** (502 proxy…) → message `"réponse non-JSON (statut N)"` ;
@@ -247,6 +251,8 @@ Cas particuliers :
 - **`detail` non-string** (ex. tableau de validation FastAPI) → message par
   défaut (`"erreur serveur (statut N)"`), le corps complet restant dans
   `err.data` ;
+- **JSON malformé sur un corps NON vide** → message
+  `"réponse JSON illisible (statut N)"` (jamais converti en `null`) ;
 - **Timeout** → message `"timeout"` ;
 - **Erreur réseau** → message `"erreur réseau"`.
 
